@@ -13,4 +13,4 @@ Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
 
 Route::post('/submissions', [SubmissionController::class, 'store'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:submissions');
