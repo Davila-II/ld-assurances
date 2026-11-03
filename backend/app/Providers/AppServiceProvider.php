@@ -22,5 +22,11 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(60)->by($request->ip()),
             ];
         });
+
+        RateLimiter::for('admin-login', function (Request $request) {
+            return Limit::perMinute(5)->by(
+                $request->ip() . '|' . strtolower((string) $request->input('email'))
+            );
+        });
     }
 }
