@@ -15,6 +15,11 @@ import type {
 const API_URL = import.meta.env.VITE_API_URL as string;
 const TIMEOUT_MS = 60000;
 
+type ErrorPayload = {
+  message?: string;
+  errors?: Record<string, string[]>;
+};
+
 export class ApiError extends Error {
   status: number;
   errors: Record<string, string[]>;
@@ -49,7 +54,6 @@ function redirectToLogin(): void {
   window.location.assign('/admin/login');
 }
 
-// Envoie la requête, gère le jeton, le délai d'attente et les erreurs réseau
 async function rawFetch(path: string, init: RequestInit = {}, auth = false): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -64,41 +68,48 @@ async function rawFetch(path: string, init: RequestInit = {}, auth = false): Pro
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let response: Response;
 
-  let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { ...init, headers, signal: controller.signal });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
+    response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
       throw new ApiError('Le serveur met trop de temps à répondre. Réessayez dans un instant.');
     }
     throw new ApiError('Impossible de joindre le serveur. Vérifiez votre connexion internet.');
   } finally {
-    clearTimeout(timer);
+    window.clearTimeout(timer);
   }
 
-  // Jeton refusé ou expiré : retour à la page de connexion
-  if (auth && res.status === 401) {
+  if (auth && response.status === 401) {
     redirectToLogin();
     throw new ApiError('Session expirée. Veuillez vous reconnecter.', 401);
   }
 
-  return res;
+  return response;
 }
 
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
-  const res = await rawFetch(path, init, auth);
-  const data = await res.json().catch(() => null);
+  const response = await rawFetch(path, init, auth);
+  const data: unknown = await response.json().catch(() => null);
 
-  if (!res.ok) {
-    throw new ApiError(messageFor(res.status, data?.message), res.status, data?.errors ?? {});
+  if (!response.ok) {
+    const payload =
+      typeof data === 'object' && data !== null ? (data as ErrorPayload) : undefined;
+    throw new ApiError(
+      messageFor(response.status, payload?.message),
+      response.status,
+      payload?.errors ?? {}
+    );
   }
 
   return data as T;
 }
-
-// --- Public ---
 
 export const getCategories = () => request<Category[]>('/categories');
 
@@ -107,8 +118,6 @@ export const getForm = (slug: string, type: FormType = 'claim') =>
 
 export const submitForm = (formData: FormData) =>
   request<SubmissionResult>('/submissions', { method: 'POST', body: formData });
-
-// --- Administration ---
 
 export const adminLogin = (email: string, password: string) =>
   request<LoginResult>('/admin/login', {
@@ -121,23 +130,23 @@ export const adminLogout = () =>
   request<{ message: string }>('/admin/logout', { method: 'POST' }, true);
 
 export const getSubmissions = (filters: SubmissionFilters) => {
-  const qs = new URLSearchParams();
-  if (filters.status) qs.set('status', filters.status);
-  if (filters.form_type) qs.set('form_type', filters.form_type);
-  if (filters.category) qs.set('category', filters.category);
-  if (filters.q) qs.set('q', filters.q);
-  if (filters.page && filters.page > 1) qs.set('page', String(filters.page));
+  const query = new URLSearchParams();
+  if (filters.status) query.set('status', filters.status);
+  if (filters.form_type) query.set('form_type', filters.form_type);
+  if (filters.category) query.set('category', filters.category);
+  if (filters.q) query.set('q', filters.q);
+  if (filters.page && filters.page > 1) query.set('page', String(filters.page));
 
-  const query = qs.toString();
+  const queryString = query.toString();
   return request<Paginated<SubmissionSummary>>(
-    `/admin/submissions${query ? `?${query}` : ''}`,
+    `/admin/submissions${queryString ? `?${queryString}` : ''}`,
     {},
     true
   );
 };
 
 export const getSubmission = (id: string | number) =>
-  request<SubmissionDetail>(`/admin/submissions/${id}`, {}, true);
+  request<SubmissionDetail>(`/admin/submissions/${encodeURIComponent(id)}`, {}, true);
 
 export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
   request<{ id: number; status: SubmissionStatus }>(
@@ -150,18 +159,17 @@ export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
     true
   );
 
-// Télécharge une pièce jointe en envoyant le jeton, puis propose le fichier au navigateur
 export async function downloadAttachment(id: number, filename: string): Promise<void> {
-  const res = await rawFetch(`/admin/attachments/${id}/download`, {}, true);
+  const response = await rawFetch(`/admin/attachments/${id}/download`, {}, true);
 
-  if (!res.ok) {
+  if (!response.ok) {
     throw new ApiError(
-      res.status === 404 ? 'Fichier introuvable.' : messageFor(res.status),
-      res.status
+      response.status === 404 ? 'Fichier introuvable.' : messageFor(response.status),
+      response.status
     );
   }
 
-  const blob = await res.blob();
+  const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -169,5 +177,5 @@ export async function downloadAttachment(id: number, filename: string): Promise<
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }

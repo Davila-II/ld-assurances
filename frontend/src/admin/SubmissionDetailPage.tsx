@@ -1,0 +1,199 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { downloadAttachment, getSubmission, updateSubmissionStatus } from '../api';
+import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
+import StatusBadge from './StatusBadge';
+import {
+  FORM_TYPE_LABELS,
+  STATUSES,
+  STATUS_LABELS,
+  errorMessage,
+  formatAnswer,
+  formatDate,
+  formatSize,
+} from './labels';
+
+export default function SubmissionDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [loadedSubmission, setLoadedSubmission] = useState<{
+    id: string;
+    data: SubmissionDetail;
+  } | null>(null);
+  const [requestError, setRequestError] = useState<{ id: string; message: string } | null>(null);
+  const [actionError, setActionError] = useState<{ id: string; message: string } | null>(null);
+  const [newStatus, setNewStatus] = useState<SubmissionStatus>('received');
+  const [notice, setNotice] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const invalidId = !id || !/^\d+$/.test(id);
+  const submission =
+    !invalidId && loadedSubmission?.id === id ? loadedSubmission.data : null;
+  const error = invalidId
+    ? 'Numéro de déclaration invalide.'
+    : requestError?.id === id
+      ? requestError.message
+      : actionError?.id === id
+        ? actionError.message
+        : '';
+  const loading = !invalidId && submission === null && requestError?.id !== id;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!id || !/^\d+$/.test(id)) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getSubmission(id)
+      .then((data) => {
+        if (cancelled) return;
+        setLoadedSubmission({ id, data });
+        setNewStatus(data.status);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setRequestError({ id, message: errorMessage(err) });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const saveStatus = async () => {
+    if (!submission || !id) return;
+    setSaving(true);
+    setNotice('');
+    setActionError(null);
+
+    try {
+      const result = await updateSubmissionStatus(submission.id, newStatus);
+      setLoadedSubmission({ id, data: { ...submission, status: result.status } });
+      setNotice('Statut mis à jour.');
+    } catch (err) {
+      setActionError({ id, message: errorMessage(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownload = async (attachment: AttachmentInfo) => {
+    if (!submission || !id) return;
+    setDownloadingId(attachment.id);
+    setActionError(null);
+
+    try {
+      await downloadAttachment(attachment.id, attachment.original_name);
+    } catch (err) {
+      setActionError({ id, message: errorMessage(err) });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  return (
+    <>
+      <Link to="/admin" className="back-link">
+        ← Retour à la liste
+      </Link>
+
+      {loading && <p role="status">Chargement…</p>}
+      {error && <p className="alert" role="alert">{error}</p>}
+
+      {submission && (
+        <>
+          <div className="detail-head">
+            <h1>{submission.reference}</h1>
+            <StatusBadge status={submission.status} />
+          </div>
+
+          <section className="card">
+            <dl className="answers">
+              <div className="answer">
+                <dt>Type</dt>
+                <dd>{FORM_TYPE_LABELS[submission.form_type]}</dd>
+              </div>
+              <div className="answer">
+                <dt>Catégorie</dt>
+                <dd>{submission.category ?? '—'}</dd>
+              </div>
+              <div className="answer">
+                <dt>Email</dt>
+                <dd>{submission.email}</dd>
+              </div>
+              <div className="answer">
+                <dt>Reçu le</dt>
+                <dd>{formatDate(submission.created_at)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="card">
+            <h2>Traitement</h2>
+            <div className="status-row">
+              <label htmlFor="new-status">Statut</label>
+              <select
+                id="new-status"
+                value={newStatus}
+                onChange={(event) => setNewStatus(event.target.value as SubmissionStatus)}
+              >
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn"
+                disabled={saving || newStatus === submission.status}
+                onClick={saveStatus}
+              >
+                {saving ? 'Enregistrement…' : 'Mettre à jour'}
+              </button>
+            </div>
+            {notice && <p className="notice" role="status">{notice}</p>}
+          </section>
+
+          <section className="card">
+            <h2>Réponses du client</h2>
+            <dl className="answers">
+              {submission.answers.map((answer, index) => (
+                <div className="answer" key={`${answer.label}-${index}`}>
+                  <dt>{answer.label}</dt>
+                  <dd>{formatAnswer(answer.value)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section className="card">
+            <h2>Pièces jointes ({submission.attachments.length})</h2>
+            {submission.attachments.length === 0 ? (
+              <p>Aucune pièce jointe.</p>
+            ) : (
+              <ul className="attachments">
+                {submission.attachments.map((attachment) => (
+                  <li key={attachment.id}>
+                    <span>
+                      {attachment.original_name} <small>({formatSize(attachment.size)})</small>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={downloadingId === attachment.id}
+                      onClick={() => handleDownload(attachment)}
+                    >
+                      {downloadingId === attachment.id ? 'Téléchargement…' : 'Télécharger'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
+    </>
+  );
+}

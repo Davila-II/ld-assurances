@@ -1,40 +1,20 @@
-import { useEffect, useState } from 'react';
-import { getCategories } from './api';
-import type { Category } from './types';
-import DynamicForm from './components/DynamicForm';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import AdminLayout from './admin/AdminLayout';
+import LoginPage from './admin/LoginPage';
+import SubmissionDetailPage from './admin/SubmissionDetailPage';
+import SubmissionsPage from './admin/SubmissionsPage';
+import PublicPage from './pages/PublicPage';
 
 export default function App() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selected, setSelected] = useState<Category | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    getCategories()
-      .then(setCategories)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Erreur inattendue.'));
-  }, []);
-
   return (
-    <main className="container">
-      <h1>Déclaration de sinistre</h1>
-      <p>Choisissez le type d'assurance concerné.</p>
-
-      {error && <p className="error">{error}</p>}
-
-      <div className="categories">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            type="button"
-            className={selected?.id === category.id ? 'active' : ''}
-            onClick={() => setSelected(category)}
-          >
-            {category.name}
-          </button>
-        ))}
-      </div>
-
-      {selected && <DynamicForm category={selected} formType="claim" />}
-    </main>
+    <Routes>
+      <Route path="/" element={<PublicPage />} />
+      <Route path="/admin/login" element={<LoginPage />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<SubmissionsPage />} />
+        <Route path="submissions/:id" element={<SubmissionDetailPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
