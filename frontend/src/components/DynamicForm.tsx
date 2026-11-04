@@ -22,7 +22,9 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
   const [message, setMessage] = useState('');
   const [reference, setReference] = useState('');
 
-  // Chargement des questions quand la catégorie change
+  const isClaim = formType === 'claim';
+
+  // Chargement des questions quand la catégorie ou le type de formulaire change
   useEffect(() => {
     let cancelled = false;
 
@@ -250,11 +252,16 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
   if (reference) {
     return (
       <div className="success">
-        <h2>Votre déclaration a bien été envoyée</h2>
+        <h2>
+          {isClaim
+            ? 'Votre déclaration a bien été envoyée'
+            : 'Votre demande de devis a bien été envoyée'}
+        </h2>
         <p>
           Votre numéro de dossier : <strong>{reference}</strong>
         </p>
         <p>Conservez-le pour suivre votre dossier.</p>
+        <p>Un email de confirmation vous est envoyé à l'adresse indiquée.</p>
       </div>
     );
   }
@@ -300,7 +307,11 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
       ))}
 
       <button type="submit" disabled={sending}>
-        {sending ? 'Envoi en cours…' : 'Envoyer la déclaration'}
+        {sending
+          ? 'Envoi en cours…'
+          : isClaim
+            ? 'Envoyer la déclaration'
+            : 'Envoyer la demande de devis'}
       </button>
     </form>
   );

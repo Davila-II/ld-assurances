@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             InsuranceFormSeeder::class,
+            QuoteFormSeeder::class,
             AdminUserSeeder::class,
         ]);
     }
