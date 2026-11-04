@@ -36,6 +36,10 @@ Route::middleware(['auth:sanctum', EnsureUserIsAdmin::class])
         Route::get('/submissions', [AdminSubmissionController::class, 'index']);
         Route::get('/submissions/{submission}', [AdminSubmissionController::class, 'show']);
         Route::patch('/submissions/{submission}/status', [AdminSubmissionController::class, 'updateStatus']);
+        Route::patch('/submissions/{submission}/notes', [AdminSubmissionController::class, 'updateNotes']);
+        Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
+
+        Route::get('/stats', [AdminSubmissionController::class, 'stats']);
 
         Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
     });

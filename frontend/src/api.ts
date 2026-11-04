@@ -1,5 +1,6 @@
 import { clearToken, getToken } from './auth';
 import type {
+  AdminStats,
   Category,
   FormDefinition,
   FormType,
@@ -131,6 +132,7 @@ export const getSubmissions = (filters: SubmissionFilters) => {
   if (filters.status) qs.set('status', filters.status);
   if (filters.form_type) qs.set('form_type', filters.form_type);
   if (filters.category) qs.set('category', filters.category);
+  if (filters.type) qs.set('type', filters.type);
   if (filters.q) qs.set('q', filters.q);
   if (filters.page && filters.page > 1) qs.set('page', String(filters.page));
 
@@ -152,6 +154,30 @@ export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
+    },
+    true
+  );
+
+export const getStats = () => request<AdminStats>('/admin/stats', {}, true);
+
+export const updateSubmissionNotes = (id: number, notes: string) =>
+  request<{ id: number; notes: string | null }>(
+    `/admin/submissions/${id}/notes`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    },
+    true
+  );
+
+export const replyToSubmission = (id: number, message: string) =>
+  request<{ message: string }>(
+    `/admin/submissions/${id}/reply`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
     },
     true
   );

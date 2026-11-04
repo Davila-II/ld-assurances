@@ -6,6 +6,7 @@ import type { Category, Paginated, SubmissionSummary } from '../types';
 import StatusBadge from './StatusBadge';
 import {
   FORM_TYPE_LABELS,
+  SINISTRE_TYPES,
   STATUSES,
   STATUS_LABELS,
   errorMessage,
@@ -17,10 +18,11 @@ export default function SubmissionsPage() {
   const status = params.get('status') ?? '';
   const formType = params.get('form_type') ?? '';
   const category = params.get('category') ?? '';
+  const type = params.get('type') ?? '';
   const query = params.get('q') ?? '';
   const requestedPage = Number(params.get('page') ?? '1');
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const requestKey = JSON.stringify([status, formType, category, query, page]);
+  const requestKey = JSON.stringify([status, formType, category, type, query, page]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState('');
@@ -55,7 +57,7 @@ export default function SubmissionsPage() {
   useEffect(() => {
     let cancelled = false;
 
-    getSubmissions({ status, form_type: formType, category, q: query, page })
+    getSubmissions({ status, form_type: formType, category, type, q: query, page })
       .then((data) => {
         if (cancelled) return;
         setResultState({ key: requestKey, data });
@@ -67,7 +69,7 @@ export default function SubmissionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [status, formType, category, query, page, requestKey]);
+  }, [status, formType, category, type, query, page, requestKey]);
 
   const update = (changes: Record<string, string>) => {
     const next = new URLSearchParams(params);
@@ -88,10 +90,10 @@ export default function SubmissionsPage() {
   };
 
   const reset = () => {
-    update({ status: '', form_type: '', category: '', q: '' });
+    update({ status: '', form_type: '', category: '', type: '', q: '' });
   };
 
-  const filtersActive = Boolean(status || formType || category || query);
+  const filtersActive = Boolean(status || formType || category || type || query);
 
   return (
     <>
@@ -155,6 +157,22 @@ export default function SubmissionsPage() {
           </select>
         </div>
 
+        <div className="field">
+          <label htmlFor="type">Type de sinistre</label>
+          <select
+            id="type"
+            value={type}
+            onChange={(event) => update({ type: event.target.value })}
+          >
+            <option value="">Tous</option>
+            {SINISTRE_TYPES.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="filter-actions">
           <button type="submit" className="btn">
             Rechercher
@@ -185,8 +203,8 @@ export default function SubmissionsPage() {
             <thead>
               <tr>
                 <th scope="col">Dossier</th>
+                <th scope="col">Nature</th>
                 <th scope="col">Type</th>
-                <th scope="col">Catégorie</th>
                 <th scope="col">Email</th>
                 <th scope="col">Statut</th>
                 <th scope="col">Pièces</th>
@@ -199,8 +217,8 @@ export default function SubmissionsPage() {
                   <td data-label="Dossier">
                     <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
                   </td>
-                  <td data-label="Type">{FORM_TYPE_LABELS[submission.form_type]}</td>
-                  <td data-label="Catégorie">{submission.category ?? '—'}</td>
+                  <td data-label="Nature">{FORM_TYPE_LABELS[submission.form_type]}</td>
+                  <td data-label="Type">{submission.type ?? '—'}</td>
                   <td data-label="Email">{submission.email}</td>
                   <td data-label="Statut">
                     <StatusBadge status={submission.status} />

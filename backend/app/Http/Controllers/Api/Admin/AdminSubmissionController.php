@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SubmissionReply;
 use App\Mail\SubmissionStatusChanged;
 use App\Models\Attachment;
 use App\Models\Submission;
@@ -26,6 +27,7 @@ class AdminSubmissionController extends Controller
             'status'    => ['nullable', Rule::in(self::STATUSES)],
             'form_type' => ['nullable', 'in:claim,quote'],
             'category'  => ['nullable', 'string', 'exists:categories,slug'],
+            'type'      => ['nullable', 'string', 'max:100'],
             'q'         => ['nullable', 'string', 'max:100'],
         ]);
 
@@ -53,6 +55,12 @@ class AdminSubmissionController extends Controller
             });
         }
 
+        // Filtre par type de sinistre (champ stocké dans les réponses)
+        if ($request->filled('type')) {
+            $query->where('form_type', 'claim')
+                ->where('answers->sinistre_type', $request->input('type'));
+        }
+
         $page = $query->paginate(15)->withQueryString()->through(fn (Submission $s) => [
             'id'                => $s->id,
             'reference'         => $s->reference,
@@ -60,6 +68,9 @@ class AdminSubmissionController extends Controller
             'status'            => $s->status,
             'email'             => $s->email,
             'category'          => $s->category?->name,
+            'type'              => $s->form_type === 'claim'
+                ? ($s->answers['sinistre_type'] ?? null)
+                : $s->category?->name,
             'attachments_count' => $s->attachments_count,
             'created_at'        => $s->created_at?->toIso8601String(),
         ]);
@@ -90,6 +101,10 @@ class AdminSubmissionController extends Controller
             'status'      => $submission->status,
             'email'       => $submission->email,
             'category'    => $submission->category?->name,
+            'type'        => $submission->form_type === 'claim'
+                ? ($submission->answers['sinistre_type'] ?? null)
+                : $submission->category?->name,
+            'notes'       => $submission->notes,
             'created_at'  => $submission->created_at?->toIso8601String(),
             'answers'     => $answers,
             'attachments' => $submission->attachments->map(fn (Attachment $a) => [
@@ -121,6 +136,60 @@ class AdminSubmissionController extends Controller
             'id'     => $submission->id,
             'status' => $submission->status,
         ]);
+    }
+
+    // Statistiques du tableau de bord
+    public function stats(): JsonResponse
+    {
+        return response()->json([
+            'total'        => Submission::count(),
+            'by_status'    => Submission::selectRaw('status, count(*) as total')
+                ->groupBy('status')->pluck('total', 'status'),
+            'by_form_type' => Submission::selectRaw('form_type, count(*) as total')
+                ->groupBy('form_type')->pluck('total', 'form_type'),
+            'recent'       => Submission::with('category:id,name')
+                ->latest()->take(5)->get()->map(fn (Submission $s) => [
+                    'id'         => $s->id,
+                    'reference'  => $s->reference,
+                    'form_type'  => $s->form_type,
+                    'status'     => $s->status,
+                    'category'   => $s->category?->name,
+                    'created_at' => $s->created_at?->toIso8601String(),
+                ])->values(),
+        ]);
+    }
+
+    // Observations internes (non visibles par le client)
+    public function updateNotes(Request $request, Submission $submission): JsonResponse
+    {
+        $data = $request->validate([
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $submission->update(['notes' => $data['notes']]);
+
+        return response()->json([
+            'id'    => $submission->id,
+            'notes' => $submission->notes,
+        ]);
+    }
+
+    // Réponse envoyée par email au client
+    public function reply(Request $request, Submission $submission): JsonResponse
+    {
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:5000'],
+        ]);
+
+        try {
+            Mail::to($submission->email)->send(new SubmissionReply($submission, $data['message']));
+        } catch (Throwable $e) {
+            Log::error('Échec envoi réponse client', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => "L'envoi de l'email a échoué."], 500);
+        }
+
+        return response()->json(['message' => 'Réponse envoyée au client.']);
     }
 
     // Téléchargement d'une pièce jointe (jamais accessible sans jeton)

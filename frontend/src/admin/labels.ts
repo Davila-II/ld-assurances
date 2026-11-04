@@ -14,6 +14,18 @@ export const FORM_TYPE_LABELS: Record<FormType, string> = {
   quote: 'Devis',
 };
 
+// Types de sinistre possibles (définis dans InsuranceFormSeeder)
+export const SINISTRE_TYPES = [
+  'Automobile',
+  'Habitation',
+  'Santé',
+  'Responsabilité civile',
+  'Transport',
+  'Agricole',
+  'Entreprise',
+  'Autre',
+];
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', {
     dateStyle: 'medium',

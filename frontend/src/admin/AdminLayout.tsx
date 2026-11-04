@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { adminLogout } from '../api';
 import { clearToken, getToken } from '../auth';
 import { errorMessage } from './labels';
@@ -30,7 +30,26 @@ export default function AdminLayout() {
   return (
     <>
       <header className="admin-header">
-        <Link to="/admin">Administration · LD Assurances</Link>
+        <div className="admin-header-brand">
+          <Link to="/admin">Administration · LD Assurances</Link>
+        </div>
+
+        <nav className="admin-nav">
+          <NavLink
+            to="/admin"
+            end
+            className={({ isActive }) => (isActive ? 'active' : '')}
+          >
+            Tableau de bord
+          </NavLink>
+          <NavLink
+            to="/admin/submissions"
+            className={({ isActive }) => (isActive ? 'active' : '')}
+          >
+            Soumissions
+          </NavLink>
+        </nav>
+
         <button type="button" disabled={loggingOut} onClick={logout}>
           {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
         </button>

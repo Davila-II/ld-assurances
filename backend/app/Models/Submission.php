@@ -11,7 +11,7 @@ class Submission extends Model
 {
     protected $fillable = [
         'reference', 'category_id', 'user_id', 'form_type',
-        'email', 'status', 'answers', 'form_snapshot',
+        'email', 'status', 'notes', 'answers', 'form_snapshot',
     ];
 
     protected $casts = [

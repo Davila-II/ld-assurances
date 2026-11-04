@@ -81,6 +81,7 @@ export interface SubmissionSummary {
   status: SubmissionStatus;
   email: string;
   category: string | null;
+  type: string | null;
   attachments_count: number;
   created_at: string;
 }
@@ -99,8 +100,23 @@ export interface SubmissionFilters {
   status?: string;
   form_type?: string;
   category?: string;
+  type?: string;
   q?: string;
   page?: number;
+}
+
+export interface AdminStats {
+  total: number;
+  by_status: Record<SubmissionStatus, number>;
+  by_form_type: Record<FormType, number>;
+  recent: Array<{
+    id: number;
+    reference: string;
+    form_type: FormType;
+    status: SubmissionStatus;
+    category: string | null;
+    created_at: string;
+  }>;
 }
 
 export interface SubmissionAnswer {
@@ -123,6 +139,8 @@ export interface SubmissionDetail {
   status: SubmissionStatus;
   email: string;
   category: string | null;
+  type: string | null;
+  notes: string | null;
   created_at: string;
   answers: SubmissionAnswer[];
   attachments: AttachmentInfo[];

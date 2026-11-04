@@ -5,6 +5,7 @@ import QuotePage from './pages/QuotePage';
 import TrackPage from './pages/TrackPage';
 import AdminLayout from './admin/AdminLayout';
 import LoginPage from './admin/LoginPage';
+import DashboardPage from './admin/DashboardPage';
 import SubmissionsPage from './admin/SubmissionsPage';
 import SubmissionDetailPage from './admin/SubmissionDetailPage';
 import ClientLayout from './client/ClientLayout';
@@ -41,7 +42,8 @@ export default function App() {
       <Route path="/admin/login" element={<LoginPage />} />
 
       <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<SubmissionsPage />} />
+        <Route index element={<DashboardPage />} />
+        <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
       </Route>
 
