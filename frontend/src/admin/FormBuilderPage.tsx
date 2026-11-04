@@ -51,6 +51,7 @@ export default function FormBuilderPage() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  // Rechargements déclenchés par les boutons (ajout, activation, etc.)
   const loadCategories = useCallback(async () => {
     setCategories(await getBuilderCategories());
   }, []);
@@ -59,24 +60,61 @@ export default function FormBuilderPage() {
     setFields(await getBuilderFields(categoryId, type));
   }, []);
 
+  // Chargement initial des catégories
   useEffect(() => {
-    loadCategories()
-      .catch((err: unknown) => setError(errorMessage(err)))
-      .finally(() => setLoading(false));
-  }, [loadCategories]);
+    let cancelled = false;
 
+    getBuilderCategories()
+      .then((data) => {
+        if (!cancelled) setCategories(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(errorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Chargement des questions quand la catégorie ou l'onglet change
   useEffect(() => {
-    if (selectedId !== null) {
-      loadFields(selectedId, formType).catch((err: unknown) => setError(errorMessage(err)));
-    }
-  }, [selectedId, formType, loadFields]);
+    if (selectedId === null) return;
+    let cancelled = false;
+
+    getBuilderFields(selectedId, formType)
+      .then((data) => {
+        if (!cancelled) setFields(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(errorMessage(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, formType]);
 
   const selected = categories.find((category) => category.id === selectedId) ?? null;
 
   const selectCategory = (id: number) => {
-    setSelectedId(id);
+    if (id !== selectedId) {
+      setSelectedId(id);
+      setFields([]);
+    }
     setEditor(null);
     setNotice('');
+  };
+
+  const changeFormType = (type: FormType) => {
+    if (type !== formType) {
+      setFormType(type);
+      setFields([]);
+    }
+    setEditor(null);
   };
 
   const handleAddCategory = async (event: FormEvent) => {
@@ -254,14 +292,14 @@ export default function FormBuilderPage() {
                     <button
                       type="button"
                       className={formType === 'quote' ? 'active' : ''}
-                      onClick={() => setFormType('quote')}
+                      onClick={() => changeFormType('quote')}
                     >
                       Devis
                     </button>
                     <button
                       type="button"
                       className={formType === 'claim' ? 'active' : ''}
-                      onClick={() => setFormType('claim')}
+                      onClick={() => changeFormType('claim')}
                     >
                       Sinistre
                     </button>

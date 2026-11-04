@@ -114,8 +114,12 @@ export const getForm = (slug: string, type: FormType = 'claim') =>
 export const submitForm = (formData: FormData) =>
   request<SubmissionResult>('/submissions', { method: 'POST', body: formData });
 
-export const trackSubmission = (reference: string) =>
-  request<TrackResult>(`/track/${encodeURIComponent(reference)}`);
+export const trackSubmission = (reference: string, email: string) =>
+  request<TrackResult>('/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reference, email }),
+  });
 
 // --- Administration ---
 
