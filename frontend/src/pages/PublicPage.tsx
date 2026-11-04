@@ -95,6 +95,9 @@ function ClaimFlow() {
         <p className="page-subtitle">
           Remplissez le formulaire ci-dessous pour déclarer votre sinistre.
         </p>
+        <p className="deadline-note">
+          Délai de déclaration : 5 jours ouvrés après le sinistre (2 jours ouvrés en cas de vol).
+        </p>
 
         <div className="form-wrap">
           <DynamicForm key={`${selected.slug}-claim`} category={selected} formType="claim" />
@@ -126,6 +129,10 @@ function ClaimFlow() {
       <p className="urgent-note">
         En cas d'urgence, appelez notre ligne 24h/24 :{' '}
         <a href={telHref(SITE.emergencyPhone)}>{SITE.emergencyPhone}</a>
+      </p>
+
+      <p className="deadline-note">
+        Délai de déclaration : 5 jours ouvrés après le sinistre (2 jours ouvrés en cas de vol).
       </p>
 
       {error && <p className="alert">{error}</p>}

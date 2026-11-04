@@ -25,6 +25,7 @@ export interface FormField {
   id: number;
   name: string;
   label: string;
+  placeholder: string | null;
   section: string | null;
   field_type: FieldType;
   is_required: boolean;

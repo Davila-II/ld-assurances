@@ -43,7 +43,7 @@ class FormController extends Controller
         $fields = $category->fields()
             ->where('form_type', $type)
             ->where('is_active', true)
-            ->get(['id', 'name', 'label', 'section', 'field_type', 'is_required', 'options', 'condition', 'sort_order']);
+            ->get(['id', 'name', 'label', 'placeholder', 'section', 'field_type', 'is_required', 'options', 'condition', 'sort_order']);
 
         return response()->json([
             'category'  => [

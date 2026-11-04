@@ -242,6 +242,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             {...common}
             rows={4}
             value={text}
+            placeholder={field.placeholder ?? undefined}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           />
         );
@@ -252,6 +253,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             {...common}
             type="number"
             value={text}
+            placeholder={field.placeholder ?? undefined}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           />
         );
@@ -312,6 +314,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
           <input
             id={field.name}
             type="checkbox"
+            required={field.is_required}
             checked={value === true}
             onChange={(e) => setAnswer(field.name, e.target.checked)}
           />
@@ -334,6 +337,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             {...common}
             type="text"
             value={text}
+            placeholder={field.placeholder ?? undefined}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           />
         );
@@ -415,6 +419,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             type="email"
             required
             value={email}
+            placeholder="Ex : nom@exemple.com"
             onChange={(e) => setEmail(e.target.value)}
           />
           {errors.email && <span className="error">{errors.email[0]}</span>}
@@ -423,11 +428,23 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
 
       {shownFields.map((field) => (
         <div className="field" key={field.id}>
-          <label htmlFor={field.name}>
-            {field.label}
-            {field.is_required ? ' *' : ''}
-          </label>
-          {renderInput(field)}
+          {field.field_type === 'checkbox' ? (
+            <label className="choice" htmlFor={field.name}>
+              {renderInput(field)}
+              <span>
+                {field.label}
+                {field.is_required ? ' *' : ''}
+              </span>
+            </label>
+          ) : (
+            <>
+              <label htmlFor={field.name}>
+                {field.label}
+                {field.is_required ? ' *' : ''}
+              </label>
+              {renderInput(field)}
+            </>
+          )}
           {errorFor(field.name) && <span className="error">{errorFor(field.name)}</span>}
         </div>
       ))}
