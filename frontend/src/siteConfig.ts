@@ -26,19 +26,23 @@ export const SITE = {
     'Société Anonyme au capital de 5 000 000 000 FCFA entièrement libéré | Agréée par arrêté N°0000815/MINFI du 15 NOV 2024',
 };
 
-// À VÉRIFIER : ces adresses sont des suppositions. Remplace-les par les vraies
-// (survole chaque lien du menu sur le site principal pour voir son adresse).
 export const NAV_LINKS = [
   { label: 'Accueil', href: `${MAIN_URL}/` },
-  { label: 'Nos Produits', href: `${MAIN_URL}/services` },
-  { label: 'À Propos', href: `${MAIN_URL}/a-propos` },
+  { label: 'Nos Produits', href: `${MAIN_URL}/produits` },
+  { label: 'À Propos', href: `${MAIN_URL}/#about` },
   { label: 'Blog', href: `${MAIN_URL}/blog` },
   { label: 'Contact', href: `${MAIN_URL}/contact` },
 ];
 
-// Catégories dont le devis existe déjà sur le site principal : on ne le refait pas ici
-export const QUOTE_ON_MAIN_SITE = ['auto'];
-export const MAIN_QUOTE_URL = MAIN_URL; // À remplacer par l'adresse de leur page « Devis en ligne »
+//devis
+export const MAIN_QUOTE_URLS: Record<string, string> = {
+  auto: `${MAIN_URL}/devis`,
+  voyage: `${MAIN_URL}/devis`,
+  professionnelle: `${MAIN_URL}/devis`,
+};
+
+// Bouton « Nous contacter » de la page de devis
+export const CONTACT_URL = `${MAIN_URL}/contact`;
 
 // Transforme un numéro affiché en lien d'appel
 export const telHref = (phone: string): string => `tel:+${phone.replace(/\D/g, '')}`;

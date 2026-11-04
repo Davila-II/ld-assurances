@@ -1,94 +1,86 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { getCategories } from '../api';
-import type { Category, FormType } from '../types';
 import DynamicForm from '../components/DynamicForm';
-import { getCategoryMeta } from '../components/categoryMeta';
-import { MAIN_QUOTE_URL, QUOTE_ON_MAIN_SITE, SITE, telHref } from '../siteConfig';
+import { PRODUCTS } from '../products';
+import type { Product } from '../products';
+import { CONTACT_URL, SITE, telHref } from '../siteConfig';
+import type { Category, FormType } from '../types';
 
-export default function PublicPage() {
-  const [params, setParams] = useSearchParams();
-  const formType: FormType = params.get('service') === 'devis' ? 'quote' : 'claim';
+interface HubItem {
+  product: Product;
+  category?: Category;
+  href?: string;
+}
+
+interface Selection {
+  category: Category;
+  label: string;
+}
+
+// Carte par défaut pour une catégorie absente de products.tsx
+function genericProduct(category: Category): Product {
+  return {
+    key: category.slug,
+    label: category.name,
+    description: "Découvrez cette solution d'assurance",
+    icon: <FileText size={32} />,
+    tone: 'gray',
+    slug: category.slug,
+  };
+}
+
+// Vue 1 : les cartes des types d'assurance
+function Hub({
+  formType,
+  onSelect,
+}: {
+  formType: FormType;
+  onSelect: (selection: Selection) => void;
+}) {
   const isClaim = formType === 'claim';
-
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selected, setSelected] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getCategories()
+    getCategories(formType)
       .then(setCategories)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Erreur inattendue.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [formType]);
 
-  // Le devis de cette catégorie existe déjà sur le site principal
-  const quoteOnMainSite = (category: Category) =>
-    !isClaim && QUOTE_ON_MAIN_SITE.includes(category.slug);
+  const bySlug = new Map(categories.map((c) => [c.slug, c]));
+  const knownSlugs = new Set(PRODUCTS.map((p) => p.slug).filter(Boolean));
 
-  const current = selected && !quoteOnMainSite(selected) ? selected : null;
+  const items: HubItem[] = [];
 
-  const switchService = (type: FormType) => {
-    setSelected(null);
-    setParams({ service: type === 'quote' ? 'devis' : 'sinistre' });
-  };
+  PRODUCTS.forEach((product) => {
+    const category = product.slug ? bySlug.get(product.slug) : undefined;
 
-  // Vue 2 : le formulaire
-  if (current) {
-    return (
-      <main className="page">
-        <button type="button" className="back-btn" onClick={() => setSelected(null)}>
-          <ArrowLeft size={16} /> Retour au choix du type d'assurance
-        </button>
+    if (!isClaim && product.mainQuoteUrl) {
+      // Le devis existe déjà sur le site principal : on y renvoie
+      items.push({ product, href: product.mainQuoteUrl });
+    } else if (category) {
+      items.push({ product, category });
+    }
+  });
 
-        <h1 className="page-title accent">
-          {isClaim ? 'Déclaration de sinistre' : 'Demande de devis'} - {current.name}
-        </h1>
-        <p className="page-subtitle">
-          {isClaim
-            ? 'Remplissez le formulaire ci-dessous pour déclarer votre sinistre.'
-            : 'Remplissez le formulaire ci-dessous pour obtenir votre devis personnalisé.'}
-        </p>
+  categories
+    .filter((c) => !knownSlugs.has(c.slug))
+    .forEach((c) => items.push({ product: genericProduct(c), category: c }));
 
-        <div className="form-wrap">
-          <DynamicForm key={`${current.slug}-${formType}`} category={current} formType={formType} />
-        </div>
-      </main>
-    );
-  }
-
-  // Vue 1 : choix du service et de la catégorie
   return (
-    <main className="page">
-      <h1 className="page-title">
+    <main className="page hub">
+      <h1 className="hub-title">
         {isClaim ? 'Déclarez votre sinistre en ligne' : 'Demandez votre devis en ligne'}
       </h1>
-      <p className="page-subtitle">
+      <p className="hub-subtitle">
         {isClaim
-          ? "Sélectionnez le type d'assurance concerné par votre sinistre."
-          : "Sélectionnez le type d'assurance qui vous intéresse."}
+          ? "Sélectionnez le type d'assurance concerné par votre sinistre"
+          : "Sélectionnez le type d'assurance qui vous intéresse"}
       </p>
-
-      <div className="service-tabs">
-        <button
-          type="button"
-          className={isClaim ? 'active' : ''}
-          aria-pressed={isClaim}
-          onClick={() => switchService('claim')}
-        >
-          Déclarer un sinistre
-        </button>
-        <button
-          type="button"
-          className={!isClaim ? 'active' : ''}
-          aria-pressed={!isClaim}
-          onClick={() => switchService('quote')}
-        >
-          Demander un devis
-        </button>
-      </div>
 
       {isClaim && (
         <p className="urgent-note">
@@ -100,40 +92,92 @@ export default function PublicPage() {
       {error && <p className="alert">{error}</p>}
       {loading && <p className="center">Chargement…</p>}
 
-      <div className="cat-grid">
-        {categories.map((category) => {
-          const meta = getCategoryMeta(category.slug);
-          const external = quoteOnMainSite(category);
+      {!loading && items.length === 0 && !error && (
+        <p className="center">Aucun formulaire disponible pour le moment.</p>
+      )}
 
-          const content = (
-            <>
-              <span className="cat-icon">{meta.icon}</span>
-              <span className="cat-name">{category.name}</span>
-              <span className="cat-desc">{meta.description}</span>
-              {external && (
-                <span className="cat-note">
-                  Devis disponible sur le site principal <ExternalLink size={12} />
-                </span>
-              )}
-            </>
-          );
+      {!loading && items.length > 0 && (
+        <div className="hub-grid">
+          {items.map(({ product, category, href }) => {
+            const inner = (
+              <>
+                <span className="hub-icon">{product.icon}</span>
+                <span className="hub-name">{product.label}</span>
+                <span className="hub-desc">{product.description}</span>
+              </>
+            );
 
-          return external ? (
-            <a key={category.id} href={MAIN_QUOTE_URL} className={`cat-card tone-${meta.tone}`}>
-              {content}
-            </a>
-          ) : (
-            <button
-              key={category.id}
-              type="button"
-              className={`cat-card tone-${meta.tone}`}
-              onClick={() => setSelected(category)}
-            >
-              {content}
-            </button>
-          );
-        })}
-      </div>
+            return href ? (
+              <a key={product.key} className={`hub-card tone-${product.tone}`} href={href}>
+                {inner}
+              </a>
+            ) : (
+              <button
+                key={product.key}
+                type="button"
+                className={`hub-card tone-${product.tone}`}
+                onClick={() => category && onSelect({ category, label: product.label })}
+              >
+                {inner}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {!isClaim && (
+        <section className="hub-contact">
+          <h2>Vous ne trouvez pas ce que vous cherchez ?</h2>
+          <p>Notre équipe est à votre disposition pour répondre à toutes vos demandes spécifiques.</p>
+          <a className="hub-contact-btn" href={CONTACT_URL}>
+            Nous contacter
+          </a>
+        </section>
+      )}
     </main>
   );
+}
+
+// Les deux vues d'un même service (sinistre ou devis)
+function ServiceFlow({ formType }: { formType: FormType }) {
+  const [selected, setSelected] = useState<Selection | null>(null);
+  const isClaim = formType === 'claim';
+
+  // Vue 2 : le formulaire
+  if (selected) {
+    return (
+      <main className="page">
+        <button type="button" className="back-btn" onClick={() => setSelected(null)}>
+          <ArrowLeft size={16} /> Retour au choix du type d'assurance
+        </button>
+
+        <h1 className="page-title accent">
+          {isClaim ? 'Déclaration de sinistre' : 'Demande de devis'} - {selected.label}
+        </h1>
+        <p className="page-subtitle">
+          {isClaim
+            ? 'Remplissez le formulaire ci-dessous pour déclarer votre sinistre.'
+            : 'Remplissez le formulaire ci-dessous pour obtenir votre devis personnalisé.'}
+        </p>
+
+        <div className="form-wrap">
+          <DynamicForm
+            key={`${selected.category.slug}-${formType}`}
+            category={selected.category}
+            formType={formType}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  return <Hub formType={formType} onSelect={setSelected} />;
+}
+
+export default function PublicPage() {
+  const [params] = useSearchParams();
+  const formType: FormType = params.get('service') === 'devis' ? 'quote' : 'claim';
+
+  // La key recrée tout le parcours quand on change de service depuis l'en-tête
+  return <ServiceFlow key={formType} formType={formType} />;
 }

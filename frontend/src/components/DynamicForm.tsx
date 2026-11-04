@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { Check } from 'lucide-react';
 import { getForm, submitForm, ApiError } from '../api';
 import type { Answers, Category, FormField, FormType } from '../types';
 
@@ -11,11 +12,46 @@ interface Props {
   formType?: FormType;
 }
 
+interface Step {
+  title: string;
+  fields: FormField[];
+}
+
+// Regroupe les questions par étape (section), dans l'ordre d'apparition
+function buildSteps(fields: FormField[]): Step[] {
+  const steps: Step[] = [];
+
+  fields.forEach((field) => {
+    const title = field.section ?? '';
+    let step = steps.find((s) => s.title === title);
+
+    if (!step) {
+      step = { title, fields: [] };
+      steps.push(step);
+    }
+
+    step.fields.push(field);
+  });
+
+  return steps;
+}
+
+// Premier message d'erreur d'une question (venant de Laravel ou de la vérification locale)
+function findError(errors: Record<string, string[]>, name: string): string | null {
+  const key = Object.keys(errors).find(
+    (k) => k === `answers.${name}` || k.startsWith(`answers.${name}.`)
+  );
+  return key ? errors[key][0] : null;
+}
+
 export default function DynamicForm({ category, formType = 'claim' }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
+
   const [fields, setFields] = useState<FormField[]>([]);
   const [answers, setAnswers] = useState<Answers>({});
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState(''); // champ piège pour les robots
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -24,16 +60,9 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
 
   const isClaim = formType === 'claim';
 
-  // Chargement des questions quand la catégorie ou le type de formulaire change
+  // Chargement des questions (PublicPage recrée ce composant à chaque changement de catégorie)
   useEffect(() => {
     let cancelled = false;
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    setAnswers({});
-    setErrors({});
-    setMessage('');
-    setReference('');
 
     getForm(category.slug, formType)
       .then((data) => {
@@ -60,24 +89,87 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
     return answers[field.condition.field] === field.condition.equals;
   };
 
-  // Message d'erreur d'une question (venant de Laravel ou de la vérification locale)
-  const errorFor = (name: string): string | null => {
-    const key = Object.keys(errors).find(
-      (k) => k === `answers.${name}` || k.startsWith(`answers.${name}.`)
+  // Un multiselect obligatoire sans aucun choix
+  const isEmptyRequiredChoice = (field: FormField): boolean => {
+    const value = answers[field.name];
+    return (
+      field.is_required &&
+      field.field_type === 'multiselect' &&
+      !(Array.isArray(value) && value.length > 0)
     );
-    return key ? errors[key][0] : null;
+  };
+
+  const errorFor = (name: string): string | null => findError(errors, name);
+
+  // --- Étapes ---
+  const steps = buildSteps(fields);
+  const stepped = steps.length > 1;
+  const lastStep = steps.length - 1;
+  const currentStep = Math.min(step, Math.max(lastStep, 0));
+  const isLast = !stepped || currentStep === lastStep;
+  const shownFields = (stepped ? steps[currentStep].fields : fields).filter(isVisible);
+  const showEmail = !stepped || isLast;
+
+  const scrollToForm = () =>
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Revient à l'étape qui contient la première erreur
+  const jumpToError = (errs: Record<string, string[]>) => {
+    if (!stepped) return;
+    const index = steps.findIndex((s) => s.fields.some((f) => findError(errs, f.name)));
+    if (index >= 0) setStep(index);
+  };
+
+  const goNext = () => {
+    setErrors({});
+    setMessage('');
+
+    // Validation native des champs de l'étape affichée (seuls ceux-là sont dans la page)
+    if (formRef.current && !formRef.current.reportValidity()) return;
+
+    const missing = shownFields.filter(isEmptyRequiredChoice);
+    if (missing.length > 0) {
+      setErrors(
+        Object.fromEntries(
+          missing.map((f) => [`answers.${f.name}`, ['Sélectionnez au moins une option.']])
+        )
+      );
+      return;
+    }
+
+    setStep(currentStep + 1);
+    scrollToForm();
+  };
+
+  const goPrev = () => {
+    setErrors({});
+    setMessage('');
+    setStep(currentStep - 1);
+    scrollToForm();
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // La touche Entrée dans une étape intermédiaire équivaut à « Suivant »
+    if (!isLast) {
+      goNext();
+      return;
+    }
+
     setErrors({});
     setMessage('');
 
     const visibleFields = fields.filter(isVisible);
 
-    // Vérification des fichiers avant l'envoi
+    // Vérifications avant l'envoi : fichiers et choix obligatoires
     const localErrors: Record<string, string[]> = {};
     visibleFields.forEach((field) => {
+      if (isEmptyRequiredChoice(field)) {
+        localErrors[`answers.${field.name}`] = ['Sélectionnez au moins une option.'];
+        return;
+      }
+
       if (field.field_type !== 'file') return;
       const list = answers[field.name] as FileList | undefined;
       const files = list ? Array.from(list) : [];
@@ -92,6 +184,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
     if (Object.keys(localErrors).length > 0) {
       setErrors(localErrors);
       setMessage('Vérifiez les champs signalés.');
+      jumpToError(localErrors);
       return;
     }
 
@@ -127,6 +220,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
       if (err instanceof ApiError) {
         setErrors(err.errors);
         setMessage(err.message);
+        jumpToError(err.errors);
       } else {
         setMessage('Une erreur inattendue est survenue.');
       }
@@ -266,8 +360,38 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
     );
   }
 
+  const submitLabel = sending
+    ? 'Envoi en cours…'
+    : isClaim
+      ? 'Envoyer la déclaration'
+      : 'Envoyer la demande de devis';
+
   return (
-    <form onSubmit={handleSubmit} className="form">
+    <form ref={formRef} onSubmit={handleSubmit} className="form">
+      {stepped && (
+        <>
+          <ol className="stepper" aria-label="Progression du formulaire">
+            {steps.map((s, index) => (
+              <li
+                key={s.title}
+                className={index === currentStep ? 'active' : index < currentStep ? 'done' : ''}
+                aria-current={index === currentStep ? 'step' : undefined}
+              >
+                <span className="stepper-dot">
+                  {index < currentStep ? <Check size={16} /> : index + 1}
+                </span>
+                <span className="stepper-label">{s.title}</span>
+              </li>
+            ))}
+          </ol>
+
+          <p className="step-count">
+            Étape {currentStep + 1} sur {steps.length}
+          </p>
+          <h2 className="step-heading">{steps[currentStep].title}</h2>
+        </>
+      )}
+
       {message && <p className="error">{message}</p>}
 
       {/* Champ piège : invisible pour les humains, rempli par les robots */}
@@ -283,19 +407,21 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
         />
       </div>
 
-      <div className="field">
-        <label htmlFor="email">Adresse email *</label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        {errors.email && <span className="error">{errors.email[0]}</span>}
-      </div>
+      {showEmail && (
+        <div className="field">
+          <label htmlFor="email">Adresse email *</label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {errors.email && <span className="error">{errors.email[0]}</span>}
+        </div>
+      )}
 
-      {fields.filter(isVisible).map((field) => (
+      {shownFields.map((field) => (
         <div className="field" key={field.id}>
           <label htmlFor={field.name}>
             {field.label}
@@ -306,13 +432,31 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
         </div>
       ))}
 
-      <button type="submit" disabled={sending}>
-        {sending
-          ? 'Envoi en cours…'
-          : isClaim
-            ? 'Envoyer la déclaration'
-            : 'Envoyer la demande de devis'}
-      </button>
+      {stepped ? (
+        <div className="step-actions">
+          {currentStep > 0 ? (
+            <button type="button" className="btn btn-secondary" onClick={goPrev}>
+              Précédent
+            </button>
+          ) : (
+            <span />
+          )}
+
+          {isLast ? (
+            <button type="submit" disabled={sending}>
+              {submitLabel}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-gradient" onClick={goNext}>
+              Suivant
+            </button>
+          )}
+        </div>
+      ) : (
+        <button type="submit" disabled={sending}>
+          {submitLabel}
+        </button>
+      )}
     </form>
   );
 }

@@ -15,11 +15,6 @@ import type {
 const API_URL = import.meta.env.VITE_API_URL as string;
 const TIMEOUT_MS = 60000;
 
-type ErrorPayload = {
-  message?: string;
-  errors?: Record<string, string[]>;
-};
-
 export class ApiError extends Error {
   status: number;
   errors: Record<string, string[]>;
@@ -54,6 +49,7 @@ function redirectToLogin(): void {
   window.location.assign('/admin/login');
 }
 
+// Envoie la requête, gère le jeton, le délai d'attente et les erreurs réseau
 async function rawFetch(path: string, init: RequestInit = {}, auth = false): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -68,56 +64,53 @@ async function rawFetch(path: string, init: RequestInit = {}, auth = false): Pro
   }
 
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let response: Response;
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+  let res: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
+    res = await fetch(`${API_URL}${path}`, { ...init, headers, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
       throw new ApiError('Le serveur met trop de temps à répondre. Réessayez dans un instant.');
     }
     throw new ApiError('Impossible de joindre le serveur. Vérifiez votre connexion internet.');
   } finally {
-    window.clearTimeout(timer);
+    clearTimeout(timer);
   }
 
-  if (auth && response.status === 401) {
+  // Jeton refusé ou expiré : retour à la page de connexion
+  if (auth && res.status === 401) {
     redirectToLogin();
     throw new ApiError('Session expirée. Veuillez vous reconnecter.', 401);
   }
 
-  return response;
+  return res;
 }
 
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
-  const response = await rawFetch(path, init, auth);
-  const data: unknown = await response.json().catch(() => null);
+  const res = await rawFetch(path, init, auth);
+  const data = await res.json().catch(() => null);
 
-  if (!response.ok) {
-    const payload =
-      typeof data === 'object' && data !== null ? (data as ErrorPayload) : undefined;
-    throw new ApiError(
-      messageFor(response.status, payload?.message),
-      response.status,
-      payload?.errors ?? {}
-    );
+  if (!res.ok) {
+    throw new ApiError(messageFor(res.status, data?.message), res.status, data?.errors ?? {});
   }
 
   return data as T;
 }
 
-export const getCategories = () => request<Category[]>('/categories');
+// --- Public ---
+
+// Avec un type, seules les catégories qui ont un formulaire de ce type sont renvoyées
+export const getCategories = (type?: FormType) =>
+  request<Category[]>(type ? `/categories?type=${type}` : '/categories');
 
 export const getForm = (slug: string, type: FormType = 'claim') =>
   request<FormDefinition>(`/categories/${encodeURIComponent(slug)}/form?type=${type}`);
 
 export const submitForm = (formData: FormData) =>
   request<SubmissionResult>('/submissions', { method: 'POST', body: formData });
+
+// --- Administration ---
 
 export const adminLogin = (email: string, password: string) =>
   request<LoginResult>('/admin/login', {
@@ -130,23 +123,23 @@ export const adminLogout = () =>
   request<{ message: string }>('/admin/logout', { method: 'POST' }, true);
 
 export const getSubmissions = (filters: SubmissionFilters) => {
-  const query = new URLSearchParams();
-  if (filters.status) query.set('status', filters.status);
-  if (filters.form_type) query.set('form_type', filters.form_type);
-  if (filters.category) query.set('category', filters.category);
-  if (filters.q) query.set('q', filters.q);
-  if (filters.page && filters.page > 1) query.set('page', String(filters.page));
+  const qs = new URLSearchParams();
+  if (filters.status) qs.set('status', filters.status);
+  if (filters.form_type) qs.set('form_type', filters.form_type);
+  if (filters.category) qs.set('category', filters.category);
+  if (filters.q) qs.set('q', filters.q);
+  if (filters.page && filters.page > 1) qs.set('page', String(filters.page));
 
-  const queryString = query.toString();
+  const query = qs.toString();
   return request<Paginated<SubmissionSummary>>(
-    `/admin/submissions${queryString ? `?${queryString}` : ''}`,
+    `/admin/submissions${query ? `?${query}` : ''}`,
     {},
     true
   );
 };
 
 export const getSubmission = (id: string | number) =>
-  request<SubmissionDetail>(`/admin/submissions/${encodeURIComponent(id)}`, {}, true);
+  request<SubmissionDetail>(`/admin/submissions/${id}`, {}, true);
 
 export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
   request<{ id: number; status: SubmissionStatus }>(
@@ -159,17 +152,18 @@ export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
     true
   );
 
+// Télécharge une pièce jointe en envoyant le jeton, puis propose le fichier au navigateur
 export async function downloadAttachment(id: number, filename: string): Promise<void> {
-  const response = await rawFetch(`/admin/attachments/${id}/download`, {}, true);
+  const res = await rawFetch(`/admin/attachments/${id}/download`, {}, true);
 
-  if (!response.ok) {
+  if (!res.ok) {
     throw new ApiError(
-      response.status === 404 ? 'Fichier introuvable.' : messageFor(response.status),
-      response.status
+      res.status === 404 ? 'Fichier introuvable.' : messageFor(res.status),
+      res.status
     );
   }
 
-  const blob = await response.blob();
+  const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -177,5 +171,5 @@ export async function downloadAttachment(id: number, filename: string): Promise<
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  URL.revokeObjectURL(url);
 }

@@ -1,0 +1,207 @@
+/* ---------- Page d'accueil d'un service (cartes) ---------- */
+
+.site .page.hub {
+  max-width: 896px;
+  padding: 48px 24px 64px;
+}
+
+.hub-title {
+  margin: 0 0 16px;
+  color: #111827;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.hub-subtitle {
+  max-width: 640px;
+  margin: 0 auto 40px;
+  color: #4b5563;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 640px) {
+  .hub-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .hub-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.hub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 24px;
+  border: 1px solid var(--tone-border);
+  border-radius: 12px;
+  background: var(--tone-bg);
+  box-shadow: 0 1px 3px rgba(15, 31, 56, 0.06);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.hub-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 31, 56, 0.12);
+}
+
+.hub-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--tone-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.hub-name {
+  color: #111827;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.hub-desc {
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+/* Bloc « Vous ne trouvez pas ce que vous cherchez ? » */
+.hub-contact {
+  margin-top: 48px;
+  padding: 24px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 31, 56, 0.1);
+}
+
+.hub-contact h2 {
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.hub-contact p {
+  margin: 0 0 16px;
+  color: #4b5563;
+}
+
+.hub-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* ---------- Formulaire en étapes ---------- */
+
+.form {
+  scroll-margin-top: 100px;
+}
+
+.stepper {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.stepper li {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.stepper-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stepper li.active .stepper-dot,
+.stepper li.done .stepper-dot {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.stepper li.active .stepper-label {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.step-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.step-heading {
+  margin: 2px 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.2rem;
+}
+
+.step-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.site .form .step-actions button[type='submit'] {
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 24px;
+  margin-left: auto;
+}
+
+.step-actions .btn-gradient {
+  margin-left: auto;
+}
