@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Briefcase, Car, FileText, HeartPulse, House, Plane, Shield } from 'lucide-react';
-import { MAIN_QUOTE_URLS } from './siteConfig';
 
 export interface Product {
   key: string;
@@ -8,8 +7,8 @@ export interface Product {
   description: string;
   icon: ReactNode;
   tone: string;
-  slug: string | null;
-  mainQuoteUrl?: string;
+  // Slug de la catégorie côté backend (l'identifiant « personne » correspond au produit « Santé »)
+  slug: string;
 }
 
 export const PRODUCTS: Product[] = [
@@ -20,7 +19,6 @@ export const PRODUCTS: Product[] = [
     icon: <Car size={32} />,
     tone: 'blue',
     slug: 'auto',
-    mainQuoteUrl: MAIN_QUOTE_URLS.auto,
   },
   {
     key: 'voyage',
@@ -28,8 +26,7 @@ export const PRODUCTS: Product[] = [
     description: 'Assurance voyage et assistance partout dans le monde',
     icon: <Plane size={32} />,
     tone: 'cyan',
-    slug: null,
-    mainQuoteUrl: MAIN_QUOTE_URLS.voyage,
+    slug: 'voyage',
   },
   {
     key: 'habitation',
@@ -53,8 +50,7 @@ export const PRODUCTS: Product[] = [
     description: 'Protection de votre activité professionnelle',
     icon: <Briefcase size={32} />,
     tone: 'purple',
-    slug: null,
-    mainQuoteUrl: MAIN_QUOTE_URLS.professionnelle,
+    slug: 'professionnelle',
   },
   {
     key: 'responsabilite-civile',

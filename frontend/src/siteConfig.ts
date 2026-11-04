@@ -34,13 +34,6 @@ export const NAV_LINKS = [
   { label: 'Contact', href: `${MAIN_URL}/contact` },
 ];
 
-//devis
-export const MAIN_QUOTE_URLS: Record<string, string> = {
-  auto: `${MAIN_URL}/devis`,
-  voyage: `${MAIN_URL}/devis`,
-  professionnelle: `${MAIN_URL}/devis`,
-};
-
 // Bouton « Nous contacter » de la page de devis
 export const CONTACT_URL = `${MAIN_URL}/contact`;
 

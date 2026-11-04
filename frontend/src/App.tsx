@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import SiteLayout from './components/SiteLayout';
 import PublicPage from './pages/PublicPage';
+import QuotePage from './pages/QuotePage';
 import AdminLayout from './admin/AdminLayout';
 import LoginPage from './admin/LoginPage';
 import SubmissionsPage from './admin/SubmissionsPage';
@@ -11,6 +12,7 @@ export default function App() {
     <Routes>
       <Route element={<SiteLayout />}>
         <Route path="/" element={<PublicPage />} />
+        <Route path="/devis/:slug" element={<QuotePage />} />
       </Route>
 
       <Route path="/admin/login" element={<LoginPage />} />
