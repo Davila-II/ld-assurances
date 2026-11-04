@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Briefcase, Car, FileText, HeartPulse, House, Plane, Shield } from 'lucide-react';
+import { DEVIS_URLS } from './siteConfig';
 
 export interface Product {
   key: string;
@@ -7,8 +8,10 @@ export interface Product {
   description: string;
   icon: ReactNode;
   tone: string;
-  // Slug de la catégorie côté backend (l'identifiant « personne » correspond au produit « Santé »)
-  slug: string;
+  // Slug de la catégorie côté backend pour les devis gérés ici.
+  // null quand le devis est déjà géré sur le site principal (lien sortant).
+  slug: string | null;
+  mainQuoteUrl?: string;
 }
 
 export const PRODUCTS: Product[] = [
@@ -19,6 +22,7 @@ export const PRODUCTS: Product[] = [
     icon: <Car size={32} />,
     tone: 'blue',
     slug: 'auto',
+    mainQuoteUrl: DEVIS_URLS.auto,
   },
   {
     key: 'voyage',
@@ -26,7 +30,8 @@ export const PRODUCTS: Product[] = [
     description: 'Assurance voyage et assistance partout dans le monde',
     icon: <Plane size={32} />,
     tone: 'cyan',
-    slug: 'voyage',
+    slug: null,
+    mainQuoteUrl: DEVIS_URLS.voyage,
   },
   {
     key: 'habitation',
@@ -41,7 +46,7 @@ export const PRODUCTS: Product[] = [
     label: 'Santé',
     description: 'Complémentaire santé et prévoyance',
     icon: <HeartPulse size={32} />,
-    tone: 'pink',
+    tone: 'red',
     slug: 'personne',
   },
   {
@@ -50,7 +55,8 @@ export const PRODUCTS: Product[] = [
     description: 'Protection de votre activité professionnelle',
     icon: <Briefcase size={32} />,
     tone: 'purple',
-    slug: 'professionnelle',
+    slug: null,
+    mainQuoteUrl: DEVIS_URLS.professionnelle,
   },
   {
     key: 'responsabilite-civile',

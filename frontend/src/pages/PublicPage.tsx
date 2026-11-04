@@ -20,7 +20,9 @@ function genericProduct(category: Category): Product {
   };
 }
 
-// Vue « devis » : une carte par type d'assurance, chacune menant à sa propre page
+// Vue « devis » : une carte par type d'assurance.
+// Les devis déjà gérés sur le site principal (auto, voyage, professionnelle)
+// sont des liens sortants ; les autres ouvrent leur propre page locale.
 function QuoteHub() {
   return (
     <main className="page hub">
@@ -28,17 +30,33 @@ function QuoteHub() {
       <p className="hub-subtitle">Sélectionnez le type d'assurance qui vous intéresse</p>
 
       <div className="hub-grid">
-        {PRODUCTS.map((product) => (
-          <Link
-            key={product.key}
-            to={`/devis/${product.key}`}
-            className={`hub-card tone-${product.tone}`}
-          >
-            <span className="hub-icon">{product.icon}</span>
-            <span className="hub-name">{product.label}</span>
-            <span className="hub-desc">{product.description}</span>
-          </Link>
-        ))}
+        {PRODUCTS.map((product) => {
+          const inner = (
+            <>
+              <span className="hub-icon">{product.icon}</span>
+              <span className="hub-name">{product.label}</span>
+              <span className="hub-desc">{product.description}</span>
+            </>
+          );
+
+          return product.mainQuoteUrl ? (
+            <a
+              key={product.key}
+              href={product.mainQuoteUrl}
+              className={`hub-card tone-${product.tone}`}
+            >
+              {inner}
+            </a>
+          ) : (
+            <Link
+              key={product.key}
+              to={`/devis/${product.key}`}
+              className={`hub-card tone-${product.tone}`}
+            >
+              {inner}
+            </Link>
+          );
+        })}
       </div>
 
       <section className="hub-contact">
@@ -86,11 +104,11 @@ function ClaimFlow() {
   }
 
   const bySlug = new Map(categories.map((c) => [c.slug, c]));
-  const knownSlugs = new Set(PRODUCTS.map((p) => p.slug));
+  const knownSlugs = new Set(PRODUCTS.map((p) => p.slug).filter((s): s is string => s !== null));
 
   const items: { product: Product; category: Category }[] = [];
   PRODUCTS.forEach((product) => {
-    const category = bySlug.get(product.slug);
+    const category = product.slug ? bySlug.get(product.slug) : undefined;
     if (category) items.push({ product, category });
   });
 

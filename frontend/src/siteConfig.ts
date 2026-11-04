@@ -34,6 +34,51 @@ export const NAV_LINKS = [
   { label: 'Contact', href: `${MAIN_URL}/contact` },
 ];
 
+// Liens vers les devis dont le formulaire existe déjà sur le site principal
+// (auto, voyage, professionnelle) : on y renvoie plutôt que de les refaire ici.
+export const DEVIS_URLS: Record<string, string> = {
+  auto: `${MAIN_URL}/devis/auto`,
+  voyage: `${MAIN_URL}/devis/voyage`,
+  professionnelle: `${MAIN_URL}/devis/professionnelle`,
+};
+
+// La déclaration de sinistre est gérée sur le site principal
+export const DECLARATION_SINISTRE_URL = `${MAIN_URL}/declaration-sinistre`;
+
+// Pied de page : colonne « Nos Produits »
+export const FOOTER_PRODUCT_LINKS = [
+  { label: 'Assurance Automobile', href: `${MAIN_URL}/services/assurance-auto` },
+  { label: 'Assurance Habitation', href: `${MAIN_URL}/services/assurance-habitation` },
+  { label: 'Assurance Entreprise', href: `${MAIN_URL}/services/assurance-entreprise` },
+  { label: 'Assurance Santé', href: `${MAIN_URL}/services/assurance-sante` },
+  { label: 'Assurance Transport', href: `${MAIN_URL}/services/assurance-transport` },
+  { label: 'Assurance Agricole', href: `${MAIN_URL}/services/assurance-agricole` },
+];
+
+// Pied de page : colonne « Liens Utiles »
+export const FOOTER_LINKS = [
+  { label: 'À Propos', href: `${MAIN_URL}/#apropos` },
+  { label: 'Nos Services', href: `${MAIN_URL}/services` },
+  { label: 'Devis Auto', href: `${MAIN_URL}/devis/auto` },
+  { label: 'Devis Voyage', href: `${MAIN_URL}/devis/voyage` },
+  { label: 'Devis en Ligne', href: `${MAIN_URL}/devis` },
+  { label: 'Espace Client', href: `${MAIN_URL}/espace-client` },
+  { label: 'Déclaration Sinistre', href: `${MAIN_URL}/declaration-sinistre` },
+  { label: 'FAQ', href: `${MAIN_URL}/faq` },
+  { label: 'Actualités', href: `${MAIN_URL}/actualites` },
+  { label: 'Carrières', href: `${MAIN_URL}/carrieres` },
+  { label: 'Avis Clients', href: `${MAIN_URL}/avis` },
+  { label: 'Conformité', href: `${MAIN_URL}/conformite` },
+];
+
+// Pied de page : liens légaux
+export const FOOTER_LEGAL_LINKS = [
+  { label: 'Mentions Légales', href: `${MAIN_URL}/mentions-legales` },
+  { label: 'Politique de Confidentialité', href: `${MAIN_URL}/politique-confidentialite` },
+  { label: 'Politique de Cookies', href: `${MAIN_URL}/politique-cookies` },
+  { label: 'Conditions Générales', href: `${MAIN_URL}/conditions-generales` },
+];
+
 // Bouton « Nous contacter » de la page de devis
 export const CONTACT_URL = `${MAIN_URL}/contact`;
 

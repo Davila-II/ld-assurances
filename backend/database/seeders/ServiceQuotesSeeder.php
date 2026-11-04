@@ -52,12 +52,10 @@ class ServiceQuotesSeeder extends Seeder
     private function ensureCategories(): void
     {
         $categories = [
-            ['slug' => 'voyage', 'name' => 'Voyage', 'sort_order' => 2],
-            ['slug' => 'habitation', 'name' => 'Habitation', 'sort_order' => 3],
-            ['slug' => 'personne', 'name' => 'Santé', 'sort_order' => 4],
-            ['slug' => 'professionnelle', 'name' => 'Professionnelle', 'sort_order' => 5],
-            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'sort_order' => 6],
-            ['slug' => 'autres', 'name' => 'Autres assurances', 'sort_order' => 7],
+            ['slug' => 'habitation', 'name' => 'Habitation', 'sort_order' => 2],
+            ['slug' => 'personne', 'name' => 'Santé', 'sort_order' => 3],
+            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'sort_order' => 4],
+            ['slug' => 'autres', 'name' => 'Autres assurances', 'sort_order' => 5],
         ];
 
         foreach ($categories as $category) {
@@ -74,46 +72,6 @@ class ServiceQuotesSeeder extends Seeder
         $yesNo = ['Oui', 'Non'];
 
         return [
-            'auto' => [
-                'Véhicule' => [
-                    $this->f('vehicle_type', 'Type de véhicule', 'select', true, ['Voiture particulière', 'Moto', 'Camion ou utilitaire', 'Transport de personnes', 'Autre']),
-                    $this->f('vehicle_brand', 'Marque et modèle', 'text', true),
-                    $this->f('vehicle_year', 'Année de première mise en circulation', 'number', true),
-                    $this->f('vehicle_usage', 'Usage du véhicule', 'select', true, ['Personnel', 'Professionnel', 'Transport de marchandises', 'Taxi ou transport de personnes']),
-                    $this->f('vehicle_value', 'Valeur estimée du véhicule (FCFA)', 'number'),
-                ],
-                'Garanties' => [
-                    $this->f('coverage', 'Formule souhaitée', 'select', true, ['Responsabilité civile (garantie obligatoire)', 'Responsabilité civile + vol et incendie', 'Tous risques']),
-                    $this->f('start_date', 'Date de début souhaitée', 'date', true),
-                    $this->f('previous_insurance', 'Le véhicule est-il déjà assuré ?', 'select', false, $yesNo),
-                    $this->f('previous_insurer', 'Assureur actuel', 'text', false, null, $this->when('previous_insurance', 'Oui')),
-                    $this->f('claims_3y', 'Avez-vous eu des sinistres au cours des 3 dernières années ?', 'select', false, $yesNo),
-                    $this->f('registration_doc', 'Carte grise (photo ou PDF)', 'file'),
-                ],
-                'Coordonnées' => $this->contactFields(),
-            ],
-
-            'voyage' => [
-                'Voyage' => [
-                    $this->f('destination', 'Destination', 'text', true),
-                    $this->f('departure_date', 'Date de départ', 'date', true),
-                    $this->f('return_date', 'Date de retour', 'date', true),
-                    $this->f('travel_reason', 'Motif du voyage', 'select', true, ['Tourisme', 'Affaires', 'Études', 'Visite familiale', 'Autre']),
-                    $this->f('travelers_count', 'Nombre de voyageurs', 'number', true),
-                ],
-                'Voyageurs' => [
-                    $this->f('traveler_ages', 'Âges des voyageurs (séparés par des virgules)', 'text', true),
-                    $this->f('departure_country', 'Pays de départ', 'text', true),
-                    $this->f('existing_cover', 'Avez-vous déjà une assistance voyage ?', 'select', false, $yesNo),
-                    $this->f('current_insurer', 'Assureur actuel', 'text', false, null, $this->when('existing_cover', 'Oui')),
-                ],
-                'Garanties' => [
-                    $this->f('cover_types', 'Garanties souhaitées', 'multiselect', true, ['Frais médicaux à l\'étranger', 'Rapatriement sanitaire', 'Annulation et interruption de séjour', 'Bagages et effets personnels', 'Responsabilité civile à l\'étranger']),
-                    $this->f('start_date', 'Date de début souhaitée', 'date', true),
-                ],
-                'Coordonnées' => $this->contactFields(),
-            ],
-
             'habitation' => [
                 'Logement' => [
                     $this->f('property_type', 'Type de bien', 'select', true, ['Appartement', 'Maison', 'Villa', 'Studio ou chambre', 'Autre']),
@@ -153,24 +111,6 @@ class ServiceQuotesSeeder extends Seeder
                     $this->f('cover_zone', 'Zone de couverture souhaitée', 'select', false, ['Cameroun', 'Cameroun et Afrique centrale', 'International']),
                     $this->f('budget', 'Budget mensuel envisagé (FCFA)', 'number'),
                     $this->f('start_date', 'Date de début souhaitée', 'date', true),
-                ],
-                'Coordonnées' => $this->contactFields(),
-            ],
-
-            'professionnelle' => [
-                'Activité' => [
-                    $this->f('sector', "Secteur d'activité", 'text', true),
-                    $this->f('legal_form', 'Forme juridique', 'select', true, ['Entreprise individuelle', 'SARL', 'SA', 'Association ou ONG', 'Autre']),
-                    $this->f('employees', "Nombre d'employés", 'number'),
-                    $this->f('turnover', 'Chiffre d\'affaires annuel estimé (FCFA)', 'number'),
-                    $this->f('premises_address', "Adresse de l'établissement (quartier, ville)", 'text', true),
-                ],
-                'Garanties' => [
-                    $this->f('cover_types', 'Garanties souhaitées', 'multiselect', true, ['Responsabilité civile professionnelle', 'Multirisque professionnelle (locaux et matériel)', 'Protection juridique', 'Perte d\'exploitation', 'Bris de machine']),
-                    $this->f('start_date', 'Date de début souhaitée', 'date', true),
-                    $this->f('previous_insurance', 'Votre activité est-elle déjà assurée ?', 'select', false, $yesNo),
-                    $this->f('previous_insurer', 'Assureur actuel', 'text', false, null, $this->when('previous_insurance', 'Oui')),
-                    $this->f('claims_3y', 'Avez-vous eu des sinistres au cours des 3 dernières années ?', 'select', false, $yesNo),
                 ],
                 'Coordonnées' => $this->contactFields(),
             ],

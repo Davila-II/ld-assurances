@@ -13,8 +13,15 @@ export default function QuotePage() {
   const [category, setCategory] = useState<Category | null>(null);
   const [error, setError] = useState('');
 
+  // Devis géré sur le site principal : on redirige vers son formulaire
   useEffect(() => {
-    if (!product) return;
+    if (product?.mainQuoteUrl) {
+      window.location.replace(product.mainQuoteUrl);
+    }
+  }, [product]);
+
+  useEffect(() => {
+    if (!product || product.mainQuoteUrl) return;
 
     let cancelled = false;
     getCategories('quote')
@@ -37,6 +44,14 @@ export default function QuotePage() {
     return (
       <main className="page">
         <p className="alert">Ce devis n'existe pas.</p>
+      </main>
+    );
+  }
+
+  if (product.mainQuoteUrl) {
+    return (
+      <main className="page">
+        <p className="center">Redirection vers le site principal…</p>
       </main>
     );
   }
