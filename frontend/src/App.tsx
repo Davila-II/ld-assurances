@@ -6,6 +6,15 @@ import AdminLayout from './admin/AdminLayout';
 import LoginPage from './admin/LoginPage';
 import SubmissionsPage from './admin/SubmissionsPage';
 import SubmissionDetailPage from './admin/SubmissionDetailPage';
+import ClientLayout from './client/ClientLayout';
+import ClientLoginPage from './client/LoginPage';
+import ClientRegisterPage from './client/RegisterPage';
+import ClientDashboardPage from './client/DashboardPage';
+import ClientRequestsPage from './client/RequestsPage';
+import ClientClaimsPage from './client/ClaimsPage';
+import ClientContractsPage from './client/ContractsPage';
+import ClientDocumentsPage from './client/DocumentsPage';
+import ClientProfilePage from './client/ProfilePage';
 
 export default function App() {
   return (
@@ -13,6 +22,18 @@ export default function App() {
       <Route element={<SiteLayout />}>
         <Route path="/" element={<PublicPage />} />
         <Route path="/devis/:slug" element={<QuotePage />} />
+
+        <Route path="/espace-client/connexion" element={<ClientLoginPage />} />
+        <Route path="/espace-client/inscription" element={<ClientRegisterPage />} />
+
+        <Route path="/espace-client" element={<ClientLayout />}>
+          <Route index element={<ClientDashboardPage />} />
+          <Route path="demandes" element={<ClientRequestsPage />} />
+          <Route path="sinistres" element={<ClientClaimsPage />} />
+          <Route path="contrats" element={<ClientContractsPage />} />
+          <Route path="documents" element={<ClientDocumentsPage />} />
+          <Route path="profil" element={<ClientProfilePage />} />
+        </Route>
       </Route>
 
       <Route path="/admin/login" element={<LoginPage />} />

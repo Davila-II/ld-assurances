@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { Mail, MapPin, Menu, Phone, PhoneCall, X } from 'lucide-react';
+import { LogIn, Mail, MapPin, Menu, Phone, PhoneCall, X } from 'lucide-react';
 import {
   FOOTER_LEGAL_LINKS,
   FOOTER_LINKS,
@@ -98,16 +98,21 @@ export default function SiteLayout() {
         <div className="site-header-inner">
           <Brand />
 
-          <button
-            type="button"
-            className="menu-toggle"
-            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
-            aria-expanded={open}
-            aria-controls="site-nav"
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          <div className="header-actions">
+            <Link className="btn btn-secondary btn-sm" to="/espace-client/connexion">
+              <LogIn size={16} /> Connexion
+            </Link>
+            <button
+              type="button"
+              className="menu-toggle"
+              aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={open}
+              aria-controls="site-nav"
+              onClick={() => setOpen((value) => !value)}
+            >
+              {open ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
 
           <nav id="site-nav" className={open ? 'site-nav open' : 'site-nav'}>
             {NAV_LINKS.map((link) => (
@@ -115,6 +120,9 @@ export default function SiteLayout() {
                 {link.label}
               </a>
             ))}
+            <Link to="/espace-client/connexion" onClick={close}>
+              Connexion
+            </Link>
             <Link className="btn btn-gradient btn-sm" to="/?service=devis" onClick={close}>
               Devis en Ligne
             </Link>
