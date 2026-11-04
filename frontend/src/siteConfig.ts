@@ -42,9 +42,6 @@ export const DEVIS_URLS: Record<string, string> = {
   professionnelle: `${MAIN_URL}/devis/professionnelle`,
 };
 
-// La déclaration de sinistre est gérée sur le site principal
-export const DECLARATION_SINISTRE_URL = `${MAIN_URL}/declaration-sinistre`;
-
 // Pied de page : colonne « Nos Produits »
 export const FOOTER_PRODUCT_LINKS = [
   { label: 'Assurance Automobile', href: `${MAIN_URL}/services/assurance-auto` },

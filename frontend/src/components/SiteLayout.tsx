@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { Mail, MapPin, Menu, Phone, PhoneCall, X } from 'lucide-react';
 import {
-  DECLARATION_SINISTRE_URL,
   FOOTER_LEGAL_LINKS,
   FOOTER_LINKS,
   FOOTER_PRODUCT_LINKS,
@@ -119,13 +118,9 @@ export default function SiteLayout() {
             <Link className="btn btn-gradient btn-sm" to="/?service=devis" onClick={close}>
               Devis en Ligne
             </Link>
-            <a
-              className="btn btn-danger btn-sm"
-              href={DECLARATION_SINISTRE_URL}
-              onClick={close}
-            >
+            <Link className="btn btn-danger btn-sm" to="/?service=sinistre" onClick={close}>
               Déclaration Sinistre
-            </a>
+            </Link>
           </nav>
         </div>
       </header>
