@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class FormField extends Model
 {
     protected $fillable = [
-        'category_id', 'form_type', 'label', 'name', 'field_type',
+        'category_id', 'form_type', 'label', 'section', 'name', 'field_type',
         'is_required', 'options', 'condition', 'sort_order', 'is_active',
     ];
 
