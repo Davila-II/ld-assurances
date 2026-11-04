@@ -8,7 +8,7 @@
     <p>Concernant votre dossier <strong>{{ $submission->reference }}</strong> :</p>
 
     <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; white-space: pre-wrap;">
-        {{ $message }}
+        {{ $body }}
     </div>
 
     <p>Cordialement,<br>LD Assurances</p>

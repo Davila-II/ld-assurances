@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { downloadAttachment, getSubmission, updateSubmissionStatus } from '../api';
+import { downloadAttachment, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
 import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
 import StatusBadge from './StatusBadge';
 import {
@@ -25,6 +25,12 @@ export default function SubmissionDetailPage() {
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [notes, setNotes] = useState('');
+  const [replyMessage, setReplyMessage] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [sendingReply, setSendingReply] = useState(false);
+  const [notesNotice, setNotesNotice] = useState('');
+  const [replyNotice, setReplyNotice] = useState('');
   const invalidId = !id || !/^\d+$/.test(id);
   const submission =
     !invalidId && loadedSubmission?.id === id ? loadedSubmission.data : null;
@@ -51,6 +57,7 @@ export default function SubmissionDetailPage() {
         if (cancelled) return;
         setLoadedSubmission({ id, data });
         setNewStatus(data.status);
+        setNotes(data.notes ?? '');
       })
       .catch((err: unknown) => {
         if (!cancelled) setRequestError({ id, message: errorMessage(err) });
@@ -78,6 +85,40 @@ export default function SubmissionDetailPage() {
     }
   };
 
+  const saveNotes = async () => {
+    if (!submission || !id) return;
+    setSavingNotes(true);
+    setNotesNotice('');
+    setActionError(null);
+
+    try {
+      const result = await updateSubmissionNotes(submission.id, notes);
+      setLoadedSubmission({ id, data: { ...submission, notes: result.notes } });
+      setNotesNotice('Observations enregistrées.');
+    } catch (err) {
+      setActionError({ id, message: errorMessage(err) });
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!submission || !id || !replyMessage.trim()) return;
+    setSendingReply(true);
+    setReplyNotice('');
+    setActionError(null);
+
+    try {
+      await replyToSubmission(submission.id, replyMessage.trim());
+      setReplyMessage('');
+      setReplyNotice('Réponse envoyée au client.');
+    } catch (err) {
+      setActionError({ id, message: errorMessage(err) });
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
   const handleDownload = async (attachment: AttachmentInfo) => {
     if (!submission || !id) return;
     setDownloadingId(attachment.id);
@@ -94,7 +135,7 @@ export default function SubmissionDetailPage() {
 
   return (
     <>
-      <Link to="/admin" className="back-link">
+      <Link to="/admin/submissions" className="back-link">
         ← Retour à la liste
       </Link>
 
@@ -111,8 +152,12 @@ export default function SubmissionDetailPage() {
           <section className="card">
             <dl className="answers">
               <div className="answer">
-                <dt>Type</dt>
+                <dt>Nature</dt>
                 <dd>{FORM_TYPE_LABELS[submission.form_type]}</dd>
+              </div>
+              <div className="answer">
+                <dt>Type</dt>
+                <dd>{submission.type ?? '—'}</dd>
               </div>
               <div className="answer">
                 <dt>Catégorie</dt>
@@ -166,6 +211,46 @@ export default function SubmissionDetailPage() {
                 </div>
               ))}
             </dl>
+          </section>
+
+          <section className="card">
+            <h2>Observations internes</h2>
+            <div className="field">
+              <label htmlFor="notes">Notes (non visibles par le client)</label>
+              <textarea
+                id="notes"
+                rows={4}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </div>
+            <button type="button" className="btn" disabled={savingNotes} onClick={saveNotes}>
+              {savingNotes ? 'Enregistrement…' : 'Enregistrer les observations'}
+            </button>
+            {notesNotice && <p className="notice" role="status">{notesNotice}</p>}
+          </section>
+
+          <section className="card">
+            <h2>Répondre au client</h2>
+            <div className="field">
+              <label htmlFor="reply">Message</label>
+              <textarea
+                id="reply"
+                rows={4}
+                value={replyMessage}
+                onChange={(event) => setReplyMessage(event.target.value)}
+                placeholder="Votre message sera envoyé par email au client."
+              />
+            </div>
+            <button
+              type="button"
+              className="btn"
+              disabled={sendingReply || !replyMessage.trim()}
+              onClick={sendReply}
+            >
+              {sendingReply ? 'Envoi…' : 'Envoyer la réponse'}
+            </button>
+            {replyNotice && <p className="notice" role="status">{replyNotice}</p>}
           </section>
 
           <section className="card">

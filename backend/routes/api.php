@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\FormBuilderController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TrackingController;
@@ -40,6 +41,16 @@ Route::middleware(['auth:sanctum', EnsureUserIsAdmin::class])
         Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
 
         Route::get('/stats', [AdminSubmissionController::class, 'stats']);
+
+        // Constructeur de formulaires dynamiques
+        Route::get('/form-builder/categories', [FormBuilderController::class, 'categories']);
+        Route::post('/form-builder/categories', [FormBuilderController::class, 'storeCategory']);
+        Route::patch('/form-builder/categories/{category}', [FormBuilderController::class, 'updateCategory']);
+        Route::get('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'fields']);
+        Route::post('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'storeField']);
+        Route::post('/form-builder/categories/{category}/fields/reorder', [FormBuilderController::class, 'reorder']);
+        Route::patch('/form-builder/fields/{field}', [FormBuilderController::class, 'updateField']);
+        Route::delete('/form-builder/fields/{field}', [FormBuilderController::class, 'destroyField']);
 
         Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
     });

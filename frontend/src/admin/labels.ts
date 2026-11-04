@@ -26,6 +26,19 @@ export const SINISTRE_TYPES = [
   'Autre',
 ];
 
+export const FIELD_TYPES = ['text', 'textarea', 'number', 'date', 'select', 'multiselect', 'checkbox', 'file'];
+
+export const FIELD_TYPE_LABELS: Record<string, string> = {
+  text: 'Texte',
+  textarea: 'Zone de texte',
+  number: 'Nombre',
+  date: 'Date',
+  select: 'Liste déroulante',
+  multiselect: 'Choix multiple',
+  checkbox: 'Case à cocher',
+  file: 'Fichier',
+};
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', {
     dateStyle: 'medium',

@@ -8,6 +8,7 @@ import LoginPage from './admin/LoginPage';
 import DashboardPage from './admin/DashboardPage';
 import SubmissionsPage from './admin/SubmissionsPage';
 import SubmissionDetailPage from './admin/SubmissionDetailPage';
+import FormBuilderPage from './admin/FormBuilderPage';
 import ClientLayout from './client/ClientLayout';
 import ClientLoginPage from './client/LoginPage';
 import ClientRegisterPage from './client/RegisterPage';
@@ -45,6 +46,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="formulaires" element={<FormBuilderPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

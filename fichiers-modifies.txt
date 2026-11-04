@@ -1,0 +1,116 @@
+BILAN DU PROJET LD ASSURANCES SA
+================================
+Date : 2026-11-04
+Fichiers créés ou modifiés au cours du travail + état d'avancement.
+
+
+1. FICHIERS CRÉÉS OU TOUCHÉS
+----------------------------
+
+FRONTEND — pages et composants
+- frontend/index.html                              (modifié : police Montserrat)
+- frontend/src/App.tsx                             (modifié : routes)
+- frontend/src/pages/PublicPage.tsx                (réécrit)
+- frontend/src/pages/QuotePage.tsx                 (créé)
+- frontend/src/pages/TrackPage.tsx                 (créé)
+- frontend/src/products.tsx                        (réécrit)
+- frontend/src/siteConfig.ts                       (modifié)
+- frontend/src/components/SiteLayout.tsx           (réécrit)
+- frontend/src/components/DynamicForm.tsx          (modifié)
+- frontend/src/types.ts                            (modifié)
+- frontend/src/api.ts                              (modifié)
+- frontend/src/site.css                            (modifié)
+- frontend/src/index.css                           (modifié)
+- frontend/src/quote.css                           (créé, renommé depuis .css)
+- frontend/src/.css                                (renommé → quote.css)
+
+FRONTEND — espace client
+- frontend/src/client/EmptyState.tsx               (créé)
+- frontend/src/client/ClientLayout.tsx             (créé)
+- frontend/src/client/LoginPage.tsx                (créé)
+- frontend/src/client/RegisterPage.tsx             (créé)
+- frontend/src/client/DashboardPage.tsx            (créé)
+- frontend/src/client/RequestsPage.tsx             (créé)
+- frontend/src/client/ClaimsPage.tsx               (créé)
+- frontend/src/client/ContractsPage.tsx            (créé)
+- frontend/src/client/DocumentsPage.tsx            (créé)
+- frontend/src/client/ProfilePage.tsx              (créé)
+
+FRONTEND — administration
+- frontend/src/admin/AdminLayout.tsx               (modifié)
+- frontend/src/admin/DashboardPage.tsx             (créé)
+- frontend/src/admin/SubmissionsPage.tsx           (modifié)
+- frontend/src/admin/SubmissionDetailPage.tsx      (modifié)
+- frontend/src/admin/FormBuilderPage.tsx           (créé)
+- frontend/src/admin/labels.ts                     (modifié)
+
+BACKEND — contrôleurs et modèles
+- backend/app/Http/Controllers/Api/FormController.php                    (modifié)
+- backend/app/Http/Controllers/Api/SubmissionController.php              (modifié)
+- backend/app/Http/Controllers/Api/TrackingController.php                (créé)
+- backend/app/Http/Controllers/Api/Admin/AdminSubmissionController.php   (modifié)
+- backend/app/Http/Controllers/Api/Admin/FormBuilderController.php       (créé)
+- backend/app/Models/FormField.php               (modifié)
+- backend/app/Models/Submission.php               (modifié)
+- backend/app/Providers/AppServiceProvider.php    (modifié)
+
+BACKEND — emails
+- backend/app/Mail/AdminNewSubmission.php         (créé)
+- backend/app/Mail/SubmissionStatusChanged.php    (créé)
+- backend/app/Mail/SubmissionReply.php            (créé)
+- backend/resources/views/emails/admin-new-submission.blade.php      (créé)
+- backend/resources/views/emails/submission-status-changed.blade.php (créé)
+- backend/resources/views/emails/submission-reply.blade.php          (créé)
+
+BACKEND — base de données et configuration
+- backend/database/migrations/2026_11_04_160000_add_placeholder_to_form_fields_table.php  (créé)
+- backend/database/migrations/2026_11_04_180000_add_notes_to_submissions_table.php        (créé)
+- backend/database/seeders/InsuranceFormSeeder.php      (réécrit)
+- backend/database/seeders/ServiceQuotesSeeder.php      (modifié)
+- backend/routes/api.php                                 (modifié)
+- backend/config/mail.php                                (modifié)
+- backend/.env                                           (modifié)
+
+BACKEND — tests
+- backend/tests/Feature/FormControllerTest.php   (créé)
+- backend/tests/Feature/SubmissionTest.php       (créé)
+- backend/tests/Feature/TrackingTest.php         (créé)
+- backend/tests/Feature/AdminSubmissionTest.php  (créé)
+- backend/tests/Feature/FormBuilderTest.php      (créé)
+- backend/tests/Unit/ModelTest.php               (créé)
+
+RACINE
+- description            (créé : description détaillée du site original)
+
+Note : des fichiers temporaires d'analyse ont aussi été créés dans .codewhale/scratch/
+(captures d'écran et scripts d'extraction) — ils ne font pas partie du projet.
+
+
+2. OÙ EN EST LE PROJET
+----------------------
+
+TERMINÉ
+- Site public : devis + déclaration de sinistre, design harmonisé (couleurs,
+  Montserrat, header/footer, page devis reproduits d'après le site original).
+- Devis : 4 formulaires locaux (Habitation, Santé, Responsabilité civile, Autres)
+  + 3 liens sortants vers le site original (Auto, Voyage, Professionnelle).
+- Déclaration de sinistre : formulaire général adaptatif (8 types), 4 étapes,
+  consentement + signature, délai légal affiché, exemples (placeholders).
+- Emails : confirmation au client, notification à l'admin, changement de statut,
+  réponse au client.
+- Suivi de demande par référence (page publique).
+- Espace client (interface) : connexion, inscription, tableau de bord,
+  mes demandes/sinistres/contrats/documents, profil (sans vraie authentification).
+- Back-office : tableau de bord, liste avec filtres (statut, type, catégorie,
+  type de sinistre, recherche), fiche détaillée, changement de statut,
+  observations internes, réponse client, pièces jointes.
+- Constructeur de formulaires dynamiques (catégories + questions).
+- Tests backend : 28 tests (74 assertions), tous verts.
+
+RESTE À FAIRE
+- Espace client : vraie authentification (inscription/connexion) + données
+  réelles rattachées au compte.
+- Constructeur : prévisualisation avant publication + historique de versions.
+- Tests frontend (Vitest / Testing Library) — non configurés.
+- Déploiement : hébergement, base de production, configuration SMTP réelle
+  (le mail est actuellement en mode "log"), HTTPS, sauvegardes.

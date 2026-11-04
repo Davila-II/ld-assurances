@@ -262,6 +262,223 @@ input[type='checkbox'] {
   cursor: pointer;
 }
 
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-nav a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-nav a.active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-stat {
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.admin-stat strong {
+  display: block;
+  font-size: 1.7rem;
+  color: #1e4d8f;
+}
+
+.admin-stat span {
+  color: #44556a;
+  font-size: 0.85rem;
+}
+
+.builder-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.builder-categories {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+}
+
+.builder-categories h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.builder-categories ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.builder-categories li {
+  border-bottom: 1px solid #e3e9f1;
+  padding: 6px 0;
+}
+
+.builder-categories li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.builder-categories li.active button {
+  background: #eaf1fe;
+}
+
+.builder-categories li button span {
+  display: block;
+  font-weight: 600;
+  color: #1c2733;
+}
+
+.builder-categories li button small {
+  color: #44556a;
+}
+
+.builder-categories .choice {
+  font-size: 0.8rem;
+}
+
+.builder-add-category {
+  display: flex;
+  gap: 8px;
+}
+
+.builder-add-category input {
+  flex: 1;
+  min-width: 0;
+}
+
+.builder-fields {
+  min-width: 0;
+}
+
+.builder-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.builder-toolbar h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.builder-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.builder-tabs button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.builder-tabs button.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.builder-toolbar .btn {
+  margin-left: auto;
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.builder-actions button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.builder-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+tr.muted {
+  opacity: 0.55;
+}
+
+.builder-editor {
+  margin-top: 20px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.builder-editor h3 {
+  margin: 0 0 16px;
+}
+
+.builder-condition {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.builder-editor-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .builder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .builder-condition {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-main {
   width: 100%;
   max-width: 1100px;

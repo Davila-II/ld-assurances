@@ -1,6 +1,8 @@
 import { clearToken, getToken } from './auth';
 import type {
   AdminStats,
+  BuilderCategory,
+  BuilderField,
   Category,
   FormDefinition,
   FormType,
@@ -159,6 +161,56 @@ export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
   );
 
 export const getStats = () => request<AdminStats>('/admin/stats', {}, true);
+
+// --- Constructeur de formulaires ---
+
+export const getBuilderCategories = () =>
+  request<BuilderCategory[]>('/admin/form-builder/categories', {}, true);
+
+export const createBuilderCategory = (name: string) =>
+  request<BuilderCategory>(
+    '/admin/form-builder/categories',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) },
+    true
+  );
+
+export const updateBuilderCategory = (id: number, data: Partial<{ name: string; is_active: boolean }>) =>
+  request<BuilderCategory>(
+    `/admin/form-builder/categories/${id}`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const getBuilderFields = (categoryId: number, type: FormType) =>
+  request<BuilderField[]>(`/admin/form-builder/categories/${categoryId}/fields?type=${type}`, {}, true);
+
+export const createBuilderField = (categoryId: number, data: Record<string, unknown>) =>
+  request<BuilderField>(
+    `/admin/form-builder/categories/${categoryId}/fields`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const updateBuilderField = (fieldId: number, data: Record<string, unknown>) =>
+  request<BuilderField>(
+    `/admin/form-builder/fields/${fieldId}`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const deleteBuilderField = (fieldId: number) =>
+  request<{ id: number; is_active: boolean }>(`/admin/form-builder/fields/${fieldId}`, { method: 'DELETE' }, true);
+
+export const reorderBuilderFields = (categoryId: number, formType: FormType, fieldIds: number[]) =>
+  request<{ message: string }>(
+    `/admin/form-builder/categories/${categoryId}/fields/reorder`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ form_type: formType, field_ids: fieldIds }),
+    },
+    true
+  );
 
 export const updateSubmissionNotes = (id: number, notes: string) =>
   request<{ id: number; notes: string | null }>(

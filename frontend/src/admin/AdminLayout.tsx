@@ -48,6 +48,12 @@ export default function AdminLayout() {
           >
             Soumissions
           </NavLink>
+          <NavLink
+            to="/admin/formulaires"
+            className={({ isActive }) => (isActive ? 'active' : '')}
+          >
+            Formulaires
+          </NavLink>
         </nav>
 
         <button type="button" disabled={loggingOut} onClick={logout}>

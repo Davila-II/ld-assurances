@@ -119,6 +119,30 @@ export interface AdminStats {
   }>;
 }
 
+export interface BuilderCategory {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+  quote_count: number;
+  claim_count: number;
+}
+
+export interface BuilderField {
+  id: number;
+  name: string;
+  label: string;
+  placeholder: string | null;
+  section: string | null;
+  field_type: FieldType;
+  is_required: boolean;
+  options: string[] | null;
+  condition: FieldCondition | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
 export interface SubmissionAnswer {
   label: string;
   type: FieldType;
