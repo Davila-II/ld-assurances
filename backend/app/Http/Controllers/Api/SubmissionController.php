@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AdminNewSubmission;
+use App\Mail\SubmissionReceived;
 use App\Models\Category;
 use App\Models\FormField;
 use App\Models\Submission;
@@ -11,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -114,6 +117,15 @@ class SubmissionController extends Controller
             return response()->json([
                 'message' => "Votre demande n'a pas pu être enregistrée. Réessayez dans un instant.",
             ], 500);
+        }
+
+        // Emails : confirmation au client + notification à l'admin
+        try {
+            $submission->loadMissing('category');
+            Mail::to($submission->email)->send(new SubmissionReceived($submission));
+            Mail::to((string) config('mail.admin_email'))->send(new AdminNewSubmission($submission));
+        } catch (Throwable $e) {
+            Log::error('Échec envoi email de confirmation', ['message' => $e->getMessage()]);
         }
 
         return response()->json([

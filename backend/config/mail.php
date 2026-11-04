@@ -115,4 +115,7 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    // Adresse qui reçoit les notifications internes (nouvelles demandes)
+    'admin_email' => env('MAIL_ADMIN_EMAIL', 'contact@ldassurances.cm'),
+
 ];

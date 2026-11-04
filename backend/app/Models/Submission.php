@@ -34,6 +34,18 @@ class Submission extends Model
         return $this->belongsTo(Category::class);
     }
 
+    // Libellé français du statut
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'received'    => 'Reçu',
+            'in_progress' => 'En cours',
+            'answered'    => 'Répondu',
+            'closed'      => 'Clôturé',
+            default       => $this->status,
+        };
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

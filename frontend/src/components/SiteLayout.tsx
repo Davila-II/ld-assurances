@@ -120,6 +120,9 @@ export default function SiteLayout() {
                 {link.label}
               </a>
             ))}
+            <Link to="/suivi" onClick={close}>
+              Suivre ma demande
+            </Link>
             <Link to="/espace-client/connexion" onClick={close}>
               Connexion
             </Link>

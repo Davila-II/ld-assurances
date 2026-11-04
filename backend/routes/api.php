@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\SubmissionController;
+use App\Http\Controllers\Api\TrackingController;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,9 @@ Route::get('/user', function (Request $request) {
 // --- Public ---
 Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
+
+Route::get('/track/{reference}', [TrackingController::class, 'show'])
+    ->middleware('throttle:tracking');
 
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submissions');

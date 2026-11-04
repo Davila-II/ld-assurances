@@ -750,8 +750,8 @@ h3 {
 
 .client-layout {
   display: flex;
-  flex: 1;
-  min-height: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
 }
 
@@ -763,6 +763,10 @@ h3 {
   padding: 20px 12px;
   background: #fff;
   border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .client-brand {
@@ -1000,4 +1004,42 @@ h3 {
   .client-sidebar-footer {
     display: none;
   }
+}
+
+/* ---------- Suivi de demande ---------- */
+
+.track-wrap {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.track-result {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 31, 56, 0.08);
+}
+
+.track-result h2 {
+  margin: 0 0 16px;
+  color: #111827;
+  font-size: 1.1rem;
+}
+
+.track-result dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.track-result dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.track-result dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }

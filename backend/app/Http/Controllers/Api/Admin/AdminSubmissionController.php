@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SubmissionStatusChanged;
 use App\Models\Attachment;
 use App\Models\Submission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class AdminSubmissionController extends Controller
 {
@@ -105,6 +109,13 @@ class AdminSubmissionController extends Controller
         ]);
 
         $submission->update(['status' => $data['status']]);
+
+        // Notification au client du changement de statut
+        try {
+            Mail::to($submission->email)->send(new SubmissionStatusChanged($submission));
+        } catch (Throwable $e) {
+            Log::error('Échec envoi email de changement de statut', ['message' => $e->getMessage()]);
+        }
 
         return response()->json([
             'id'     => $submission->id,

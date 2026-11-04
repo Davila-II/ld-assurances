@@ -10,6 +10,7 @@ import type {
   SubmissionResult,
   SubmissionStatus,
   SubmissionSummary,
+  TrackResult,
 } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
@@ -109,6 +110,9 @@ export const getForm = (slug: string, type: FormType = 'claim') =>
 
 export const submitForm = (formData: FormData) =>
   request<SubmissionResult>('/submissions', { method: 'POST', body: formData });
+
+export const trackSubmission = (reference: string) =>
+  request<TrackResult>(`/track/${encodeURIComponent(reference)}`);
 
 // --- Administration ---
 

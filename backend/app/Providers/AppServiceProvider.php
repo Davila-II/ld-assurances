@@ -28,5 +28,9 @@ class AppServiceProvider extends ServiceProvider
                 $request->ip() . '|' . strtolower((string) $request->input('email'))
             );
         });
+
+        RateLimiter::for('tracking', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
     }
 }

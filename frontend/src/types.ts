@@ -48,6 +48,16 @@ export interface SubmissionResult {
   reference: string;
 }
 
+export interface TrackResult {
+  reference: string;
+  form_type: FormType;
+  status: SubmissionStatus;
+  status_label: string;
+  category: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // --- Administration ---
 
 export type SubmissionStatus = 'received' | 'in_progress' | 'answered' | 'closed';
