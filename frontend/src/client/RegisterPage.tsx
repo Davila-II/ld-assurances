@@ -4,6 +4,8 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { clientErrorMessage, clientRegister } from '../clientApi';
 import { getClientToken, setClientToken } from '../clientAuth';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import PasswordInput from '../components/PasswordInput';
+import PhoneInput from '../components/PhoneInput';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -88,21 +90,17 @@ export default function RegisterPage() {
 
         <div className="field">
           <label htmlFor="phone">{t('auth.phone')}</label>
-          <input
+          <PhoneInput
             id="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="Ex : 6 90 12 34 56"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(val) => setPhone(val)}
           />
         </div>
 
         <div className="field">
           <label htmlFor="password">{t('auth.password')}</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"
@@ -114,9 +112,8 @@ export default function RegisterPage() {
 
         <div className="field">
           <label htmlFor="confirm">{t('auth.password_confirm')}</label>
-          <input
+          <PasswordInput
             id="confirm"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"

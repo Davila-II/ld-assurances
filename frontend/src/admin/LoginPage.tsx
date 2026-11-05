@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { adminLogin } from '../api';
 import { getToken, setToken } from '../auth';
 import { errorMessage } from './labels';
+import PasswordInput from '../components/PasswordInput';
 
 function getNotice(state: unknown): string {
   if (
@@ -70,9 +71,8 @@ export default function LoginPage() {
 
         <div className="field">
           <label htmlFor="password">Mot de passe</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             autoComplete="current-password"
             value={password}

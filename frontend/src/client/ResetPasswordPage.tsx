@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { clientErrorMessage, clientReset } from '../clientApi';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import PasswordInput from '../components/PasswordInput';
 
 export default function ResetPasswordPage() {
   const { t } = useLanguage();
@@ -83,9 +84,8 @@ export default function ResetPasswordPage() {
 
         <div className="field">
           <label htmlFor="password">{t('auth.password')}</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"
@@ -97,9 +97,8 @@ export default function ResetPasswordPage() {
 
         <div className="field">
           <label htmlFor="confirm">{t('auth.password_confirm')}</label>
-          <input
+          <PasswordInput
             id="confirm"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"

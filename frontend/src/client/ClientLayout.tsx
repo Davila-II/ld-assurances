@@ -5,13 +5,15 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  Menu,
   User,
+  X,
 } from 'lucide-react';
 import { SITE } from '../siteConfig';
 import { clientErrorMessage, clientLogout, clientMe } from '../clientApi';
 import { clearClientToken, getClientToken } from '../clientAuth';
 import type { ClientUser } from '../clientTypes';
-import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 
 export interface ClientOutletContext {
@@ -41,6 +43,9 @@ export default function ClientLayout() {
   const [user, setUser] = useState<ClientUser | null>(null);
   const [ready, setReady] = useState(!hasToken);
   const [error, setError] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
 
   // Chargement du compte connecté
   useEffect(() => {
@@ -71,7 +76,7 @@ export default function ClientLayout() {
     try {
       await clientLogout();
     } catch {
-      // Même si le serveur ne répond pas, on ferme la session dans le navigateur
+      // Même si le serveur ne répond pas, on ferme la session locale
     }
     clearClientToken();
     navigate('/espace-client/connexion', { replace: true });
@@ -100,16 +105,67 @@ export default function ClientLayout() {
     );
   }
 
+  const initials = user.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0].toUpperCase())
+    .join('');
+
   return (
     <div className="client-layout">
-      <aside className="client-sidebar">
-        <Link className="client-brand" to="/espace-client">
+      {/* Barre supérieure mobile avec bouton 3 barres (hamburger) */}
+      <header className="client-mobile-bar">
+        <Link className="client-mobile-brand" to="/espace-client" onClick={closeMenu}>
           <img src="/logo-icon.png" alt="" />
           <span>
-            <span className="brand-ld">LD</span> ASSURANCES SA
-            <span className="client-brand-sub">{t('nav.client_space')}</span>
+            <strong className="brand-ld">LD</strong> ASSURANCES SA
           </span>
         </Link>
+
+        <button
+          type="button"
+          className="client-hamburger-btn"
+          aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((prev) => !prev)}
+        >
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </header>
+
+      {/* Fond obscurci lorsque le menu mobile est ouvert */}
+      {menuOpen && <div className="client-backdrop" onClick={closeMenu} aria-hidden="true" />}
+
+      {/* Barre latérale gauche (sur PC) / Tiroir déroulant (sur téléphone) */}
+      <aside className={`client-sidebar ${menuOpen ? 'open' : ''}`}>
+        <div className="client-sidebar-header">
+          <Link className="client-brand" to="/espace-client" onClick={closeMenu}>
+            <img src="/logo-icon.png" alt="" />
+            <span>
+              <span className="brand-ld">LD</span> ASSURANCES SA
+              <span className="client-brand-sub">{t('nav.client_space')}</span>
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            className="client-sidebar-close"
+            aria-label="Fermer le menu"
+            onClick={closeMenu}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Badge récapitulatif utilisateur */}
+        <div className="client-user-badge">
+          <div className="client-user-avatar">{initials || 'U'}</div>
+          <div className="client-user-info">
+            <strong className="client-user-name">{user.name}</strong>
+            <span className="client-user-email">{user.email}</span>
+          </div>
+        </div>
 
         <nav className="client-nav">
           {NAV.map((item) => (
@@ -118,19 +174,18 @@ export default function ClientLayout() {
               to={item.to}
               end={item.end}
               className={({ isActive }) => (isActive ? 'active' : '')}
+              onClick={closeMenu}
             >
               {item.icon}
-              {t(item.labelKey)}
+              <span>{t(item.labelKey)}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="client-sidebar-footer">
-          <div style={{ marginBottom: '10px' }}>
-            <LanguageToggle />
-          </div>
-          <small style={{ display: 'block', padding: '0 4px 8px', opacity: 0.8 }}>{user.name}</small>
-          <Link to={SITE.mainUrl}>{t('nav.back_to_site')}</Link>
+          <Link to={SITE.mainUrl} onClick={closeMenu}>
+            {t('nav.back_to_site')}
+          </Link>
           <button type="button" onClick={logout}>
             <LogOut size={18} /> {t('nav.logout')}
           </button>

@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { clientErrorMessage, clientLogin } from '../clientApi';
 import { getClientToken, setClientToken } from '../clientAuth';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import PasswordInput from '../components/PasswordInput';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -60,9 +61,8 @@ export default function LoginPage() {
 
         <div className="field">
           <label htmlFor="password">{t('auth.password')}</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             autoComplete="current-password"
             value={password}

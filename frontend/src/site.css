@@ -1108,3 +1108,338 @@ h3 {
   opacity: 0.4;
   font-size: 0.7rem;
 }
+
+/* ---------- Password Input with Visibility Toggle ---------- */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrap input {
+  width: 100%;
+  padding-right: 44px !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent !important;
+  border: none !important;
+  color: var(--muted) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  border-radius: 6px;
+  box-shadow: none !important;
+  line-height: 1;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ---------- Profile Sections & Accordion ---------- */
+.profile-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.profile-section-title {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.profile-section-desc {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.accordion-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.accordion-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+  transition: border-color 0.15s;
+}
+
+.accordion-item:focus-within,
+.accordion-item:hover {
+  border-color: #bcd0ea;
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  transition: background-color 0.15s;
+}
+
+.accordion-trigger:hover {
+  background: #f8fbff;
+}
+
+.accordion-trigger.open {
+  background: #f1f6fc;
+  border-bottom: 1px solid var(--border);
+}
+
+.accordion-trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.accordion-icon {
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.accordion-trigger-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.accordion-body {
+  padding: 20px;
+  background: #fff;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Responsiveness Polish Across the Site ---------- */
+.client-mobile-user {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .client-sidebar {
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    flex-direction: column;
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 31, 56, 0.05);
+  }
+
+  .client-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .client-brand {
+    padding: 0;
+    border-bottom: none;
+    margin: 0;
+  }
+
+  .client-brand img {
+    height: 28px;
+  }
+
+  .client-brand-sub {
+    font-size: 0.65rem;
+  }
+
+  .client-mobile-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .client-mobile-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-mobile-logout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--red);
+    cursor: pointer;
+  }
+
+  .client-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .client-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .client-nav a {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .client-sidebar-footer {
+    display: none;
+  }
+
+  .client-content {
+    padding: 16px;
+  }
+
+  .client-content-inner {
+    max-width: 100%;
+  }
+
+  .client-page-title {
+    font-size: 1.4rem;
+  }
+
+  .client-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .client-actions {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .profile-section {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 12px;
+  }
+
+  .topbar-contact {
+    gap: 4px 10px;
+    font-size: 0.75rem;
+  }
+
+  .site-header-inner {
+    padding: 8px 12px;
+  }
+
+  .brand-text {
+    font-size: 0.85rem;
+  }
+
+  .hub-title {
+    font-size: 1.5rem;
+  }
+
+  .hub-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hub-card {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .form-wrap {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .stepper {
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .stepper-label {
+    font-size: 0.75rem;
+  }
+
+  .step-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .step-actions button {
+    width: 100%;
+  }
+
+  .track-result dl {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .track-result dt {
+    font-size: 0.8rem;
+  }
+
+  .track-result dd {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+  }
+
+  .login {
+    padding: 20px 16px;
+    margin: 16px auto;
+  }
+}
