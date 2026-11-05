@@ -94,9 +94,6 @@ export default function ClientLayout() {
     );
   }
 
-  if (!user.email_verified) {
-    return <Navigate to="/espace-client/verification" replace />;
-  }
 
   return (
     <div className="client-layout">

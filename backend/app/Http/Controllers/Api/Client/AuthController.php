@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountCreated;
 use App\Mail\PasswordResetLink;
-use App\Mail\VerificationCode;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -20,8 +20,6 @@ use Throwable;
 class AuthController extends Controller
 {
     private const TOKEN_DAYS = 7;
-    private const CODE_MINUTES = 15;
-    private const MAX_CODE_ATTEMPTS = 5;
 
     // Création du compte : le rôle est fixé ici, jamais par le client
     public function register(Request $request): JsonResponse
@@ -47,9 +45,23 @@ class AuthController extends Controller
             'password' => $data['password'],
         ]);
         $user->role = 'client';
+        $user->email_verified_at = now();
         $user->save();
 
-        $this->sendCode($user);
+        // Le compte est actif : on rattache immédiatement les demandes faites sans compte avec cette adresse
+        Submission::whereNull('user_id')
+            ->whereRaw('LOWER(email) = ?', [Str::lower($user->email)])
+            ->update(['user_id' => $user->id]);
+
+        // Envoi d'un email de confirmation de création de compte
+        try {
+            Mail::to($user->email)->send(new AccountCreated($user));
+        } catch (Throwable $e) {
+            Log::error("Échec de l'envoi de l'email de confirmation de création de compte", [
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'token' => $this->newToken($user),
@@ -100,53 +112,19 @@ class AuthController extends Controller
         return response()->json($this->userData($request->user()));
     }
 
-    // Vérification de l'email par le code à 6 chiffres
+    // Vérification de l'email : le compte est déjà actif dès la création
     public function verifyEmail(Request $request): JsonResponse
     {
-        $data = $request->validate(
-            ['code' => ['required', 'digits:6']],
-            ['code.required' => 'Saisissez le code reçu par email.', 'code.digits' => 'Le code contient 6 chiffres.']
-        );
-
         $user = $request->user();
 
-        if ($user->email_verified_at !== null) {
-            return response()->json(['message' => 'Adresse email déjà vérifiée.', 'user' => $this->userData($user), 'linked' => 0]);
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
-
-        if (
-            ! $user->verification_code
-            || ! $user->verification_code_expires_at
-            || $user->verification_code_expires_at->isPast()
-        ) {
-            return response()->json(['message' => 'Ce code a expiré. Demandez-en un nouveau.'], 422);
-        }
-
-        if ($user->verification_attempts >= self::MAX_CODE_ATTEMPTS) {
-            return response()->json(['message' => 'Trop de tentatives. Demandez un nouveau code.'], 422);
-        }
-
-        if (! Hash::check($data['code'], $user->verification_code)) {
-            $user->increment('verification_attempts');
-            return response()->json(['message' => 'Code incorrect.'], 422);
-        }
-
-        $user->forceFill([
-            'email_verified_at'            => now(),
-            'verification_code'            => null,
-            'verification_code_expires_at' => null,
-            'verification_attempts'        => 0,
-        ])->save();
-
-        // L'email est vérifié : on rattache les demandes faites sans compte avec cette adresse
-        $linked = Submission::whereNull('user_id')
-            ->whereRaw('LOWER(email) = ?', [Str::lower($user->email)])
-            ->update(['user_id' => $user->id]);
 
         return response()->json([
             'message' => 'Adresse email vérifiée.',
             'user'    => $this->userData($user),
-            'linked'  => $linked,
+            'linked'  => 0,
         ]);
     }
 
@@ -154,13 +132,11 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if ($user->email_verified_at !== null) {
-            return response()->json(['message' => 'Adresse email déjà vérifiée.']);
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
-        $this->sendCode($user);
-
-        return response()->json(['message' => 'Un nouveau code vient de vous être envoyé.']);
+        return response()->json(['message' => 'Adresse email déjà vérifiée.']);
     }
 
     // Demande de réinitialisation : la réponse est identique que le compte existe ou non
@@ -298,27 +274,6 @@ class AuthController extends Controller
     private function newToken(User $user): string
     {
         return $user->createToken('client', ['client'], now()->addDays(self::TOKEN_DAYS))->plainTextToken;
-    }
-
-    // Génère un code à 6 chiffres, le stocke chiffré et l'envoie par email
-    private function sendCode(User $user): void
-    {
-        $code = (string) random_int(100000, 999999);
-
-        $user->forceFill([
-            'verification_code'            => Hash::make($code),
-            'verification_code_expires_at' => now()->addMinutes(self::CODE_MINUTES),
-            'verification_attempts'        => 0,
-        ])->save();
-
-        try {
-            Mail::to($user->email)->send(new VerificationCode($user, $code, self::CODE_MINUTES));
-        } catch (Throwable $e) {
-            Log::error("Échec de l'envoi du code de vérification", [
-                'user_id' => $user->id,
-                'message' => $e->getMessage(),
-            ]);
-        }
     }
 
     private function userData(User $user): array

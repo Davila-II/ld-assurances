@@ -38,7 +38,7 @@ export default function RegisterPage() {
         password_confirmation: confirm,
       });
       setClientToken(result.token);
-      navigate('/espace-client/verification', { replace: true });
+      navigate('/espace-client', { replace: true });
     } catch (err) {
       setError(clientErrorMessage(err));
     } finally {

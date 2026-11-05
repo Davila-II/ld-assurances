@@ -23,9 +23,7 @@ export default function LoginPage() {
     try {
       const result = await clientLogin(email.trim(), password);
       setClientToken(result.token);
-      navigate(result.user.email_verified ? '/espace-client' : '/espace-client/verification', {
-        replace: true,
-      });
+      navigate('/espace-client', { replace: true });
     } catch (err) {
       setError(clientErrorMessage(err));
     } finally {
