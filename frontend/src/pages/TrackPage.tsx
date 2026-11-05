@@ -6,6 +6,7 @@ import type { TrackResult } from '../types';
 
 export default function TrackPage() {
   const [reference, setReference] = useState('');
+  const [email, setEmail] = useState('');
   const [result, setResult] = useState<TrackResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,11 +18,13 @@ export default function TrackPage() {
     setLoading(true);
 
     try {
-      const data = await trackSubmission(reference.trim());
+      const data = await trackSubmission(reference.trim().toUpperCase(), email.trim());
       setResult(data);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setError('Référence introuvable. Vérifiez le numéro de dossier saisi.');
+        setError(
+          "Aucun dossier ne correspond à ces informations. Vérifiez le numéro de dossier et l'adresse email utilisée lors de votre demande."
+        );
       } else {
         setError(err instanceof Error ? err.message : 'Erreur inattendue.');
       }
@@ -35,7 +38,7 @@ export default function TrackPage() {
       <h1 className="page-title">Suivre ma demande</h1>
       <p className="page-subtitle">
         Saisissez le numéro de dossier reçu lors de votre demande de devis ou de votre déclaration
-        de sinistre.
+        de sinistre, ainsi que l'adresse email utilisée.
       </p>
 
       <div className="form-wrap track-wrap">
@@ -51,6 +54,20 @@ export default function TrackPage() {
               onChange={(event) => setReference(event.target.value)}
             />
           </div>
+
+          <div className="field">
+            <label htmlFor="track-email">Adresse email</label>
+            <input
+              id="track-email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Ex : nom@exemple.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+
           <button type="submit" disabled={loading}>
             {loading ? 'Recherche…' : 'Rechercher'}
           </button>
