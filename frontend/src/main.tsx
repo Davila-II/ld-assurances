@@ -5,12 +5,15 @@ import '@fontsource-variable/inter/index.css';
 import './index.css';
 import './site.css';
 import './quote.css';
+import { LanguageProvider } from './i18n/LanguageContext';
 import App from './App.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
     </BrowserRouter>
   </StrictMode>
 );

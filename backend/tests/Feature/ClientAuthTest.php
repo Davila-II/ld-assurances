@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Mail\AccountCreated;
 use App\Mail\PasswordResetLink;
-use App\Mail\VerificationCode;
 use App\Models\Category;
 use App\Models\FormField;
 use App\Models\Submission;
@@ -32,20 +32,6 @@ class ClientAuthTest extends TestCase
     private function registerClient(array $override = [])
     {
         return $this->postJson('/api/client/register', $this->payload($override));
-    }
-
-    // Dernier code envoyé par email (nécessite Mail::fake())
-    private function lastCode(): string
-    {
-        $code = null;
-
-        Mail::assertSent(VerificationCode::class, function (VerificationCode $mail) use (&$code) {
-            $code = $mail->code;
-
-            return true;
-        });
-
-        return (string) $code;
     }
 
     // Plusieurs requêtes avec des jetons différents dans un même test : on réinitialise l'authentification
@@ -78,7 +64,7 @@ class ClientAuthTest extends TestCase
         return $submission;
     }
 
-    public function test_register_creates_unverified_client_and_sends_a_code(): void
+    public function test_register_creates_active_client_and_sends_welcome_email(): void
     {
         Mail::fake();
 
@@ -86,15 +72,17 @@ class ClientAuthTest extends TestCase
             ->assertCreated()
             ->assertJsonStructure(['token', 'user'])
             ->assertJsonPath('user.email', 'jean@example.com')
-            ->assertJsonPath('user.email_verified', false);
+            ->assertJsonPath('user.email_verified', true);
 
         $user = User::where('email', 'jean@example.com')->firstOrFail();
 
         $this->assertSame('client', $user->role);
-        $this->assertNull($user->email_verified_at);
-        $this->assertNotSame($this->lastCode(), $user->verification_code); // le code est stocké chiffré
+        $this->assertNotNull($user->email_verified_at);
 
-        Mail::assertSent(VerificationCode::class, fn ($mail) => $mail->hasTo('jean@example.com'));
+        Mail::assertSent(AccountCreated::class, function (AccountCreated $mail) {
+            return $mail->hasTo('jean@example.com')
+                && $mail->envelope()->from->name === 'LD Assurance';
+        });
     }
 
     public function test_register_ignores_a_role_sent_by_the_client(): void
@@ -142,21 +130,14 @@ class ClientAuthTest extends TestCase
             ->assertJsonPath('message', 'Identifiants incorrects.');
     }
 
-    public function test_verifying_the_email_links_previous_submissions(): void
+    public function test_registering_immediately_links_previous_submissions(): void
     {
         Mail::fake();
 
         $guest = $this->makeSubmission('Jean@Example.com');
         $other = $this->makeSubmission('quelquun@example.com');
 
-        $token = $this->registerClient()->json('token');
-        $code = $this->lastCode();
-
-        $this->asClient($token)
-            ->postJson('/api/client/email/verify', ['code' => $code])
-            ->assertOk()
-            ->assertJsonPath('linked', 1)
-            ->assertJsonPath('user.email_verified', true);
+        $this->registerClient()->assertCreated();
 
         $userId = User::where('email', 'jean@example.com')->value('id');
 
@@ -164,45 +145,16 @@ class ClientAuthTest extends TestCase
         $this->assertNull($other->fresh()->user_id);
     }
 
-    public function test_submissions_require_a_verified_email(): void
+    public function test_registered_client_can_immediately_access_submissions(): void
     {
         Mail::fake();
 
         $token = $this->registerClient()->json('token');
-
-        $this->asClient($token)
-            ->getJson('/api/client/submissions')
-            ->assertStatus(403)
-            ->assertJsonPath('code', 'email_unverified');
-
-        $this->asClient($token)
-            ->postJson('/api/client/email/verify', ['code' => $this->lastCode()])
-            ->assertOk();
 
         $this->asClient($token)
             ->getJson('/api/client/submissions')
             ->assertOk()
             ->assertJsonPath('total', 0);
-    }
-
-    public function test_wrong_codes_are_limited(): void
-    {
-        Mail::fake();
-
-        $token = $this->registerClient()->json('token');
-
-        for ($i = 0; $i < 5; $i++) {
-            $this->asClient($token)
-                ->postJson('/api/client/email/verify', ['code' => '000000'])
-                ->assertStatus(422)
-                ->assertJsonPath('message', 'Code incorrect.');
-        }
-
-        // Même le bon code est refusé après 5 échecs : il faut en demander un nouveau
-        $this->asClient($token)
-            ->postJson('/api/client/email/verify', ['code' => $this->lastCode()])
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'Trop de tentatives. Demandez un nouveau code.');
     }
 
     public function test_a_client_only_sees_their_own_submissions(): void

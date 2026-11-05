@@ -1043,3 +1043,68 @@ h3 {
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* ---------- Language Switcher ---------- */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.topbar .lang-toggle {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.site-nav .lang-toggle,
+.client-sidebar .lang-toggle,
+.header-actions .lang-toggle {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+}
+
+.lang-globe-icon {
+  opacity: 0.8;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 5px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.lang-btn:hover {
+  opacity: 0.85;
+}
+
+.lang-btn.active {
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.site-nav .lang-btn.active,
+.client-sidebar .lang-btn.active,
+.header-actions .lang-btn.active {
+  background: var(--blue);
+  color: #fff;
+}
+
+.lang-sep {
+  opacity: 0.4;
+  font-size: 0.7rem;
+}
