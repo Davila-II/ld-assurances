@@ -26,9 +26,11 @@ class SubmissionController extends Controller
     {
         // Piège anti-robots : ce champ est invisible, seul un robot le remplit
         if ($request->filled('website')) {
+            $prefix = $request->input('form_type') === 'quote' ? 'DEV' : 'SIN';
+
             return response()->json([
                 'message'   => 'Votre demande a bien été enregistrée.',
-                'reference' => 'SIN-' . now()->format('Y') . '-' . strtoupper(Str::random(6)),
+                'reference' => $prefix . '-' . now()->format('Y') . '-' . strtoupper(Str::random(6)),
             ], 201);
         }
 
@@ -42,6 +44,10 @@ class SubmissionController extends Controller
         $category = Category::where('slug', $base['category'])
             ->where('is_active', true)
             ->firstOrFail();
+
+        // Si un client connecté envoie le formulaire, le dossier est rattaché à son compte
+        $client = $request->user('sanctum');
+        $userId = ($client && $client->role === 'client') ? $client->id : null;
 
         // 2. Les questions de ce formulaire, telles qu'enregistrées en base
         $fields = $category->fields()
@@ -79,9 +85,10 @@ class SubmissionController extends Controller
         $storedPaths = [];
 
         try {
-            $submission = DB::transaction(function () use ($request, $base, $category, $answers, $snapshot, $visible, &$storedPaths) {
+            $submission = DB::transaction(function () use ($request, $base, $category, $userId, $answers, $snapshot, $visible, &$storedPaths) {
                 $submission = Submission::create([
                     'category_id'   => $category->id,
+                    'user_id'       => $userId,
                     'form_type'     => $base['form_type'],
                     'email'         => $base['email'],
                     'status'        => 'received',
@@ -97,7 +104,8 @@ class SubmissionController extends Controller
                         $storedPaths[] = $path;
 
                         $submission->attachments()->create([
-                            'original_name' => $file->getClientOriginalName(),
+                            // MySQL refuse un texte plus long que la colonne : on limite la longueur
+                            'original_name' => Str::limit($file->getClientOriginalName(), 200, ''),
                             'path'          => $path,
                             'mime_type'     => $file->getMimeType(),
                             'size'          => $file->getSize(),
@@ -119,13 +127,23 @@ class SubmissionController extends Controller
             ], 500);
         }
 
-        // Emails : confirmation au client + notification à l'admin
+        // Emails : chacun a sa propre protection, un échec ne bloque jamais la demande
+        $submission->loadMissing('category');
+
         try {
-            $submission->loadMissing('category');
             Mail::to($submission->email)->send(new SubmissionReceived($submission));
-            Mail::to((string) config('mail.admin_email'))->send(new AdminNewSubmission($submission));
         } catch (Throwable $e) {
             Log::error('Échec envoi email de confirmation', ['message' => $e->getMessage()]);
+        }
+
+        $adminEmail = (string) config('mail.admin_email');
+
+        if ($adminEmail !== '') {
+            try {
+                Mail::to($adminEmail)->send(new AdminNewSubmission($submission));
+            } catch (Throwable $e) {
+                Log::error('Échec envoi email administrateur', ['message' => $e->getMessage()]);
+            }
         }
 
         return response()->json([

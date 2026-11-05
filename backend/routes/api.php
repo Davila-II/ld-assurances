@@ -3,10 +3,13 @@
 use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\FormBuilderController;
+use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
+use App\Http\Controllers\Api\Client\SubmissionController as ClientSubmissionController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsClient;
 use Illuminate\Support\Facades\Route;
 
 // --- Public ---
@@ -19,6 +22,29 @@ Route::post('/submissions', [SubmissionController::class, 'store'])
 // Suivi : référence + email (POST, pour que l'email ne figure jamais dans l'adresse)
 Route::post('/track', [TrackingController::class, 'show'])
     ->middleware('throttle:tracking');
+
+// --- Espace client ---
+Route::prefix('client')->group(function () {
+    Route::post('/register', [ClientAuthController::class, 'register'])->middleware('throttle:client-register');
+    Route::post('/login', [ClientAuthController::class, 'login'])->middleware('throttle:client-login');
+    Route::post('/forgot-password', [ClientAuthController::class, 'forgotPassword'])->middleware('throttle:client-reset');
+    Route::post('/reset-password', [ClientAuthController::class, 'resetPassword'])->middleware('throttle:client-reset');
+
+    // Connecté (email pas forcément vérifié)
+    Route::middleware(['auth:sanctum', EnsureUserIsClient::class])->group(function () {
+        Route::get('/me', [ClientAuthController::class, 'me']);
+        Route::post('/logout', [ClientAuthController::class, 'logout']);
+        Route::post('/email/verify', [ClientAuthController::class, 'verifyEmail'])->middleware('throttle:client-verify');
+        Route::post('/email/resend', [ClientAuthController::class, 'resendCode'])->middleware('throttle:client-resend');
+        Route::patch('/profile', [ClientAuthController::class, 'updateProfile']);
+        Route::post('/password', [ClientAuthController::class, 'changePassword']);
+    });
+
+    // Connecté ET email vérifié : accès aux données du client
+    Route::middleware(['auth:sanctum', EnsureUserIsClient::class . ':verified'])->group(function () {
+        Route::get('/submissions', [ClientSubmissionController::class, 'index']);
+    });
+});
 
 // --- Administration ---
 Route::prefix('admin')->group(function () {

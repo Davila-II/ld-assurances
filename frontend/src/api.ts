@@ -1,4 +1,5 @@
 import { clearToken, getToken } from './auth';
+import { getClientToken } from './clientAuth';
 import type {
   AdminStats,
   BuilderCategory,
@@ -111,8 +112,15 @@ export const getCategories = (type?: FormType) =>
 export const getForm = (slug: string, type: FormType = 'claim') =>
   request<FormDefinition>(`/categories/${encodeURIComponent(slug)}/form?type=${type}`);
 
-export const submitForm = (formData: FormData) =>
-  request<SubmissionResult>('/submissions', { method: 'POST', body: formData });
+export const submitForm = (formData: FormData) => {
+  const token = getClientToken();
+
+  return request<SubmissionResult>('/submissions', {
+    method: 'POST',
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+};
 
 export const trackSubmission = (reference: string, email: string) =>
   request<TrackResult>('/track', {
