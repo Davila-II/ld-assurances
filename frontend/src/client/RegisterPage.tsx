@@ -3,9 +3,11 @@ import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { clientErrorMessage, clientRegister } from '../clientApi';
 import { getClientToken, setClientToken } from '../clientAuth';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -23,7 +25,7 @@ export default function RegisterPage() {
     setError('');
 
     if (password !== confirm) {
-      setError('La confirmation du mot de passe ne correspond pas.');
+      setError(t('auth.password_mismatch'));
       return;
     }
 
@@ -48,14 +50,18 @@ export default function RegisterPage() {
 
   return (
     <main className="login">
-      <h1>Créer un compte</h1>
-      <p>Créez votre espace client pour suivre vos demandes en ligne.</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+        <LanguageToggle />
+      </div>
+
+      <h1>{t('auth.register_title')}</h1>
+      <p>{t('auth.register_sub')}</p>
 
       <form onSubmit={handleSubmit} className="form">
         {error && <p className="alert">{error}</p>}
 
         <div className="field">
-          <label htmlFor="name">Nom et prénom</label>
+          <label htmlFor="name">{t('auth.name')}</label>
           <input
             id="name"
             type="text"
@@ -68,7 +74,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="email">Adresse email</label>
+          <label htmlFor="email">{t('auth.email')}</label>
           <input
             id="email"
             type="email"
@@ -81,7 +87,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="phone">Téléphone</label>
+          <label htmlFor="phone">{t('auth.phone')}</label>
           <input
             id="phone"
             type="tel"
@@ -93,7 +99,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="password">Mot de passe</label>
+          <label htmlFor="password">{t('auth.password')}</label>
           <input
             id="password"
             type="password"
@@ -103,11 +109,11 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <small>8 caractères minimum, avec des lettres et des chiffres.</small>
+          <small>{t('auth.password_help')}</small>
         </div>
 
         <div className="field">
-          <label htmlFor="confirm">Confirmer le mot de passe</label>
+          <label htmlFor="confirm">{t('auth.password_confirm')}</label>
           <input
             id="confirm"
             type="password"
@@ -120,12 +126,13 @@ export default function RegisterPage() {
         </div>
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Création…' : "S'inscrire"}
+          {loading ? t('auth.registering') : t('auth.register_btn')}
         </button>
       </form>
 
       <p className="center">
-        Déjà un compte ? <Link to="/espace-client/connexion">Se connecter</Link>
+        {t('auth.have_account')}{' '}
+        <Link to="/espace-client/connexion">{t('auth.login_btn')}</Link>
       </p>
     </main>
   );

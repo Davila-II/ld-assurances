@@ -3,9 +3,11 @@ import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { clientErrorMessage, clientLogin } from '../clientApi';
 import { getClientToken, setClientToken } from '../clientAuth';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,14 +35,18 @@ export default function LoginPage() {
 
   return (
     <main className="login">
-      <h1>Espace client</h1>
-      <p>Connectez-vous pour suivre vos demandes, contrats et documents.</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+        <LanguageToggle />
+      </div>
+
+      <h1>{t('auth.login_title')}</h1>
+      <p>{t('auth.login_sub')}</p>
 
       <form onSubmit={handleSubmit} className="form">
         {error && <p className="alert">{error}</p>}
 
         <div className="field">
-          <label htmlFor="email">Adresse email</label>
+          <label htmlFor="email">{t('auth.email')}</label>
           <input
             id="email"
             type="email"
@@ -53,7 +59,7 @@ export default function LoginPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="password">Mot de passe</label>
+          <label htmlFor="password">{t('auth.password')}</label>
           <input
             id="password"
             type="password"
@@ -65,15 +71,16 @@ export default function LoginPage() {
         </div>
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Connexion…' : 'Se connecter'}
+          {loading ? t('auth.logging_in') : t('auth.login_btn')}
         </button>
       </form>
 
       <p className="center">
-        <Link to="/espace-client/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+        <Link to="/espace-client/mot-de-passe-oublie">{t('auth.forgot_password')}</Link>
       </p>
       <p className="center">
-        Pas encore de compte ? <Link to="/espace-client/inscription">Créer un compte</Link>
+        {t('auth.no_account')}{' '}
+        <Link to="/espace-client/inscription">{t('auth.create_account')}</Link>
       </p>
     </main>
   );

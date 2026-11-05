@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { clientErrorMessage, clientForgot } from '../clientApi';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -27,15 +29,19 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="login">
-      <h1>Mot de passe oublié</h1>
-      <p>Saisissez l'adresse email de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+        <LanguageToggle />
+      </div>
+
+      <h1>{t('auth.forgot_title')}</h1>
+      <p>{t('auth.forgot_sub')}</p>
 
       <form onSubmit={handleSubmit} className="form">
         {error && <p className="alert">{error}</p>}
         {notice && <p className="notice">{notice}</p>}
 
         <div className="field">
-          <label htmlFor="email">Adresse email</label>
+          <label htmlFor="email">{t('auth.email')}</label>
           <input
             id="email"
             type="email"
@@ -48,12 +54,12 @@ export default function ForgotPasswordPage() {
         </div>
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Envoi…' : 'Envoyer le lien'}
+          {loading ? t('auth.sending') : t('auth.send_link')}
         </button>
       </form>
 
       <p className="center">
-        <Link to="/espace-client/connexion">← Retour à la connexion</Link>
+        <Link to="/espace-client/connexion">{t('auth.back_to_login')}</Link>
       </p>
     </main>
   );

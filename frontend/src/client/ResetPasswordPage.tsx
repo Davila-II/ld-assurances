@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { clientErrorMessage, clientReset } from '../clientApi';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage();
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const email = params.get('email') ?? '';
@@ -17,10 +19,13 @@ export default function ResetPasswordPage() {
   if (!token || !email) {
     return (
       <main className="login">
-        <h1>Lien invalide</h1>
-        <p>Ce lien de réinitialisation est incomplet. Refaites une demande.</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <LanguageToggle />
+        </div>
+        <h1>Lien invalide / Invalid link</h1>
+        <p>Ce lien de réinitialisation est incomplet. / This reset link is invalid.</p>
         <p className="center">
-          <Link to="/espace-client/mot-de-passe-oublie">Demander un nouveau lien</Link>
+          <Link to="/espace-client/mot-de-passe-oublie">{t('auth.forgot_title')}</Link>
         </p>
       </main>
     );
@@ -29,10 +34,13 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <main className="login">
-        <h1>Mot de passe modifié</h1>
-        <p className="notice">Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <LanguageToggle />
+        </div>
+        <h1>{t('auth.reset_title')}</h1>
+        <p className="notice">{t('profile.password_changed')}</p>
         <p className="center">
-          <Link to="/espace-client/connexion">Se connecter</Link>
+          <Link to="/espace-client/connexion">{t('auth.login_btn')}</Link>
         </p>
       </main>
     );
@@ -43,7 +51,7 @@ export default function ResetPasswordPage() {
     setError('');
 
     if (password !== confirm) {
-      setError('La confirmation du mot de passe ne correspond pas.');
+      setError(t('auth.password_mismatch'));
       return;
     }
 
@@ -61,16 +69,20 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="login">
-      <h1>Nouveau mot de passe</h1>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+        <LanguageToggle />
+      </div>
+
+      <h1>{t('auth.reset_title')}</h1>
       <p>
-        Choisissez un nouveau mot de passe pour <strong>{email}</strong>.
+        {t('auth.reset_sub')} (<strong>{email}</strong>)
       </p>
 
       <form onSubmit={handleSubmit} className="form">
         {error && <p className="alert">{error}</p>}
 
         <div className="field">
-          <label htmlFor="password">Nouveau mot de passe</label>
+          <label htmlFor="password">{t('auth.password')}</label>
           <input
             id="password"
             type="password"
@@ -80,11 +92,11 @@ export default function ResetPasswordPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <small>8 caractères minimum, avec des lettres et des chiffres.</small>
+          <small>{t('auth.password_help')}</small>
         </div>
 
         <div className="field">
-          <label htmlFor="confirm">Confirmer le mot de passe</label>
+          <label htmlFor="confirm">{t('auth.password_confirm')}</label>
           <input
             id="confirm"
             type="password"
@@ -97,7 +109,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Enregistrement…' : 'Enregistrer'}
+          {loading ? t('profile.saving') : t('auth.reset_btn')}
         </button>
       </form>
     </main>

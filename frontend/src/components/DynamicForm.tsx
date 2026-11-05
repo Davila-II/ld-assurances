@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Check } from 'lucide-react';
 import { getForm, submitForm, ApiError } from '../api';
 import type { Answers, Category, FormField, FormType } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 5;
@@ -46,6 +47,7 @@ function findError(errors: Record<string, string[]>, name: string): string | nul
 
 export default function DynamicForm({ category, formType = 'claim' }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
+  const { t } = useLanguage();
 
   const [fields, setFields] = useState<FormField[]>([]);
   const [answers, setAnswers] = useState<Answers>({});
@@ -275,7 +277,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             value={text}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           >
-            <option value="">Choisir…</option>
+            <option value="">{t('form.choose')}</option>
             {(field.options ?? []).map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -344,31 +346,31 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
     }
   };
 
-  if (loading) return <p>Chargement du formulaire…</p>;
+  if (loading) return <p>{t('claims.loading')}</p>;
 
   // Écran de confirmation après l'envoi
   if (reference) {
     return (
       <div className="success">
-        <h2>
-          {isClaim
-            ? 'Votre déclaration a bien été envoyée'
-            : 'Votre demande de devis a bien été envoyée'}
-        </h2>
+        <h2>{t('form.success_title')}</h2>
         <p>
-          Votre numéro de dossier : <strong>{reference}</strong>
+          {t('form.success_ref')} <strong>{reference}</strong>
         </p>
-        <p>Conservez-le pour suivre votre dossier.</p>
-        <p>Un email de confirmation vous est envoyé à l'adresse indiquée.</p>
+        <p>{t('form.success_note')}</p>
+        <div style={{ marginTop: '16px' }}>
+          <a className="btn btn-secondary" href="/suivi">
+            {t('form.track_link')}
+          </a>
+        </div>
       </div>
     );
   }
 
   const submitLabel = sending
-    ? 'Envoi en cours…'
+    ? t('form.sending')
     : isClaim
-      ? 'Envoyer la déclaration'
-      : 'Envoyer la demande de devis';
+      ? t('form.submit_claim')
+      : t('form.submit_quote');
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="form">
@@ -390,7 +392,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
           </ol>
 
           <p className="step-count">
-            Étape {currentStep + 1} sur {steps.length}
+            {t('form.step')} {currentStep + 1} {t('form.of')} {steps.length}
           </p>
           <h2 className="step-heading">{steps[currentStep].title}</h2>
         </>
@@ -413,7 +415,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
 
       {showEmail && (
         <div className="field">
-          <label htmlFor="email">Adresse email *</label>
+          <label htmlFor="email">{t('form.email_label')}</label>
           <input
             id="email"
             type="email"
@@ -453,7 +455,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
         <div className="step-actions">
           {currentStep > 0 ? (
             <button type="button" className="btn btn-secondary" onClick={goPrev}>
-              Précédent
+              {t('form.prev')}
             </button>
           ) : (
             <span />
@@ -465,7 +467,7 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             </button>
           ) : (
             <button type="button" className="btn btn-gradient" onClick={goNext}>
-              Suivant
+              {t('form.next')}
             </button>
           )}
         </div>

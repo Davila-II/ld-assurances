@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { trackSubmission, ApiError } from '../api';
-import { FORM_TYPE_LABELS, formatDate } from '../admin/labels';
+import { formatDate } from '../admin/labels';
 import type { TrackResult } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function TrackPage() {
+  const { t } = useLanguage();
   const [reference, setReference] = useState('');
   const [email, setEmail] = useState('');
   const [result, setResult] = useState<TrackResult | null>(null);
@@ -22,9 +24,7 @@ export default function TrackPage() {
       setResult(data);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setError(
-          "Aucun dossier ne correspond à ces informations. Vérifiez le numéro de dossier et l'adresse email utilisée lors de votre demande."
-        );
+        setError(t('track.not_found'));
       } else {
         setError(err instanceof Error ? err.message : 'Erreur inattendue.');
       }
@@ -33,30 +33,46 @@ export default function TrackPage() {
     }
   };
 
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'received':
+        return t('status.received');
+      case 'in_progress':
+        return t('status.in_progress');
+      case 'answered':
+        return t('status.answered');
+      case 'closed':
+        return t('status.closed');
+      default:
+        return status;
+    }
+  };
+
+  const formTypeLabel = (type: string) => {
+    return type === 'claim' ? t('status.claim') : t('status.quote');
+  };
+
   return (
     <main className="page">
-      <h1 className="page-title">Suivre ma demande</h1>
-      <p className="page-subtitle">
-        Saisissez le numéro de dossier reçu lors de votre demande de devis ou de votre déclaration
-        de sinistre, ainsi que l'adresse email utilisée.
-      </p>
+      <h1 className="page-title">{t('track.title')}</h1>
+      <p className="page-subtitle">{t('track.subtitle')}</p>
 
       <div className="form-wrap track-wrap">
         <form onSubmit={handleSubmit} className="form">
           <div className="field">
-            <label htmlFor="reference">Numéro de dossier</label>
+            <label htmlFor="reference">{t('track.ref_label')}</label>
             <input
               id="reference"
               type="text"
               required
-              placeholder="Ex : SIN-2026-ABC123"
+              placeholder={t('track.ref_placeholder')}
               value={reference}
               onChange={(event) => setReference(event.target.value)}
             />
           </div>
 
           <div className="field">
-            <label htmlFor="track-email">Adresse email</label>
+            <label htmlFor="track-email">{t('track.email_label')}</label>
             <input
               id="track-email"
               type="email"
@@ -69,7 +85,7 @@ export default function TrackPage() {
           </div>
 
           <button type="submit" disabled={loading}>
-            {loading ? 'Recherche…' : 'Rechercher'}
+            {loading ? t('track.searching') : t('track.submit')}
           </button>
         </form>
 
@@ -77,22 +93,20 @@ export default function TrackPage() {
 
         {result && (
           <div className="track-result">
-            <h2>Statut de votre dossier</h2>
+            <h2>{t('track.result_title')}</h2>
             <dl>
-              <dt>Référence</dt>
+              <dt>{t('track.ref_label')}</dt>
               <dd>{result.reference}</dd>
-              <dt>Type</dt>
-              <dd>{FORM_TYPE_LABELS[result.form_type]}</dd>
-              <dt>Catégorie</dt>
+              <dt>{t('track.category_label')}</dt>
+              <dd>{formTypeLabel(result.form_type)}</dd>
+              <dt>Branche</dt>
               <dd>{result.category ?? '—'}</dd>
-              <dt>Statut</dt>
+              <dt>{t('track.status_label')}</dt>
               <dd>
-                <span className={`badge badge-${result.status}`}>{result.status_label}</span>
+                <span className={`badge badge-${result.status}`}>{statusLabel(result.status)}</span>
               </dd>
-              <dt>Déposé le</dt>
+              <dt>{t('track.date_label')}</dt>
               <dd>{formatDate(result.created_at)}</dd>
-              <dt>Dernière mise à jour</dt>
-              <dd>{formatDate(result.updated_at)}</dd>
             </dl>
           </div>
         )}

@@ -1,23 +1,22 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle, FileCheck, FileText, FolderOpen, ShieldAlert } from 'lucide-react';
-
-const STATS = [
-  { label: 'Mes demandes de devis', value: 0, icon: <FileText size={22} /> },
-  { label: 'Mes sinistres', value: 0, icon: <ShieldAlert size={22} /> },
-  { label: 'Mes contrats', value: 0, icon: <FileCheck size={22} /> },
-  { label: 'Mes documents', value: 0, icon: <FolderOpen size={22} /> },
-];
+import { AlertTriangle, FileText, ShieldAlert } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
+
+  const stats = [
+    { label: t('client.stat_quotes'), value: 0, icon: <FileText size={22} /> },
+    { label: t('client.stat_claims'), value: 0, icon: <ShieldAlert size={22} /> },
+  ];
+
   return (
     <div className="client-content-inner">
-      <h1 className="client-page-title">Tableau de bord</h1>
-      <p className="client-page-subtitle">
-        Bienvenue dans votre espace client. Retrouvez ici toutes vos demandes et documents.
-      </p>
+      <h1 className="client-page-title">{t('client.dashboard')}</h1>
+      <p className="client-page-subtitle">{t('client.welcome_sub')}</p>
 
       <div className="client-stats">
-        {STATS.map((stat) => (
+        {stats.map((stat) => (
           <div className="client-stat" key={stat.label}>
             {stat.icon}
             <strong>{stat.value}</strong>
@@ -29,14 +28,14 @@ export default function DashboardPage() {
       <div className="client-actions">
         <Link className="client-action-card" to="/?service=devis">
           <FileText size={24} />
-          <strong>Demander un devis</strong>
-          <span>Obtenez un devis personnalisé en quelques minutes.</span>
+          <strong>{t('client.action_quote_title')}</strong>
+          <span>{t('client.action_quote_desc')}</span>
         </Link>
 
         <Link className="client-action-card" to="/?service=sinistre">
           <AlertTriangle size={24} />
-          <strong>Déclarer un sinistre</strong>
-          <span>Déclarez un sinistre et suivez son traitement.</span>
+          <strong>{t('client.action_claim_title')}</strong>
+          <span>{t('client.action_claim_desc')}</span>
         </Link>
       </div>
     </div>

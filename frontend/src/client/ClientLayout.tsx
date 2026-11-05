@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
-  FileCheck,
   FileText,
-  FolderOpen,
   LayoutDashboard,
   LogOut,
   User,
@@ -13,23 +11,31 @@ import { SITE } from '../siteConfig';
 import { clientErrorMessage, clientLogout, clientMe } from '../clientApi';
 import { clearClientToken, getClientToken } from '../clientAuth';
 import type { ClientUser } from '../clientTypes';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 
 export interface ClientOutletContext {
   user: ClientUser;
   refresh: () => Promise<void>;
 }
 
-const NAV = [
-  { to: '/espace-client', label: 'Tableau de bord', icon: <LayoutDashboard size={18} />, end: true },
-  { to: '/espace-client/demandes', label: 'Mes demandes', icon: <FileText size={18} /> },
-  { to: '/espace-client/sinistres', label: 'Mes sinistres', icon: <AlertTriangle size={18} /> },
-  { to: '/espace-client/contrats', label: 'Mes contrats', icon: <FileCheck size={18} /> },
-  { to: '/espace-client/documents', label: 'Mes documents', icon: <FolderOpen size={18} /> },
-  { to: '/espace-client/profil', label: 'Mon profil', icon: <User size={18} /> },
+interface NavItem {
+  to: string;
+  labelKey: TranslationKey;
+  icon: React.ReactNode;
+  end?: boolean;
+}
+
+const NAV: NavItem[] = [
+  { to: '/espace-client', labelKey: 'client.dashboard', icon: <LayoutDashboard size={18} />, end: true },
+  { to: '/espace-client/demandes', labelKey: 'client.my_requests', icon: <FileText size={18} /> },
+  { to: '/espace-client/sinistres', labelKey: 'client.my_claims', icon: <AlertTriangle size={18} /> },
+  { to: '/espace-client/profil', labelKey: 'client.my_profile', icon: <User size={18} /> },
 ];
 
 export default function ClientLayout() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const hasToken = Boolean(getClientToken());
 
   const [user, setUser] = useState<ClientUser | null>(null);
@@ -78,7 +84,7 @@ export default function ClientLayout() {
   if (!ready) {
     return (
       <p role="status" className="center">
-        Chargement…
+        {t('claims.loading')}
       </p>
     );
   }
@@ -88,12 +94,11 @@ export default function ClientLayout() {
       <main className="login">
         <p className="alert">{error || "Impossible de charger votre espace client."}</p>
         <p className="center">
-          <Link to="/espace-client/connexion">Retour à la connexion</Link>
+          <Link to="/espace-client/connexion">{t('auth.back_to_login')}</Link>
         </p>
       </main>
     );
   }
-
 
   return (
     <div className="client-layout">
@@ -102,7 +107,7 @@ export default function ClientLayout() {
           <img src="/logo-icon.png" alt="" />
           <span>
             <span className="brand-ld">LD</span> ASSURANCES SA
-            <span className="client-brand-sub">Espace client</span>
+            <span className="client-brand-sub">{t('nav.client_space')}</span>
           </span>
         </Link>
 
@@ -115,16 +120,19 @@ export default function ClientLayout() {
               className={({ isActive }) => (isActive ? 'active' : '')}
             >
               {item.icon}
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
 
         <div className="client-sidebar-footer">
+          <div style={{ marginBottom: '10px' }}>
+            <LanguageToggle />
+          </div>
           <small style={{ display: 'block', padding: '0 4px 8px', opacity: 0.8 }}>{user.name}</small>
-          <Link to={SITE.mainUrl}>← Retour au site</Link>
+          <Link to={SITE.mainUrl}>{t('nav.back_to_site')}</Link>
           <button type="button" onClick={logout}>
-            <LogOut size={18} /> Se déconnecter
+            <LogOut size={18} /> {t('nav.logout')}
           </button>
         </div>
       </aside>

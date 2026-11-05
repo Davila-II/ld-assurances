@@ -5,9 +5,11 @@ import { getCategories } from '../api';
 import DynamicForm from '../components/DynamicForm';
 import { PRODUCTS } from '../products';
 import type { Category } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function QuotePage() {
   const { slug = '' } = useParams();
+  const { t } = useLanguage();
   const product = PRODUCTS.find((p) => p.key === slug);
 
   const [category, setCategory] = useState<Category | null>(null);
@@ -51,21 +53,23 @@ export default function QuotePage() {
   if (product.mainQuoteUrl) {
     return (
       <main className="page">
-        <p className="center">Redirection vers le site principal…</p>
+        <p className="center">Redirection…</p>
       </main>
     );
   }
 
+  const label = product.labelKey ? t(product.labelKey) : product.label;
+
   return (
     <main className="page">
       <Link className="back-btn" to="/?service=devis">
-        <ArrowLeft size={16} /> Retour aux devis
+        <ArrowLeft size={16} /> {t('quotes.title')}
       </Link>
 
-      <h1 className="page-title accent">Demande de devis - {product.label}</h1>
-      <p className="page-subtitle">
-        Remplissez le formulaire ci-dessous pour obtenir votre devis personnalisé.
-      </p>
+      <h1 className="page-title accent">
+        {t('quotes.title')} - {label}
+      </h1>
+      <p className="page-subtitle">{t('quotes.subtitle')}</p>
 
       {error && <p className="alert">{error}</p>}
 

@@ -5,23 +5,27 @@ import DynamicForm from '../components/DynamicForm';
 import { PRODUCTS } from '../products';
 import { CONTACT_URL, SITE, telHref } from '../siteConfig';
 import type { Category, FormType } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // Vue « devis » : une carte par type d'assurance.
-// Les devis déjà gérés sur le site principal (auto, voyage, professionnelle)
-// sont des liens sortants ; les autres ouvrent leur propre page locale.
 function QuoteHub() {
+  const { t } = useLanguage();
+
   return (
     <main className="page hub">
-      <h1 className="hub-title">Demandez votre devis en ligne</h1>
-      <p className="hub-subtitle">Sélectionnez le type d'assurance qui vous intéresse</p>
+      <h1 className="hub-title">{t('quotes.title')}</h1>
+      <p className="hub-subtitle">{t('quotes.subtitle')}</p>
 
       <div className="hub-grid">
         {PRODUCTS.map((product) => {
+          const label = product.labelKey ? t(product.labelKey) : product.label;
+          const desc = product.descKey ? t(product.descKey) : product.description;
+
           const inner = (
             <>
               <span className="hub-icon">{product.icon}</span>
-              <span className="hub-name">{product.label}</span>
-              <span className="hub-desc">{product.description}</span>
+              <span className="hub-name">{label}</span>
+              <span className="hub-desc">{desc}</span>
             </>
           );
 
@@ -46,10 +50,10 @@ function QuoteHub() {
       </div>
 
       <section className="hub-contact">
-        <h2>Vous ne trouvez pas ce que vous cherchez ?</h2>
-        <p>Notre équipe est à votre disposition pour répondre à toutes vos demandes spécifiques.</p>
+        <h2>{t('quotes.cant_find_title')}</h2>
+        <p>{t('quotes.cant_find_desc')}</p>
         <a className="hub-contact-btn" href={CONTACT_URL}>
-          Nous contacter
+          {t('quotes.contact_us')}
         </a>
       </section>
     </main>
@@ -58,6 +62,7 @@ function QuoteHub() {
 
 // Vue « sinistre » : un seul formulaire général, qui s'adapte au type choisi
 function ClaimFlow() {
+  const { t } = useLanguage();
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,21 +78,17 @@ function ClaimFlow() {
 
   return (
     <main className="page">
-      <h1 className="page-title accent">Déclaration de sinistre</h1>
-      <p className="page-subtitle">
-        Remplissez le formulaire ci-dessous. Il s'adaptera au type de sinistre que vous choisirez.
-      </p>
+      <h1 className="page-title accent">{t('claims.title')}</h1>
+      <p className="page-subtitle">{t('claims.subtitle')}</p>
 
       <p className="urgent-note">
-        En cas d'urgence, appelez notre ligne 24h/24 :{' '}
+        {t('site.emergency')}{' '}
         <a href={telHref(SITE.emergencyPhone)}>{SITE.emergencyPhone}</a>
       </p>
-      <p className="deadline-note">
-        Délai de déclaration : 5 jours ouvrés après le sinistre (48h en cas de vol).
-      </p>
+      <p className="deadline-note">{t('site.deadline')}</p>
 
       {error && <p className="alert">{error}</p>}
-      {loading && <p className="center">Chargement…</p>}
+      {loading && <p className="center">{t('claims.loading')}</p>}
 
       {category && (
         <div className="form-wrap">

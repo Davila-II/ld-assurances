@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { adminLogout } from '../api';
 import { clearToken, getToken } from '../auth';
 import { errorMessage } from './labels';
+import { LanguageToggle } from '../i18n/LanguageContext';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -56,9 +57,12 @@ export default function AdminLayout() {
           </NavLink>
         </nav>
 
-        <button type="button" disabled={loggingOut} onClick={logout}>
-          {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <LanguageToggle />
+          <button type="button" disabled={loggingOut} onClick={logout}>
+            {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
+          </button>
+        </div>
       </header>
       <main className="admin-main">
         <Outlet />

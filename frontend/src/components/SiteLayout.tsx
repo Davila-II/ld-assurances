@@ -5,10 +5,10 @@ import {
   FOOTER_LEGAL_LINKS,
   FOOTER_LINKS,
   FOOTER_PRODUCT_LINKS,
-  NAV_LINKS,
   SITE,
   telHref,
 } from '../siteConfig';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 
 function Brand({ footer = false }: { footer?: boolean }) {
   return (
@@ -72,6 +72,7 @@ const SOCIALS = [
 ];
 
 export default function SiteLayout() {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -90,7 +91,10 @@ export default function SiteLayout() {
               <MapPin size={14} /> {SITE.address}
             </span>
           </div>
-          <div className="topbar-agencies">Nos Agences : {SITE.agencies.join(' | ')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="topbar-agencies">{t('nav.agencies')} : {SITE.agencies.join(' | ')}</div>
+            <LanguageToggle />
+          </div>
         </div>
       </div>
 
@@ -99,8 +103,9 @@ export default function SiteLayout() {
           <Brand />
 
           <div className="header-actions">
+            <LanguageToggle />
             <Link className="btn btn-secondary btn-sm" to="/espace-client/connexion">
-              <LogIn size={16} /> Connexion
+              <LogIn size={16} /> {t('nav.login')}
             </Link>
             <button
               type="button"
@@ -115,22 +120,22 @@ export default function SiteLayout() {
           </div>
 
           <nav id="site-nav" className={open ? 'site-nav open' : 'site-nav'}>
-            {NAV_LINKS.map((link) => (
-              <a key={link.label} href={link.href}>
-                {link.label}
-              </a>
-            ))}
+            <a href={`${SITE.mainUrl}/`}>{t('nav.home')}</a>
+            <a href={`${SITE.mainUrl}/produits`}>{t('nav.products')}</a>
+            <a href={`${SITE.mainUrl}/#about`}>{t('nav.about')}</a>
+            <a href={`${SITE.mainUrl}/blog`}>{t('nav.blog')}</a>
+            <a href={`${SITE.mainUrl}/contact`}>{t('nav.contact')}</a>
             <Link to="/suivi" onClick={close}>
-              Suivre ma demande
+              {t('nav.track')}
             </Link>
             <Link to="/espace-client/connexion" onClick={close}>
-              Connexion
+              {t('nav.login')}
             </Link>
             <Link className="btn btn-gradient btn-sm" to="/?service=devis" onClick={close}>
-              Devis en Ligne
+              {t('nav.quote_btn')}
             </Link>
             <Link className="btn btn-danger btn-sm" to="/?service=sinistre" onClick={close}>
-              Déclaration Sinistre
+              {t('nav.claim_btn')}
             </Link>
           </nav>
         </div>
@@ -147,10 +152,10 @@ export default function SiteLayout() {
               </span>
               <div>
                 <h4 className="footer-title-gradient">{SITE.name}</h4>
-                <p className="footer-tagline">{SITE.tagline}</p>
+                <p className="footer-tagline">{t('site.tagline')}</p>
               </div>
             </div>
-            <p className="footer-desc">{SITE.description}</p>
+            <p className="footer-desc">{t('site.description')}</p>
             <ul className="footer-list">
               <li>
                 <MapPin size={18} />
@@ -179,7 +184,7 @@ export default function SiteLayout() {
           </div>
 
           <div>
-            <h4 className="footer-heading">Nos Produits</h4>
+            <h4 className="footer-heading">{t('nav.products')}</h4>
             <ul className="footer-links">
               {FOOTER_PRODUCT_LINKS.map((link) => (
                 <li key={link.label}>
@@ -190,7 +195,7 @@ export default function SiteLayout() {
           </div>
 
           <div>
-            <h4 className="footer-heading">Liens Utiles</h4>
+            <h4 className="footer-heading">{t('site.useful_links')}</h4>
             <ul className="footer-links">
               {FOOTER_LINKS.map((link) => (
                 <li key={link.label}>
@@ -215,10 +220,7 @@ export default function SiteLayout() {
               <h3>
                 <PhoneCall size={18} /> Urgence Sinistre 24/7
               </h3>
-              <p>
-                En cas de sinistre urgent, contactez notre ligne d'urgence disponible 24h/24 et
-                7j/7.
-              </p>
+              <p>{t('site.emergency')}</p>
               <a className="phone" href={telHref(SITE.emergencyPhone)}>
                 {SITE.emergencyPhone}
               </a>
@@ -243,19 +245,25 @@ export default function SiteLayout() {
         </div>
 
         <div className="trust">
-          {SITE.badges.map((badge) => (
-            <div key={badge.name}>
-              <strong>{badge.name}</strong>
-              <span>{badge.text}</span>
-            </div>
-          ))}
+          <div>
+            <strong>CIMA</strong>
+            <span>{t('site.cima')}</span>
+          </div>
+          <div>
+            <strong>MINFI</strong>
+            <span>{t('site.minfi')}</span>
+          </div>
+          <div>
+            <strong>OHADA</strong>
+            <span>{t('site.ohada')}</span>
+          </div>
         </div>
 
         <div className="footer-legal">
           <p>
-            © {new Date().getFullYear()} {SITE.name}. Tous droits réservés.
+            © {new Date().getFullYear()} {SITE.name}. {t('site.rights')}
           </p>
-          <p>{SITE.legal}</p>
+          <p>{t('site.legal')}</p>
           <div className="footer-legal-links">
             {FOOTER_LEGAL_LINKS.map((link) => (
               <a key={link.label} href={link.href}>
