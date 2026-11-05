@@ -1,4 +1,5 @@
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   FileCheck,
@@ -9,6 +10,14 @@ import {
   User,
 } from 'lucide-react';
 import { SITE } from '../siteConfig';
+import { clientErrorMessage, clientLogout, clientMe } from '../clientApi';
+import { clearClientToken, getClientToken } from '../clientAuth';
+import type { ClientUser } from '../clientTypes';
+
+export interface ClientOutletContext {
+  user: ClientUser;
+  refresh: () => Promise<void>;
+}
 
 const NAV = [
   { to: '/espace-client', label: 'Tableau de bord', icon: <LayoutDashboard size={18} />, end: true },
@@ -21,9 +30,73 @@ const NAV = [
 
 export default function ClientLayout() {
   const navigate = useNavigate();
+  const hasToken = Boolean(getClientToken());
 
-  // Déconnexion factice (l'authentification réelle arrive plus tard)
-  const logout = () => navigate('/espace-client/connexion');
+  const [user, setUser] = useState<ClientUser | null>(null);
+  const [ready, setReady] = useState(!hasToken);
+  const [error, setError] = useState('');
+
+  // Chargement du compte connecté
+  useEffect(() => {
+    if (!hasToken) return;
+    let cancelled = false;
+
+    clientMe()
+      .then((data) => {
+        if (!cancelled) setUser(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(clientErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasToken]);
+
+  const refresh = useCallback(async () => {
+    setUser(await clientMe());
+  }, []);
+
+  const logout = async () => {
+    try {
+      await clientLogout();
+    } catch {
+      // Même si le serveur ne répond pas, on ferme la session dans le navigateur
+    }
+    clearClientToken();
+    navigate('/espace-client/connexion', { replace: true });
+  };
+
+  if (!hasToken) {
+    return <Navigate to="/espace-client/connexion" replace />;
+  }
+
+  if (!ready) {
+    return (
+      <p role="status" className="center">
+        Chargement…
+      </p>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="login">
+        <p className="alert">{error || "Impossible de charger votre espace client."}</p>
+        <p className="center">
+          <Link to="/espace-client/connexion">Retour à la connexion</Link>
+        </p>
+      </main>
+    );
+  }
+
+  if (!user.email_verified) {
+    return <Navigate to="/espace-client/verification" replace />;
+  }
 
   return (
     <div className="client-layout">
@@ -51,6 +124,7 @@ export default function ClientLayout() {
         </nav>
 
         <div className="client-sidebar-footer">
+          <small style={{ display: 'block', padding: '0 4px 8px', opacity: 0.8 }}>{user.name}</small>
           <Link to={SITE.mainUrl}>← Retour au site</Link>
           <button type="button" onClick={logout}>
             <LogOut size={18} /> Se déconnecter
@@ -59,7 +133,7 @@ export default function ClientLayout() {
       </aside>
 
       <main className="client-content">
-        <Outlet />
+        <Outlet context={{ user, refresh } satisfies ClientOutletContext} />
       </main>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { clientErrorMessage, clientRegister } from '../clientApi';
+import { getClientToken, setClientToken } from '../clientAuth';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -9,11 +11,39 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Inscription réelle à venir : on entre simplement dans l'espace client pour l'instant
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  if (getClientToken()) {
+    return <Navigate to="/espace-client" replace />;
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate('/espace-client');
+    setError('');
+
+    if (password !== confirm) {
+      setError('La confirmation du mot de passe ne correspond pas.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await clientRegister({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+        password_confirmation: confirm,
+      });
+      setClientToken(result.token);
+      navigate('/espace-client/verification', { replace: true });
+    } catch (err) {
+      setError(clientErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,6 +52,8 @@ export default function RegisterPage() {
       <p>Créez votre espace client pour suivre vos demandes en ligne.</p>
 
       <form onSubmit={handleSubmit} className="form">
+        {error && <p className="alert">{error}</p>}
+
         <div className="field">
           <label htmlFor="name">Nom et prénom</label>
           <input
@@ -71,6 +103,7 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
+          <small>8 caractères minimum, avec des lettres et des chiffres.</small>
         </div>
 
         <div className="field">
@@ -86,7 +119,9 @@ export default function RegisterPage() {
           />
         </div>
 
-        <button type="submit">S'inscrire</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Création…' : "S'inscrire"}
+        </button>
       </form>
 
       <p className="center">

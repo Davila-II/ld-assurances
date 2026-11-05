@@ -18,6 +18,9 @@ import ClientClaimsPage from './client/ClaimsPage';
 import ClientContractsPage from './client/ContractsPage';
 import ClientDocumentsPage from './client/DocumentsPage';
 import ClientProfilePage from './client/ProfilePage';
+import VerifyEmailPage from './client/VerifyEmailPage';
+import ForgotPasswordPage from './client/ForgotPasswordPage';
+import ResetPasswordPage from './client/ResetPasswordPage';
 
 export default function App() {
   return (
@@ -28,6 +31,9 @@ export default function App() {
         <Route path="/suivi" element={<TrackPage />} />
         <Route path="/espace-client/connexion" element={<ClientLoginPage />} />
         <Route path="/espace-client/inscription" element={<ClientRegisterPage />} />
+        <Route path="/espace-client/verification" element={<VerifyEmailPage />} />
+        <Route path="/espace-client/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
+        <Route path="/espace-client/reinitialiser" element={<ResetPasswordPage />} />
       </Route>
 
       {/* Espace client : layout autonome (sidebar), sans le header/footer public */}

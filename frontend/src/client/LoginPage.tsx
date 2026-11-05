@@ -1,16 +1,36 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { clientErrorMessage, clientLogin } from '../clientApi';
+import { getClientToken, setClientToken } from '../clientAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Authentification réelle à venir : on entre simplement dans l'espace client pour l'instant
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  if (getClientToken()) {
+    return <Navigate to="/espace-client" replace />;
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate('/espace-client');
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await clientLogin(email.trim(), password);
+      setClientToken(result.token);
+      navigate(result.user.email_verified ? '/espace-client' : '/espace-client/verification', {
+        replace: true,
+      });
+    } catch (err) {
+      setError(clientErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -19,6 +39,8 @@ export default function LoginPage() {
       <p>Connectez-vous pour suivre vos demandes, contrats et documents.</p>
 
       <form onSubmit={handleSubmit} className="form">
+        {error && <p className="alert">{error}</p>}
+
         <div className="field">
           <label htmlFor="email">Adresse email</label>
           <input
@@ -44,9 +66,14 @@ export default function LoginPage() {
           />
         </div>
 
-        <button type="submit">Se connecter</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Connexion…' : 'Se connecter'}
+        </button>
       </form>
 
+      <p className="center">
+        <Link to="/espace-client/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+      </p>
       <p className="center">
         Pas encore de compte ? <Link to="/espace-client/inscription">Créer un compte</Link>
       </p>
