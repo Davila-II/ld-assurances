@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   KeyRound,
+  Mail,
   MailQuestion,
+  Phone,
   Save,
-  ShieldCheck,
   User as UserIcon,
 } from 'lucide-react';
 import type { ClientOutletContext } from './ClientLayout';
@@ -122,30 +122,11 @@ export default function ProfilePage() {
     }
   };
 
-  const initials = user.name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0].toUpperCase())
-    .join('');
-
   return (
     <div className="client-content-inner">
       <h1 className="client-page-title">{t('profile.title')}</h1>
       <p className="client-page-subtitle">{t('profile.subtitle')}</p>
 
-      {/* En-tête profil avec avatar et statut */}
-      <div className="profile-hero-card">
-        <div className="profile-hero-avatar">{initials || 'U'}</div>
-        <div className="profile-hero-details">
-          <h2>{user.name}</h2>
-          <p>{user.email}</p>
-          <div className="profile-hero-badge">
-            <ShieldCheck size={14} />
-            <span>Compte vérifié & actif</span>
-          </div>
-        </div>
-      </div>
 
       {/* Section 1 : Préférences de langue dans le profil */}
       <section className="profile-section" style={{ marginBottom: '28px' }}>
@@ -166,7 +147,9 @@ export default function ProfilePage() {
           {profileNotice && <p className="notice">{profileNotice}</p>}
 
           <div className="field">
-            <label htmlFor="name">{t('profile.name')}</label>
+            <label htmlFor="name" className="field-label-with-icon">
+              <UserIcon size={15} /> {t('profile.name')}
+            </label>
             <input
               id="name"
               type="text"
@@ -179,10 +162,9 @@ export default function ProfilePage() {
 
           <div className="field">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label htmlFor="email">{t('profile.email')}</label>
-              <span className="email-verified-tag">
-                <CheckCircle2 size={13} /> Vérifié
-              </span>
+              <label htmlFor="email" className="field-label-with-icon">
+                <Mail size={15} /> {t('profile.email')}
+              </label>
             </div>
             <input
               id="email"
@@ -197,14 +179,16 @@ export default function ProfilePage() {
           </div>
 
           <div className="field">
-            <label htmlFor="phone">{t('profile.phone')}</label>
+            <label htmlFor="phone" className="field-label-with-icon">
+              <Phone size={15} /> {t('profile.phone')}
+            </label>
             <PhoneInput
               id="phone"
               value={phone}
               onChange={(val) => setPhone(val)}
             />
             <small style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
-              Sélectionnez votre indicatif pays (ex: 🇨🇲 +237) puis saisissez votre numéro de mobile.
+              {t('profile.phone_help')}
             </small>
           </div>
 
