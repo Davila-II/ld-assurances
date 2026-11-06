@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 
 const CAMEROON_DIAL = '+237';
 const CAMEROON_PLACEHOLDER = '6 XX XX XX XX';
@@ -23,24 +22,27 @@ export default function PhoneInput({
   // Extrait le numéro local sans le préfixe +237
   const parseLocalNumber = (val: string): string => {
     if (!val) return '';
-    if (val.startsWith(CAMEROON_DIAL)) {
-      return val.slice(CAMEROON_DIAL.length).trim();
+    if (val.startsWith(CAMEROON_DIAL + ' ')) {
+      return val.slice(CAMEROON_DIAL.length + 1);
     }
-    // Nettoie tout autre préfixe international éventuel
-    return val.replace(/^\+\d+\s*/, '').trim();
+    if (val.startsWith(CAMEROON_DIAL)) {
+      return val.slice(CAMEROON_DIAL.length).trimStart();
+    }
+    return val.replace(/^\+\d+\s*/, '');
   };
 
-  const [phoneNumber, setPhoneNumber] = useState<string>(() => parseLocalNumber(value));
-
-  useEffect(() => {
-    setPhoneNumber(parseLocalNumber(value));
-  }, [value]);
+  const localNumber = parseLocalNumber(value);
 
   const handleNumberChange = (raw: string) => {
+    let normalized = raw;
+    if (normalized.startsWith(CAMEROON_DIAL)) {
+      normalized = normalized.slice(CAMEROON_DIAL.length);
+    } else if (normalized.startsWith('+237')) {
+      normalized = normalized.slice(4);
+    }
     // Ne garder que chiffres, espaces et tirets
-    const cleaned = raw.replace(/[^\d\s-]/g, '');
-    setPhoneNumber(cleaned);
-    const combined = cleaned.trim() ? `${CAMEROON_DIAL} ${cleaned.trim()}` : '';
+    const cleaned = normalized.replace(/[^\d\s-]/g, '');
+    const combined = cleaned.trim() ? `${CAMEROON_DIAL} ${cleaned}` : '';
     onChange(combined);
   };
 
@@ -58,7 +60,7 @@ export default function PhoneInput({
         disabled={disabled}
         className="phone-number-input"
         placeholder={CAMEROON_PLACEHOLDER}
-        value={phoneNumber}
+        value={localNumber}
         onChange={(e) => handleNumberChange(e.target.value)}
       />
     </div>

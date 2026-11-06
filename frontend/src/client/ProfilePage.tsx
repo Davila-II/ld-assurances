@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -48,10 +48,12 @@ export default function ProfilePage() {
   const [forgotError, setForgotError] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  useEffect(() => {
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
     setName(user.name);
     setPhone(user.phone ?? '');
-  }, [user]);
+  }
 
   const toggleMode = (mode: 'change' | 'forgot') => {
     setPasswordMode((prev) => (prev === mode ? null : mode));
