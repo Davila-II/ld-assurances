@@ -5,6 +5,7 @@ export const STATUS_LABELS: Record<SubmissionStatus, string> = {
   in_progress: 'En cours',
   answered: 'Répondu',
   closed: 'Clôturé',
+  rejected: 'Rejeté',
 };
 
 export const STATUSES: SubmissionStatus[] = Object.keys(STATUS_LABELS) as SubmissionStatus[];

@@ -98,6 +98,40 @@ class AdminSubmissionTest extends TestCase
             ->assertJsonPath('status', 'in_progress');
     }
 
+    public function test_admin_can_reject_submission_with_reason(): void
+    {
+        $submission = $this->makeSubmission();
+
+        Sanctum::actingAs($this->admin());
+
+        $this->patchJson("/api/admin/submissions/{$submission->id}/status", [
+            'status'           => 'rejected',
+            'rejection_reason' => 'Dossier incomplet, pièces manquantes.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'rejected')
+            ->assertJsonPath('rejection_reason', 'Dossier incomplet, pièces manquantes.');
+
+        $this->assertDatabaseHas('submissions', [
+            'id'               => $submission->id,
+            'status'           => 'rejected',
+            'rejection_reason' => 'Dossier incomplet, pièces manquantes.',
+        ]);
+    }
+
+    public function test_admin_rejection_requires_reason(): void
+    {
+        $submission = $this->makeSubmission();
+
+        Sanctum::actingAs($this->admin());
+
+        $this->patchJson("/api/admin/submissions/{$submission->id}/status", [
+            'status' => 'rejected',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('rejection_reason');
+    }
+
     public function test_admin_can_save_notes_and_reply(): void
     {
         $submission = $this->makeSubmission();

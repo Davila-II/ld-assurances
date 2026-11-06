@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminClientController;
 use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\FormBuilderController;
@@ -64,6 +65,10 @@ Route::prefix('admin')->group(function () {
         Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
 
         Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
+
+        // Gestion des clients
+        Route::get('/clients', [AdminClientController::class, 'index']);
+        Route::post('/clients', [AdminClientController::class, 'store']);
 
         // Constructeur de formulaires
         Route::get('/form-builder/categories', [FormBuilderController::class, 'categories']);

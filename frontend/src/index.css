@@ -235,53 +235,411 @@ input[type='checkbox'] {
 .admin-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: 16px;
+  padding: 12px 20px;
   background: #1e4d8f;
   color: #fff;
+  box-shadow: 0 2px 6px rgba(15, 31, 56, 0.12);
 }
 
-.admin-header a {
+.admin-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
   color: #fff;
-  font-weight: 600;
   text-decoration: none;
+  font-size: 1.05rem;
 }
 
-.admin-header button {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
-  background: transparent;
+.admin-brand-ld {
+  color: #f59e0b;
+  font-weight: 800;
+}
+
+.admin-brand-badge {
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  font-size: 0.95rem;
-  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .admin-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .admin-nav a {
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
   border-radius: 6px;
-  color: #fff;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 500;
   text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .admin-nav a:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 
 .admin-nav a.active {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-weight: 600;
+}
+
+.admin-header-actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.admin-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #fff;
+}
+
+/* Bouton Hamburger 3 barres pour mobile */
+.admin-hamburger-btn {
+  display: none;
+}
+
+.admin-backdrop {
+  display: none;
+}
+
+.admin-drawer {
+  display: none;
+}
+
+/* Séparateur Déclarations de sinistres et Demandes de devis */
+.submission-type-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #eef2f7;
+  padding: 6px;
+  border-radius: 10px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.submission-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.submission-switcher-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.submission-switcher-btn.active {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 31, 56, 0.1);
+}
+
+.submission-switcher-btn.active.active-claim {
+  color: #b91c1c;
+}
+
+.submission-switcher-btn.active.active-quote {
+  color: #1e4d8f;
+}
+
+/* Modal pour création de client */
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 31, 56, 0.6);
+  z-index: 120;
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.admin-modal-card {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.admin-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.admin-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Responsivité Mobile pour le côté Administrateur */
+@media (max-width: 800px) {
+  .admin-nav-desktop {
+    display: none;
+  }
+
+  .admin-header-actions-desktop {
+    display: none;
+  }
+
+  .admin-hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .admin-hamburger-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .admin-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 31, 56, 0.5);
+    z-index: 95;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .admin-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 290px;
+    max-width: 85vw;
+    height: 100vh;
+    height: 100dvh;
+    background: #fff;
+    z-index: 100;
+    box-shadow: 4px 0 24px rgba(15, 31, 56, 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-right: 1px solid #e2e8f0;
+  }
+
+  .admin-drawer.open {
+    transform: translateX(0);
+  }
+
+  .admin-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .admin-drawer-brand {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e4d8f;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-drawer-brand .admin-brand-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  .admin-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+  }
+
+  .admin-drawer-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .admin-drawer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .admin-drawer-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #1e293b;
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .admin-drawer-nav a:hover {
+    background: #f1f5f9;
+  }
+
+  .admin-drawer-nav a.active {
+    background: #eaf1fe;
+    color: #1e4d8f;
+    font-weight: 600;
+  }
+
+  .admin-drawer-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .admin-drawer-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .admin-drawer-link:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+  }
+
+  .admin-drawer-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 1px solid #fee2e2;
+    border-radius: 8px;
+    background: #fff5f5;
+    color: #b91c1c;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.15s;
+  }
+
+  .admin-drawer-logout-btn:hover {
+    background: #fde8e8;
+  }
+
+  .submission-type-switcher {
+    width: 100%;
+  }
+
+  .submission-switcher-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
 }
 
 .admin-stats {
@@ -565,6 +923,11 @@ tr.muted {
 .badge-closed {
   background: #e8eaee;
   color: #4a5565;
+}
+
+.badge-rejected {
+  background: #fde8e8;
+  color: #9b1c1c;
 }
 
 .pagination {

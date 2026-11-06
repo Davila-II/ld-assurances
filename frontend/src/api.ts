@@ -1,6 +1,7 @@
 import { clearToken, getToken } from './auth';
 import { getClientToken } from './clientAuth';
 import type {
+  AdminClient,
   AdminStats,
   BuilderCategory,
   BuilderField,
@@ -161,13 +162,41 @@ export const getSubmissions = (filters: SubmissionFilters) => {
 export const getSubmission = (id: string | number) =>
   request<SubmissionDetail>(`/admin/submissions/${id}`, {}, true);
 
-export const updateSubmissionStatus = (id: number, status: SubmissionStatus) =>
-  request<{ id: number; status: SubmissionStatus }>(
+export const updateSubmissionStatus = (
+  id: number | string,
+  status: SubmissionStatus,
+  rejection_reason?: string
+) =>
+  request<{ id: number; status: SubmissionStatus; rejection_reason?: string | null }>(
     `/admin/submissions/${id}/status`,
     {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, rejection_reason: rejection_reason || undefined }),
+    },
+    true
+  );
+
+export const getClients = (params: { q?: string; page?: number } = {}) => {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set('q', params.q);
+  if (params.page && params.page > 1) qs.set('page', String(params.page));
+  const query = qs.toString();
+  return request<Paginated<AdminClient>>(`/admin/clients${query ? `?${query}` : ''}`, {}, true);
+};
+
+export const createClient = (data: {
+  name: string;
+  email: string;
+  phone?: string;
+  password?: string;
+}) =>
+  request<{ message: string; user: AdminClient; temporary_password?: string }>(
+    '/admin/clients',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     },
     true
   );

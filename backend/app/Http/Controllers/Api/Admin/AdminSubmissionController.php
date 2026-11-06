@@ -18,7 +18,7 @@ use Throwable;
 
 class AdminSubmissionController extends Controller
 {
-    private const STATUSES = ['received', 'in_progress', 'answered', 'closed'];
+    private const STATUSES = ['received', 'in_progress', 'answered', 'closed', 'rejected'];
 
     // Liste paginée, avec filtres : status, form_type, category, q (référence ou email)
     public function index(Request $request): JsonResponse
@@ -104,8 +104,9 @@ class AdminSubmissionController extends Controller
             'type'        => $submission->form_type === 'claim'
                 ? ($submission->answers['sinistre_type'] ?? null)
                 : $submission->category?->name,
-            'notes'       => $submission->notes,
-            'created_at'  => $submission->created_at?->toIso8601String(),
+            'notes'            => $submission->notes,
+            'rejection_reason' => $submission->rejection_reason,
+            'created_at'       => $submission->created_at?->toIso8601String(),
             'answers'     => $answers,
             'attachments' => $submission->attachments->map(fn (Attachment $a) => [
                 'id'            => $a->id,
@@ -116,14 +117,27 @@ class AdminSubmissionController extends Controller
         ]);
     }
 
-    // Changement de statut : received, in_progress, answered, closed
+    // Changement de statut : received, in_progress, answered, closed, rejected
     public function updateStatus(Request $request, Submission $submission): JsonResponse
     {
         $data = $request->validate([
-            'status' => ['required', Rule::in(self::STATUSES)],
+            'status'           => ['required', Rule::in(self::STATUSES)],
+            'rejection_reason' => [
+                Rule::requiredIf($request->input('status') === 'rejected'),
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+        ], [
+            'rejection_reason.required' => 'Le motif du rejet est obligatoire pour rejeter un dossier.',
         ]);
 
-        $submission->update(['status' => $data['status']]);
+        $submission->update([
+            'status'           => $data['status'],
+            'rejection_reason' => $data['status'] === 'rejected'
+                ? ($data['rejection_reason'] ?? null)
+                : null,
+        ]);
 
         // Notification au client du changement de statut
         try {
@@ -133,8 +147,9 @@ class AdminSubmissionController extends Controller
         }
 
         return response()->json([
-            'id'     => $submission->id,
-            'status' => $submission->status,
+            'id'               => $submission->id,
+            'status'           => $submission->status,
+            'rejection_reason' => $submission->rejection_reason,
         ]);
     }
 

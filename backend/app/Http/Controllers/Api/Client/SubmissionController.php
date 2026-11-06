@@ -23,13 +23,14 @@ class SubmissionController extends Controller
         }
 
         $page = $query->paginate(20)->through(fn (Submission $submission) => [
-            'reference'    => $submission->reference,
-            'form_type'    => $submission->form_type,
-            'status'       => $submission->status,
-            'status_label' => $submission->statusLabel(),
-            'category'     => $submission->category?->name,
-            'created_at'   => $submission->created_at?->toIso8601String(),
-            'updated_at'   => $submission->updated_at?->toIso8601String(),
+            'reference'        => $submission->reference,
+            'form_type'        => $submission->form_type,
+            'status'           => $submission->status,
+            'status_label'     => $submission->statusLabel(),
+            'category'         => $submission->category?->name,
+            'rejection_reason' => $submission->rejection_reason,
+            'created_at'       => $submission->created_at?->toIso8601String(),
+            'updated_at'       => $submission->updated_at?->toIso8601String(),
         ]);
 
         return response()->json($page);

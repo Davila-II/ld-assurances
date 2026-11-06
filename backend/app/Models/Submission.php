@@ -11,7 +11,7 @@ class Submission extends Model
 {
     protected $fillable = [
         'reference', 'category_id', 'user_id', 'form_type',
-        'email', 'status', 'notes', 'answers', 'form_snapshot',
+        'email', 'status', 'notes', 'rejection_reason', 'answers', 'form_snapshot',
     ];
 
     protected $casts = [
@@ -42,6 +42,7 @@ class Submission extends Model
             'in_progress' => 'En cours',
             'answered'    => 'Répondu',
             'closed'      => 'Clôturé',
+            'rejected'    => 'Rejeté',
             default       => $this->status,
         };
     }

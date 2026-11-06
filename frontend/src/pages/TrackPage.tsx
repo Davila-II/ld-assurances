@@ -43,6 +43,8 @@ export default function TrackPage() {
         return t('status.answered');
       case 'closed':
         return t('status.closed');
+      case 'rejected':
+        return t('status.rejected');
       default:
         return status;
     }
@@ -105,6 +107,12 @@ export default function TrackPage() {
               <dd>
                 <span className={`badge badge-${result.status}`}>{statusLabel(result.status)}</span>
               </dd>
+              {result.status === 'rejected' && result.rejection_reason && (
+                <>
+                  <dt style={{ color: '#b91c1c' }}>Motif du rejet</dt>
+                  <dd style={{ color: '#b91c1c', fontWeight: 600 }}>{result.rejection_reason}</dd>
+                </>
+              )}
               <dt>{t('track.date_label')}</dt>
               <dd>{formatDate(result.created_at)}</dd>
             </dl>

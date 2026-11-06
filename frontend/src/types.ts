@@ -54,13 +54,14 @@ export interface TrackResult {
   status: SubmissionStatus;
   status_label: string;
   category: string | null;
+  rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 // --- Administration ---
 
-export type SubmissionStatus = 'received' | 'in_progress' | 'answered' | 'closed';
+export type SubmissionStatus = 'received' | 'in_progress' | 'answered' | 'closed' | 'rejected';
 
 export interface AdminUser {
   id: number;
@@ -165,7 +166,17 @@ export interface SubmissionDetail {
   category: string | null;
   type: string | null;
   notes: string | null;
+  rejection_reason?: string | null;
   created_at: string;
   answers: SubmissionAnswer[];
   attachments: AttachmentInfo[];
+}
+
+export interface AdminClient {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  submissions_count: number;
+  created_at: string;
 }

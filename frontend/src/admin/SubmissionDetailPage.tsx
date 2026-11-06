@@ -22,6 +22,7 @@ export default function SubmissionDetailPage() {
   const [requestError, setRequestError] = useState<{ id: string; message: string } | null>(null);
   const [actionError, setActionError] = useState<{ id: string; message: string } | null>(null);
   const [newStatus, setNewStatus] = useState<SubmissionStatus>('received');
+  const [rejectionReason, setRejectionReason] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
@@ -57,6 +58,7 @@ export default function SubmissionDetailPage() {
         if (cancelled) return;
         setLoadedSubmission({ id, data });
         setNewStatus(data.status);
+        setRejectionReason(data.rejection_reason ?? '');
         setNotes(data.notes ?? '');
       })
       .catch((err: unknown) => {
@@ -70,14 +72,25 @@ export default function SubmissionDetailPage() {
 
   const saveStatus = async () => {
     if (!submission || !id) return;
+    if (newStatus === 'rejected' && !rejectionReason.trim()) {
+      setActionError({ id, message: 'Veuillez saisir le motif du rejet (obligatoire).' });
+      return;
+    }
     setSaving(true);
     setNotice('');
     setActionError(null);
 
     try {
-      const result = await updateSubmissionStatus(submission.id, newStatus);
-      setLoadedSubmission({ id, data: { ...submission, status: result.status } });
-      setNotice('Statut mis à jour.');
+      const result = await updateSubmissionStatus(submission.id, newStatus, rejectionReason.trim());
+      setLoadedSubmission({
+        id,
+        data: {
+          ...submission,
+          status: result.status,
+          rejection_reason: result.rejection_reason ?? (newStatus === 'rejected' ? rejectionReason.trim() : null),
+        },
+      });
+      setNotice(newStatus === 'rejected' ? 'Dossier rejeté et client notifié par email avec le motif.' : 'Statut mis à jour.');
     } catch (err) {
       setActionError({ id, message: errorMessage(err) });
     } finally {
@@ -175,7 +188,15 @@ export default function SubmissionDetailPage() {
           </section>
 
           <section className="card">
-            <h2>Traitement</h2>
+            <h2>Traitement du dossier</h2>
+
+            {submission.status === 'rejected' && submission.rejection_reason && (
+              <div className="alert" style={{ background: '#fdf2f2', borderColor: '#f98080', color: '#9b1c1c', marginBottom: '16px' }}>
+                <strong>Dossier rejeté</strong>
+                <p style={{ margin: '4px 0 0' }}>Motif : {submission.rejection_reason}</p>
+              </div>
+            )}
+
             <div className="status-row">
               <label htmlFor="new-status">Statut</label>
               <select
@@ -191,14 +212,39 @@ export default function SubmissionDetailPage() {
               </select>
               <button
                 type="button"
-                className="btn"
-                disabled={saving || newStatus === submission.status}
+                className={newStatus === 'rejected' ? 'btn btn-danger' : 'btn'}
+                disabled={
+                  saving ||
+                  (newStatus === submission.status &&
+                    (newStatus !== 'rejected' || rejectionReason.trim() === (submission.rejection_reason ?? '')))
+                }
                 onClick={saveStatus}
               >
-                {saving ? 'Enregistrement…' : 'Mettre à jour'}
+                {saving
+                  ? 'Enregistrement…'
+                  : newStatus === 'rejected'
+                    ? 'Confirmer le rejet'
+                    : 'Mettre à jour'}
               </button>
             </div>
-            {notice && <p className="notice" role="status">{notice}</p>}
+
+            {newStatus === 'rejected' && (
+              <div className="field" style={{ marginTop: '14px' }}>
+                <label htmlFor="rejection-reason" style={{ color: '#9b1c1c', fontWeight: 600 }}>
+                  Motif du rejet (obligatoire — sera envoyé par email au client) :
+                </label>
+                <textarea
+                  id="rejection-reason"
+                  rows={3}
+                  required
+                  placeholder="Ex : Délai légal dépassé, pièces justificatives non conformes, garantie non souscrite..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                />
+              </div>
+            )}
+
+            {notice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{notice}</p>}
           </section>
 
           <section className="card">
