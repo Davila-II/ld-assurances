@@ -56,8 +56,33 @@ export const TRANSLATIONS = {
 
     // Sinistres
     'claims.title': 'Déclaration de sinistre',
-    'claims.subtitle': "Remplissez le formulaire ci-dessous. Il s'adaptera au type de sinistre que vous choisirez.",
+    'claims.subtitle': 'Sélectionnez le type de sinistre à déclarer pour accéder au formulaire adapté.',
+    'claims.form_subtitle': 'Remplissez le formulaire ci-dessous avec les informations et justificatifs demandés.',
     'claims.loading': 'Chargement du formulaire…',
+    'claims.back_to_hub': '← Choisir un autre type de sinistre',
+    'claims.auto_title': 'Sinistre Automobile',
+    'claims.auto_desc': 'Accident, bris de glace, collision, vol de véhicule ou dommages matériels',
+    'claims.habitation_title': 'Sinistre Habitation',
+    'claims.habitation_desc': 'Incendie, dégât des eaux, vol, cambriolage ou intempéries à domicile',
+    'claims.sante_title': 'Santé & Corporel',
+    'claims.sante_desc': 'Hospitalisation, soins médicaux, blessure corporelle ou incapacité',
+    'claims.pro_title': 'Sinistre Professionnel',
+    'claims.pro_desc': 'Locaux d’entreprise, stocks, machines, bris ou perte d’exploitation',
+    'claims.rc_title': 'Responsabilité Civile',
+    'claims.rc_desc': 'Dommages matériels ou corporels causés involontairement à un tiers',
+    'claims.transport_title': 'Transport & Voyage',
+    'claims.transport_desc': 'Avaries de marchandises en transit, perte de bagages ou fret',
+    'claims.agricole_title': 'Sinistre Agricole',
+    'claims.agricole_desc': 'Pertes de récoltes, mortalité de bétail ou sinistre d’exploitation',
+    'claims.autre_title': 'Autre type de sinistre',
+    'claims.autre_desc': 'Déclaration générale pour tout autre dommage ou garantie spécifique',
+
+    // Modal compte après soumission
+    'modal.create_account_title': 'Suivez votre dossier en temps réel !',
+    'modal.create_account_desc': 'Créez un compte client LD Assurances en 1 clic pour suivre l’avancement de votre demande, échanger avec nos experts et télécharger vos documents.',
+    'modal.create_btn': 'Créer mon compte client',
+    'modal.skip_btn': 'Non merci, continuer sans compte',
+    'form.account_linked': 'Compte connecté : vos coordonnées ont été automatiquement pré-remplies.',
 
     // Formulaire dynamique
     'form.prev': 'Précédent',
@@ -238,9 +263,34 @@ export const TRANSLATIONS = {
     'product.rc.desc': 'Coverage for damages caused to third parties',
 
     // Sinistres
-    'claims.title': 'Report a Claim',
-    'claims.subtitle': 'Fill out the form below. It will automatically adapt to the type of claim you select.',
+    'claims.title': 'Claim Declaration',
+    'claims.subtitle': 'Select the type of claim you wish to declare to access the adapted form.',
+    'claims.form_subtitle': 'Complete the form below with the required information and supporting documents.',
     'claims.loading': 'Loading form…',
+    'claims.back_to_hub': '← Choose another claim type',
+    'claims.auto_title': 'Motor Claim',
+    'claims.auto_desc': 'Accident, broken glass, collision, vehicle theft or property damage',
+    'claims.habitation_title': 'Home Claim',
+    'claims.habitation_desc': 'Fire, water damage, theft, burglary or storm at home',
+    'claims.sante_title': 'Health & Bodily Injury',
+    'claims.sante_desc': 'Emergency hospitalization, medical care, bodily injury or disability',
+    'claims.pro_title': 'Business Claim',
+    'claims.pro_desc': 'Business premises, inventory, machinery, breakdown or business interruption',
+    'claims.rc_title': 'Public Liability',
+    'claims.rc_desc': 'Accidental bodily injury or property damage caused to a third party',
+    'claims.transport_title': 'Cargo & Travel',
+    'claims.transport_desc': 'Transit cargo damage, lost luggage or travel incident',
+    'claims.agricole_title': 'Agricultural Claim',
+    'claims.agricole_desc': 'Crop losses, livestock loss or agricultural farm damage',
+    'claims.autre_title': 'Other Claim Type',
+    'claims.autre_desc': 'General declaration for any other damage or specific coverage',
+
+    // Modal compte après soumission
+    'modal.create_account_title': 'Track your file in real time!',
+    'modal.create_account_desc': 'Create an LD Assurances client account in 1 click to follow the progress of your request, exchange with our advisors and access all your documents.',
+    'modal.create_btn': 'Create my client account',
+    'modal.skip_btn': 'No thanks, continue without account',
+    'form.account_linked': 'Connected account: your personal details have been automatically filled in.',
 
     // Formulaire dynamique
     'form.prev': 'Previous',

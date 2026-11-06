@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { clientErrorMessage, clientRegister } from '../clientApi';
 import { getClientToken, setClientToken } from '../clientAuth';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
@@ -9,10 +9,11 @@ import PhoneInput from '../components/PhoneInput';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { t } = useLanguage();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(params.get('name') ?? '');
+  const [email, setEmail] = useState(params.get('email') ?? '');
+  const [phone, setPhone] = useState(params.get('phone') ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');

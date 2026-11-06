@@ -55,19 +55,13 @@ class InsuranceFormSeeder extends Seeder
     }
 
     // Déclaration de sinistre en 4 étapes, avec des champs conditionnels selon le type
+    // Étape 1 : Votre sinistre
+    // Étape 2 : Détails
+    // Étape 3 : Pièces et déclaration
+    // Étape 4 : Identification
     private function definitions(array $yesNo, array $types): array
     {
         return [
-            'Identification' => [
-                $this->f('full_name', 'Nom et prénom', 'text', true, null, null, 'Ex : Jean Dupont'),
-                $this->f('profession', 'Profession', 'text', false, null, null, 'Ex : Commerçant'),
-                $this->f('policy_number', 'Numéro de police', 'text', true, null, null, 'Ex : POL-2024-00123'),
-                $this->f('agency', 'Agence ou courtier émetteur', 'text', false, null, null, 'Ex : Agence Akwa'),
-                $this->f('id_number', 'N° de la pièce d\'identité (CNI ou passeport)', 'text', false, null, null, 'Ex : 1087654321'),
-                $this->f('phone', 'Téléphone', 'text', true, null, null, 'Ex : 6 90 12 34 56'),
-                $this->f('address', 'Adresse (quartier, ville)', 'text', true, null, null, 'Ex : Akwa, Douala'),
-            ],
-
             'Votre sinistre' => [
                 $this->f('sinistre_type', 'Type de sinistre', 'select', true, $types),
                 $this->f('incident_date', 'Date du sinistre', 'date', true),
@@ -95,6 +89,16 @@ class InsuranceFormSeeder extends Seeder
                 $this->documentFields(),
                 $this->declarationFields()
             ),
+
+            'Identification' => [
+                $this->f('full_name', 'Nom et prénom', 'text', true, null, null, 'Ex : Jean Dupont'),
+                $this->f('profession', 'Profession', 'text', false, null, null, 'Ex : Commerçant'),
+                $this->f('policy_number', 'Numéro de police', 'text', true, null, null, 'Ex : POL-2024-00123'),
+                $this->f('agency', 'Agence ou courtier émetteur', 'text', false, null, null, 'Ex : Agence Akwa'),
+                $this->f('id_number', 'N° de la pièce d\'identité (CNI ou passeport)', 'text', false, null, null, 'Ex : 1087654321'),
+                $this->f('phone', 'Téléphone', 'text', true, null, null, 'Ex : 6 90 12 34 56'),
+                $this->f('address', 'Adresse (quartier, ville)', 'text', true, null, null, 'Ex : Akwa, Douala'),
+            ],
         ];
     }
 

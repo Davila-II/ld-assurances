@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Check } from 'lucide-react';
+import { Check, CheckCircle2, Sparkles, X } from 'lucide-react';
 import { getForm, submitForm, ApiError } from '../api';
+import { clientMe } from '../clientApi';
+import { getClientToken } from '../clientAuth';
 import type { Answers, Category, FormField, FormType } from '../types';
+import type { ClientUser } from '../clientTypes';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -11,6 +14,7 @@ const MAX_FILES = 5;
 interface Props {
   category: Category;
   formType?: FormType;
+  presetAnswers?: Answers;
 }
 
 interface Step {
@@ -19,6 +23,7 @@ interface Step {
 }
 
 // Regroupe les questions par étape (section), dans l'ordre d'apparition
+// Garantit que l'étape "Identification" ou "Coordonnées" arrive en 4e et dernière étape
 function buildSteps(fields: FormField[]): Step[] {
   const steps: Step[] = [];
 
@@ -34,6 +39,17 @@ function buildSteps(fields: FormField[]): Step[] {
     step.fields.push(field);
   });
 
+  // Si "Identification" ou "Coordonnées" est présent, on s'assure qu'il est en dernière position
+  const identIndex = steps.findIndex((s) => {
+    const lower = s.title.toLowerCase();
+    return lower.includes('identification') || lower.includes('coordonnées') || lower.includes('coordonnees');
+  });
+
+  if (identIndex >= 0 && identIndex !== steps.length - 1) {
+    const [identStep] = steps.splice(identIndex, 1);
+    steps.push(identStep);
+  }
+
   return steps;
 }
 
@@ -45,12 +61,18 @@ function findError(errors: Record<string, string[]>, name: string): string | nul
   return key ? errors[key][0] : null;
 }
 
-export default function DynamicForm({ category, formType = 'claim' }: Props) {
+export default function DynamicForm({ category, formType = 'claim', presetAnswers }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const { t } = useLanguage();
 
   const [fields, setFields] = useState<FormField[]>([]);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<Answers>(() => ({ ...(presetAnswers ?? {}) }));
+  const [prevPreset, setPrevPreset] = useState(presetAnswers);
+  if (presetAnswers !== prevPreset) {
+    setPrevPreset(presetAnswers);
+    setAnswers((prev) => ({ ...(presetAnswers ?? {}), ...prev }));
+  }
+
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState(''); // champ piège pour les robots
   const [step, setStep] = useState(0);
@@ -59,8 +81,34 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState('');
   const [reference, setReference] = useState('');
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const isClaim = formType === 'claim';
+  const isLoggedIn = Boolean(getClientToken());
+
+  // Récupération des données du client connecté pour pré-remplir automatiquement ses coordonnées
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let cancelled = false;
+
+    clientMe()
+      .then((u) => {
+        if (cancelled) return;
+        setClientUser(u);
+        setEmail((prev) => prev || u.email);
+        setAnswers((prev) => ({
+          ...prev,
+          full_name: prev.full_name || u.name,
+          phone: prev.phone || u.phone || '',
+        }));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
 
   // Chargement des questions (PublicPage recrée ce composant à chaque changement de catégorie)
   useEffect(() => {
@@ -218,6 +266,9 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
     try {
       const data = await submitForm(formData);
       setReference(data.reference);
+      if (!isLoggedIn) {
+        setShowRegisterModal(true);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors(err.errors);
@@ -351,18 +402,76 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
   // Écran de confirmation après l'envoi
   if (reference) {
     return (
-      <div className="success">
-        <h2>{t('form.success_title')}</h2>
-        <p>
-          {t('form.success_ref')} <strong>{reference}</strong>
-        </p>
-        <p>{t('form.success_note')}</p>
-        <div style={{ marginTop: '16px' }}>
-          <a className="btn btn-secondary" href="/suivi">
-            {t('form.track_link')}
-          </a>
+      <>
+        {showRegisterModal && !isLoggedIn && (
+          <div className="register-modal-backdrop" role="dialog" aria-modal="true">
+            <div className="register-modal-card">
+              <button
+                type="button"
+                className="register-modal-close"
+                aria-label="Fermer"
+                onClick={() => setShowRegisterModal(false)}
+              >
+                <X size={20} />
+              </button>
+              <div className="register-modal-icon">
+                <Sparkles size={32} />
+              </div>
+              <h3 className="register-modal-title">{t('modal.create_account_title')}</h3>
+              <p className="register-modal-desc">{t('modal.create_account_desc')}</p>
+              <div className="register-modal-ref">
+                <span>{t('form.success_ref')}</span>
+                <strong>{reference}</strong>
+              </div>
+              <div className="register-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-gradient btn-full"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (email) params.set('email', email);
+                    const fullName = String(answers.full_name ?? '');
+                    if (fullName) params.set('name', fullName);
+                    const phone = String(answers.phone ?? '');
+                    if (phone) params.set('phone', phone);
+                    window.location.assign(`/espace-client/inscription?${params.toString()}`);
+                  }}
+                >
+                  {t('modal.create_btn')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-full"
+                  onClick={() => setShowRegisterModal(false)}
+                >
+                  {t('modal.skip_btn')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="success">
+          <h2>{t('form.success_title')}</h2>
+          <p>
+            {t('form.success_ref')} <strong>{reference}</strong>
+          </p>
+          <p>{t('form.success_note')}</p>
+          <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a className="btn btn-secondary" href="/suivi">
+              {t('form.track_link')}
+            </a>
+            {!isLoggedIn && (
+              <a
+                className="btn btn-gradient"
+                href={`/espace-client/inscription?email=${encodeURIComponent(email)}&name=${encodeURIComponent(String(answers.full_name ?? ''))}&phone=${encodeURIComponent(String(answers.phone ?? ''))}`}
+              >
+                {t('modal.create_btn')}
+              </a>
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -395,7 +504,27 @@ export default function DynamicForm({ category, formType = 'claim' }: Props) {
             {t('form.step')} {currentStep + 1} {t('form.of')} {steps.length}
           </p>
           <h2 className="step-heading">{steps[currentStep].title}</h2>
+
+          {clientUser && isLast && (
+            <div className="client-auto-badge">
+              <CheckCircle2 size={18} />
+              <div>
+                <strong>Compte client connecté : {clientUser.name}</strong> ({clientUser.email})
+                <p>{t('form.account_linked')}</p>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {!stepped && clientUser && (
+        <div className="client-auto-badge">
+          <CheckCircle2 size={18} />
+          <div>
+            <strong>Compte client connecté : {clientUser.name}</strong> ({clientUser.email})
+            <p>{t('form.account_linked')}</p>
+          </div>
+        </div>
       )}
 
       {message && <p className="error">{message}</p>}

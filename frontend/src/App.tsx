@@ -26,6 +26,8 @@ export default function App() {
       <Route element={<SiteLayout />}>
         <Route path="/" element={<PublicPage />} />
         <Route path="/devis/:slug" element={<QuotePage />} />
+        <Route path="/sinistre" element={<PublicPage />} />
+        <Route path="/sinistre/:slug" element={<PublicPage />} />
         <Route path="/suivi" element={<TrackPage />} />
         <Route path="/espace-client/connexion" element={<ClientLoginPage />} />
         <Route path="/espace-client/inscription" element={<ClientRegisterPage />} />

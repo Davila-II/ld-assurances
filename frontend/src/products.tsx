@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Briefcase, Car, FileText, HeartPulse, House, Plane, Shield } from 'lucide-react';
-import { DEVIS_URLS } from './siteConfig';
 import type { TranslationKey } from './i18n/translations';
 
 export interface Product {
@@ -11,9 +10,8 @@ export interface Product {
   descKey?: TranslationKey;
   icon: ReactNode;
   tone: string;
-  // Slug de la catégorie côté backend pour les devis gérés ici.
-  // null quand le devis est déjà géré sur le site principal (lien sortant).
-  slug: string | null;
+  // Slug de la catégorie côté backend pour les devis gérés ici
+  slug: string;
   mainQuoteUrl?: string;
 }
 
@@ -27,7 +25,6 @@ export const PRODUCTS: Product[] = [
     icon: <Car size={32} />,
     tone: 'blue',
     slug: 'auto',
-    mainQuoteUrl: DEVIS_URLS.auto,
   },
   {
     key: 'voyage',
@@ -37,8 +34,7 @@ export const PRODUCTS: Product[] = [
     descKey: 'product.voyage.desc',
     icon: <Plane size={32} />,
     tone: 'cyan',
-    slug: null,
-    mainQuoteUrl: DEVIS_URLS.voyage,
+    slug: 'voyage',
   },
   {
     key: 'habitation',
@@ -68,8 +64,7 @@ export const PRODUCTS: Product[] = [
     descKey: 'product.pro.desc',
     icon: <Briefcase size={32} />,
     tone: 'purple',
-    slug: null,
-    mainQuoteUrl: DEVIS_URLS.professionnelle,
+    slug: 'professionnelle',
   },
   {
     key: 'responsabilite-civile',

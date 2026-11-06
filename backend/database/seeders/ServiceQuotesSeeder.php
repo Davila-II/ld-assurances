@@ -53,10 +53,13 @@ class ServiceQuotesSeeder extends Seeder
     private function ensureCategories(): void
     {
         $categories = [
-            ['slug' => 'habitation', 'name' => 'Habitation', 'sort_order' => 2],
-            ['slug' => 'personne', 'name' => 'Santé', 'sort_order' => 3],
-            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'sort_order' => 4],
-            ['slug' => 'autres', 'name' => 'Autres assurances', 'sort_order' => 5],
+            ['slug' => 'auto', 'name' => 'Automobile', 'sort_order' => 1],
+            ['slug' => 'voyage', 'name' => 'Voyage', 'sort_order' => 2],
+            ['slug' => 'habitation', 'name' => 'Habitation', 'sort_order' => 3],
+            ['slug' => 'personne', 'name' => 'Santé', 'sort_order' => 4],
+            ['slug' => 'professionnelle', 'name' => 'Professionnelle', 'sort_order' => 5],
+            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'sort_order' => 6],
+            ['slug' => 'autres', 'name' => 'Autres assurances', 'sort_order' => 7],
         ];
 
         foreach ($categories as $category) {
@@ -73,6 +76,74 @@ class ServiceQuotesSeeder extends Seeder
         $yesNo = ['Oui', 'Non'];
 
         return [
+            'auto' => [
+                'Véhicule' => [
+                    $this->f('vehicle_usage', 'Usage du véhicule', 'select', true, ['Personnel / Trajets privés et domicile-travail', 'Professionnel / Déplacements commerciaux', 'Transport public de voyageurs (Taxi / Car)', 'Transport de marchandises']),
+                    $this->f('vehicle_brand', 'Marque et modèle', 'text', true, null, null, 'Ex : Toyota Corolla, Renault Duster…'),
+                    $this->f('vehicle_plate', 'Immatriculation', 'text', true, null, null, 'Ex : LT 123 AB'),
+                    $this->f('first_reg_year', 'Année de première mise en circulation', 'number', true, null, null, 'Ex : 2021'),
+                    $this->f('fiscal_power', 'Puissance fiscale (CV)', 'number', true, null, null, 'Ex : 7'),
+                    $this->f('fuel_type', 'Carburant / Énergie', 'select', true, ['Essence', 'Diesel', 'Hybride / Électrique']),
+                    $this->f('estimated_value', 'Valeur estimée du véhicule (FCFA)', 'number', false, null, null, 'Ex : 10 000 000'),
+                    $this->f('parking_type', 'Stationnement habituel de nuit', 'select', false, ['Garage fermé', 'Cour clôturée surveillée', 'Voie publique', 'Parking gardé']),
+                ],
+                'Conducteur' => [
+                    $this->f('driver_birthdate', 'Date de naissance du conducteur principal', 'date', true),
+                    $this->f('license_date', 'Date d’obtention du permis de conduire', 'date', true),
+                    $this->f('claims_3y', 'Avez-vous eu des sinistres au cours des 3 dernières années ?', 'select', false, $yesNo),
+                    $this->f('claims_count', 'Si oui, nombre de sinistres', 'number', false, null, $this->when('claims_3y', 'Oui'), 'Ex : 1'),
+                ],
+                'Garanties' => [
+                    $this->f('formula', 'Formule d’assurance souhaitée', 'select', true, ['Responsabilité Civile (Tiers Simple)', 'Tiers Complet (Vol, Incendie, Bris de glace)', 'Tous Risques']),
+                    $this->f('defense_recourse', 'Option Défense et Recours', 'select', false, $yesNo),
+                    $this->f('passenger_cover', 'Sécurité du conducteur et des passagers', 'select', false, $yesNo),
+                    $this->f('start_date', 'Date d’effet souhaitée', 'date', true),
+                    $this->f('duration', 'Durée du contrat', 'select', true, ['1 an (12 mois)', '6 mois', '3 mois']),
+                ],
+                'Coordonnées' => $this->contactFields(),
+            ],
+
+            'voyage' => [
+                'Séjour' => [
+                    $this->f('destination_country', 'Pays de destination', 'text', true, null, null, 'Ex : France, Canada, Émirats Arabes Unis…'),
+                    $this->f('travel_purpose', 'Motif principal du voyage', 'select', true, ['Tourisme / Vacances', 'Affaires / Mission professionnelle', 'Études / Stage académique', 'Visite familiale', 'Autre']),
+                    $this->f('departure_date', 'Date de départ', 'date', true),
+                    $this->f('return_date', 'Date de retour', 'date', true),
+                    $this->f('schengen_visa', 'Attestation demandée pour visa Schengen ou équivalent ?', 'select', true, $yesNo),
+                ],
+                'Voyageurs' => [
+                    $this->f('travelers_count', 'Nombre de voyageurs à assurer', 'number', true, null, null, 'Ex : 2'),
+                    $this->f('travelers_ages', 'Âge(s) du/des voyageur(s)', 'text', true, null, null, 'Ex : 35 ans, 30 ans, 4 ans'),
+                    $this->f('preexisting', 'Un voyageur a-t-il une pathologie médicale connue ?', 'select', false, $yesNo),
+                ],
+                'Garanties' => [
+                    $this->f('guarantees', 'Garanties souhaitées', 'multiselect', true, ['Frais médicaux et hospitalisation d’urgence', 'Rapatriement sanitaire 24h/24', 'Bagages (vol, retard, perte)', 'Responsabilité civile à l’étranger', 'Annulation ou interruption de voyage']),
+                ],
+                'Coordonnées' => $this->contactFields(),
+            ],
+
+            'professionnelle' => [
+                'Entreprise' => [
+                    $this->f('company_name', 'Raison sociale ou nom de l’entreprise', 'text', true, null, null, 'Ex : ETS Cameroun Services'),
+                    $this->f('legal_form', 'Forme juridique', 'select', true, ['SARL', 'SAS / SA', 'Entreprise individuelle / ETS', 'Profession libérale', 'GIC / Association', 'Autre']),
+                    $this->f('activity_sector', 'Secteur d’activité précis', 'text', true, null, null, 'Ex : Commerce général, BTP, Informatique, Restauration…'),
+                    $this->f('turnover', 'Chiffre d’affaires annuel estimé (FCFA)', 'number', false, null, null, 'Ex : 45 000 000'),
+                    $this->f('employees_count', 'Nombre de collaborateurs', 'number', false, null, null, 'Ex : 6'),
+                    $this->f('company_city', 'Ville et quartier des locaux', 'text', true, null, null, 'Ex : Akwa, Douala'),
+                ],
+                'Locaux et biens' => [
+                    $this->f('premise_type', 'Type de locaux', 'select', true, ['Bureaux administratifs', 'Boutique / Point de vente commercial', 'Entrepôt / Dépôt de stockage', 'Atelier / Usine de production', 'Travail à domicile']),
+                    $this->f('occupant_status', 'Vous êtes', 'select', true, ['Propriétaire des murs', 'Locataire']),
+                    $this->f('content_value', 'Valeur estimée du matériel, machines et marchandises (FCFA)', 'number', false, null, null, 'Ex : 20 000 000'),
+                    $this->f('security_measures', 'Moyens de protection en place', 'multiselect', false, ['Gardiennage jour et nuit', 'Alarme anti-intrusion', 'Caméras de surveillance', 'Extincteurs vérifiés', 'Grilles et portes blindées']),
+                ],
+                'Garanties' => [
+                    $this->f('guarantees', 'Garanties souhaitées', 'multiselect', true, ['Incendie, explosion et foudre', 'Dégâts des eaux', 'Vol et vandalisme', 'Bris de machines et matériel informatique', 'Perte d’exploitation après sinistre', 'Responsabilité civile professionnelle']),
+                    $this->f('start_date', 'Date d’effet souhaitée', 'date', true),
+                ],
+                'Coordonnées' => $this->contactFields(),
+            ],
+
             'habitation' => [
                 'Logement' => [
                     $this->f('property_type', 'Type de bien', 'select', true, ['Appartement', 'Maison', 'Villa', 'Studio ou chambre', 'Autre']),

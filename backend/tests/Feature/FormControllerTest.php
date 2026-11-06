@@ -26,9 +26,21 @@ class FormControllerTest extends TestCase
     {
         $slugs = collect($this->getJson('/api/categories?type=quote')->json())->pluck('slug');
 
+        $this->assertTrue($slugs->contains('auto'));
+        $this->assertTrue($slugs->contains('voyage'));
+        $this->assertTrue($slugs->contains('professionnelle'));
         $this->assertTrue($slugs->contains('habitation'));
         // La catégorie « sinistre » (générale) n'a pas de formulaire de devis
         $this->assertFalse($slugs->contains('sinistre'));
+    }
+
+    public function test_claim_form_has_identification_as_last_section(): void
+    {
+        $response = $this->getJson('/api/categories/sinistre/form?type=claim')->assertOk();
+        $fields = collect($response->json('fields'));
+        $sections = $fields->pluck('section')->unique()->values()->all();
+
+        $this->assertSame(['Votre sinistre', 'Détails', 'Pièces et déclaration', 'Identification'], $sections);
     }
 
     public function test_categories_rejects_invalid_type(): void

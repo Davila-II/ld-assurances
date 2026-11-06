@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { LogIn, Mail, MapPin, Menu, Phone, PhoneCall, X } from 'lucide-react';
+import { LogIn, Mail, MapPin, Menu, Phone, PhoneCall, User as UserIcon, X } from 'lucide-react';
+import { getClientToken } from '../clientAuth';
+import { getToken } from '../auth';
 import {
   FOOTER_LEGAL_LINKS,
   FOOTER_LINKS,
@@ -76,6 +78,9 @@ export default function SiteLayout() {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
+  const isClientLoggedIn = Boolean(getClientToken());
+  const isAdminLoggedIn = Boolean(getToken());
+
   return (
     <div className="site">
       <div className="topbar">
@@ -104,9 +109,19 @@ export default function SiteLayout() {
 
           <div className="header-actions">
             <LanguageToggle />
-            <Link className="btn btn-secondary btn-sm" to="/espace-client/connexion">
-              <LogIn size={16} /> {t('nav.login')}
-            </Link>
+            {isClientLoggedIn ? (
+              <Link className="btn btn-secondary btn-sm" to="/espace-client">
+                <UserIcon size={16} /> {t('nav.client_space')}
+              </Link>
+            ) : isAdminLoggedIn ? (
+              <Link className="btn btn-secondary btn-sm" to="/admin">
+                <UserIcon size={16} /> Admin
+              </Link>
+            ) : (
+              <Link className="btn btn-secondary btn-sm" to="/espace-client/connexion">
+                <LogIn size={16} /> {t('nav.login')}
+              </Link>
+            )}
             <button
               type="button"
               className="menu-toggle"
@@ -128,9 +143,19 @@ export default function SiteLayout() {
             <Link to="/suivi" onClick={close}>
               {t('nav.track')}
             </Link>
-            <Link to="/espace-client/connexion" onClick={close}>
-              {t('nav.login')}
-            </Link>
+            {isClientLoggedIn ? (
+              <Link to="/espace-client" onClick={close}>
+                {t('nav.client_space')}
+              </Link>
+            ) : isAdminLoggedIn ? (
+              <Link to="/admin" onClick={close}>
+                Administration
+              </Link>
+            ) : (
+              <Link to="/espace-client/connexion" onClick={close}>
+                {t('nav.login')}
+              </Link>
+            )}
             <Link className="btn btn-gradient btn-sm" to="/?service=devis" onClick={close}>
               {t('nav.quote_btn')}
             </Link>
