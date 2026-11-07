@@ -20,6 +20,7 @@ interface Props {
 
 interface Step {
   title: string;
+  title_en?: string | null;
   fields: FormField[];
 }
 
@@ -33,7 +34,7 @@ function buildSteps(fields: FormField[]): Step[] {
     let step = steps.find((s) => s.title === title);
 
     if (!step) {
-      step = { title, fields: [] };
+      step = { title, title_en: field.section_en, fields: [] };
       steps.push(step);
     }
 
@@ -64,7 +65,7 @@ function findError(errors: Record<string, string[]>, name: string): string | nul
 
 export default function DynamicForm({ category, formType = 'claim', presetAnswers, isPreview }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [fields, setFields] = useState<FormField[]>([]);
   const [answers, setAnswers] = useState<Answers>(() => ({ ...(presetAnswers ?? {}) }));
@@ -87,6 +88,7 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
 
   const isClaim = formType === 'claim';
   const isLoggedIn = Boolean(getClientToken());
+  const activeEmail = (clientUser?.email || email).trim();
 
   // Récupération des données du client connecté pour pré-remplir automatiquement ses coordonnées
   useEffect(() => {
@@ -266,7 +268,7 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
     const formData = new FormData();
     formData.append('category', category.slug);
     formData.append('form_type', formType);
-    formData.append('email', email);
+    formData.append('email', activeEmail);
     formData.append('website', website);
 
     visibleFields.forEach((field) => {
@@ -309,7 +311,9 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
   const renderInput = (field: FormField) => {
     const value = answers[field.name];
     const text = typeof value === 'string' ? value : '';
-    const common = { id: field.name, required: field.is_required };
+    const placeholder =
+      lang === 'en' && field.placeholder_en ? field.placeholder_en : (field.placeholder ?? undefined);
+    const common = { id: field.name, required: field.is_required, placeholder };
 
     switch (field.field_type) {
       case 'textarea':
@@ -318,7 +322,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             {...common}
             rows={4}
             value={text}
-            placeholder={field.placeholder ?? undefined}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           />
         );
@@ -329,7 +332,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             {...common}
             type="number"
             value={text}
-            placeholder={field.placeholder ?? undefined}
             onChange={(e) => setAnswer(field.name, e.target.value)}
           />
         );
@@ -352,11 +354,17 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             onChange={(e) => setAnswer(field.name, e.target.value)}
           >
             <option value="">{t('form.choose')}</option>
-            {(field.options ?? []).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            {(field.options ?? []).map((option, idx) => {
+              const optLabel =
+                lang === 'en' && field.options_en && field.options_en[idx]
+                  ? field.options_en[idx]
+                  : (lang === 'en' && option === 'Oui' ? 'Yes' : (lang === 'en' && option === 'Non' ? 'No' : option));
+              return (
+                <option key={option} value={option}>
+                  {optLabel}
+                </option>
+              );
+            })}
           </select>
         );
 
@@ -364,23 +372,29 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
         const current = Array.isArray(value) ? value : [];
         return (
           <div className="choices">
-            {(field.options ?? []).map((option) => (
-              <label key={option} className="choice">
-                <input
-                  type="checkbox"
-                  checked={current.includes(option)}
-                  onChange={(e) =>
-                    setAnswer(
-                      field.name,
-                      e.target.checked
-                        ? [...current, option]
-                        : current.filter((v) => v !== option)
-                    )
-                  }
-                />{' '}
-                {option}
-              </label>
-            ))}
+            {(field.options ?? []).map((option, idx) => {
+              const optLabel =
+                lang === 'en' && field.options_en && field.options_en[idx]
+                  ? field.options_en[idx]
+                  : (lang === 'en' && option === 'Oui' ? 'Yes' : (lang === 'en' && option === 'Non' ? 'No' : option));
+              return (
+                <label key={option} className="choice">
+                  <input
+                    type="checkbox"
+                    checked={current.includes(option)}
+                    onChange={(e) =>
+                      setAnswer(
+                        field.name,
+                        e.target.checked
+                          ? [...current, option]
+                          : current.filter((v) => v !== option)
+                      )
+                    }
+                  />{' '}
+                  {optLabel}
+                </label>
+              );
+            })}
           </div>
         );
       }
@@ -481,17 +495,24 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
           </p>
           <p>{t('form.success_note')}</p>
           <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a className="btn btn-secondary" href="/suivi">
-              {t('form.track_link')}
-            </a>
-            {!isLoggedIn && (
+            {isLoggedIn ? (
+              <a
+                className="btn btn-primary"
+                href={isClaim ? '/espace-client/sinistres' : '/espace-client/demandes'}
+              >
+                {t('form.view_in_client_space')}
+              </a>
+            ) : (
               <a
                 className="btn btn-gradient"
-                href={`/espace-client/inscription?email=${encodeURIComponent(email)}&name=${encodeURIComponent(String(answers.full_name ?? ''))}&phone=${encodeURIComponent(String(answers.phone ?? ''))}`}
+                href={`/espace-client/inscription?email=${encodeURIComponent(activeEmail)}&name=${encodeURIComponent(String(answers.full_name ?? ''))}&phone=${encodeURIComponent(String(answers.phone ?? ''))}`}
               >
                 {t('modal.create_btn')}
               </a>
             )}
+            <a className="btn btn-secondary" href={`/suivi?ref=${encodeURIComponent(reference)}`}>
+              {t('form.track_link')}
+            </a>
           </div>
         </div>
       </>
@@ -518,7 +539,9 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
                 <span className="stepper-dot">
                   {index < currentStep ? <Check size={16} /> : index + 1}
                 </span>
-                <span className="stepper-label">{s.title}</span>
+                <span className="stepper-label">
+                  {lang === 'en' && s.title_en ? s.title_en : s.title}
+                </span>
               </li>
             ))}
           </ol>
@@ -526,7 +549,11 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
           <p className="step-count">
             {t('form.step')} {currentStep + 1} {t('form.of')} {steps.length}
           </p>
-          <h2 className="step-heading">{steps[currentStep].title}</h2>
+          <h2 className="step-heading">
+            {lang === 'en' && steps[currentStep].title_en
+              ? steps[currentStep].title_en
+              : steps[currentStep].title}
+          </h2>
 
           {clientUser && isLast && (
             <div className="client-auto-badge">
@@ -572,7 +599,9 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             id="email"
             type="email"
             required
-            value={email}
+            value={clientUser?.email || email}
+            disabled={Boolean(clientUser)}
+            readOnly={Boolean(clientUser)}
             placeholder="Ex : nom@exemple.com"
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -580,28 +609,32 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
         </div>
       )}
 
-      {shownFields.map((field) => (
-        <div className="field" key={field.id}>
-          {field.field_type === 'checkbox' ? (
-            <label className="choice" htmlFor={field.name}>
-              {renderInput(field)}
-              <span>
-                {field.label}
-                {field.is_required ? ' *' : ''}
-              </span>
-            </label>
-          ) : (
-            <>
-              <label htmlFor={field.name}>
-                {field.label}
-                {field.is_required ? ' *' : ''}
+      {shownFields.map((field) => {
+        const fieldLabel = lang === 'en' && field.label_en ? field.label_en : field.label;
+
+        return (
+          <div className="field" key={field.id}>
+            {field.field_type === 'checkbox' ? (
+              <label className="choice" htmlFor={field.name}>
+                {renderInput(field)}
+                <span>
+                  {fieldLabel}
+                  {field.is_required ? ' *' : ''}
+                </span>
               </label>
-              {renderInput(field)}
-            </>
-          )}
-          {errorFor(field.name) && <span className="error">{errorFor(field.name)}</span>}
-        </div>
-      ))}
+            ) : (
+              <>
+                <label htmlFor={field.name}>
+                  {fieldLabel}
+                  {field.is_required ? ' *' : ''}
+                </label>
+                {renderInput(field)}
+              </>
+            )}
+            {errorFor(field.name) && <span className="error">{errorFor(field.name)}</span>}
+          </div>
+        );
+      })}
 
       {stepped ? (
         <div className="step-actions">

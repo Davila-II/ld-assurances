@@ -173,4 +173,55 @@ class FormBuilderTest extends TestCase
 
         $this->assertDatabaseHas('categories', ['id' => $category->id]);
     }
+
+    public function test_category_created_with_quote_type_does_not_appear_in_claim_type_query(): void
+    {
+        Sanctum::actingAs($this->admin());
+
+        $createRes = $this->postJson('/api/admin/form-builder/categories', [
+            'name'      => 'Flotte Auto Devis',
+            'name_en'   => 'Fleet Quote',
+            'form_type' => 'quote',
+        ])->assertCreated();
+
+        $quoteCatId = $createRes->json('id');
+
+        // Récupère les catégories devis -> présent
+        $quotesList = collect($this->getJson('/api/admin/form-builder/categories?type=quote')->json())->pluck('id');
+        $this->assertTrue($quotesList->contains($quoteCatId));
+
+        // Récupère les catégories sinistres -> ABSENT !
+        $claimsList = collect($this->getJson('/api/admin/form-builder/categories?type=claim')->json())->pluck('id');
+        $this->assertFalse($claimsList->contains($quoteCatId));
+    }
+
+    public function test_admin_can_create_bilingual_category_and_fields(): void
+    {
+        Sanctum::actingAs($this->admin());
+
+        $catRes = $this->postJson('/api/admin/form-builder/categories', [
+            'name'      => 'Assurance Drone',
+            'name_en'   => 'Drone Insurance',
+            'form_type' => 'quote',
+        ])->assertCreated();
+
+        $catId = $catRes->json('id');
+        $this->assertSame('Drone Insurance', $catRes->json('name_en'));
+
+        $fieldRes = $this->postJson("/api/admin/form-builder/categories/{$catId}/fields", [
+            'form_type'      => 'quote',
+            'name'           => 'drone_weight',
+            'label'          => 'Poids du drone',
+            'label_en'       => 'Drone weight',
+            'placeholder'    => 'Ex : 250g',
+            'placeholder_en' => 'E.g., 250g',
+            'section'        => 'Appareil',
+            'section_en'     => 'Aircraft',
+            'field_type'     => 'text',
+            'is_required'    => true,
+        ])->assertCreated();
+
+        $this->assertSame('Drone weight', $fieldRes->json('label_en'));
+        $this->assertSame('Aircraft', $fieldRes->json('section_en'));
+    }
 }

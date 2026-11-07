@@ -87,7 +87,7 @@ export default function RequestsPage() {
                       <span className="client-ref-code">{sub.reference}</span>
                     </td>
                     <td>
-                      <strong>{sub.category || '-'}</strong>
+                      <strong>{lang === 'en' && sub.category_en ? sub.category_en : (sub.category || '-')}</strong>
                     </td>
                     <td>{dateStr}</td>
                     <td>

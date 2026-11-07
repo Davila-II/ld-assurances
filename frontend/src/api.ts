@@ -205,17 +205,24 @@ export const getStats = () => request<AdminStats>('/admin/stats', {}, true);
 
 // --- Constructeur de formulaires ---
 
-export const getBuilderCategories = () =>
-  request<BuilderCategory[]>('/admin/form-builder/categories', {}, true);
-
-export const createBuilderCategory = (name: string) =>
-  request<BuilderCategory>(
-    '/admin/form-builder/categories',
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) },
+export const getBuilderCategories = (formType?: FormType) =>
+  request<BuilderCategory[]>(
+    `/admin/form-builder/categories${formType ? `?form_type=${formType}` : ''}`,
+    {},
     true
   );
 
-export const updateBuilderCategory = (id: number, data: Partial<{ name: string; is_active: boolean }>) =>
+export const createBuilderCategory = (data: { name: string; name_en?: string; form_type?: FormType }) =>
+  request<BuilderCategory>(
+    '/admin/form-builder/categories',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const updateBuilderCategory = (
+  id: number,
+  data: Partial<{ name: string; name_en?: string; form_type?: FormType; is_active: boolean }>
+) =>
   request<BuilderCategory>(
     `/admin/form-builder/categories/${id}`,
     { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },

@@ -173,6 +173,22 @@ class ClientAuthTest extends TestCase
             ->assertJsonPath('data.0.reference', $mine->reference);
     }
 
+    public function test_client_sees_bilingual_category_in_portal(): void
+    {
+        $client = User::factory()->create(['email' => 'clientportal@example.com', 'role' => 'client']);
+        $sub = $this->makeSubmission('clientportal@example.com', $client->id);
+
+        Sanctum::actingAs($client, ['client']);
+
+        $res = $this->getJson('/api/client/submissions')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.reference', $sub->reference)
+            ->assertJsonPath('data.0.category', 'Habitation');
+
+        $this->assertArrayHasKey('category_en', $res->json('data.0'));
+    }
+
     public function test_client_and_admin_areas_are_separated(): void
     {
         $client = User::factory()->create(['role' => 'client']);

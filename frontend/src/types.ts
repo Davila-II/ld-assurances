@@ -13,7 +13,9 @@ export type FieldType =
 export interface Category {
   id: number;
   name: string;
+  name_en?: string | null;
   slug: string;
+  form_type?: FormType | null;
 }
 
 export interface FieldCondition {
@@ -25,11 +27,15 @@ export interface FormField {
   id: number;
   name: string;
   label: string;
+  label_en?: string | null;
   placeholder: string | null;
+  placeholder_en?: string | null;
   section: string | null;
+  section_en?: string | null;
   field_type: FieldType;
   is_required: boolean;
   options: string[] | null;
+  options_en?: string[] | null;
   condition: FieldCondition | null;
   sort_order: number;
 }
@@ -123,7 +129,9 @@ export interface AdminStats {
 export interface BuilderCategory {
   id: number;
   name: string;
+  name_en?: string | null;
   slug: string;
+  form_type?: FormType | null;
   is_active: boolean;
   sort_order: number;
   quote_count: number;
@@ -134,11 +142,15 @@ export interface BuilderField {
   id: number;
   name: string;
   label: string;
+  label_en?: string | null;
   placeholder: string | null;
+  placeholder_en?: string | null;
   section: string | null;
+  section_en?: string | null;
   field_type: FieldType;
   is_required: boolean;
   options: string[] | null;
+  options_en?: string[] | null;
   condition: FieldCondition | null;
   sort_order: number;
   is_active: boolean;

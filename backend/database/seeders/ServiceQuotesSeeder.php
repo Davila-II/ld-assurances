@@ -53,19 +53,25 @@ class ServiceQuotesSeeder extends Seeder
     private function ensureCategories(): void
     {
         $categories = [
-            ['slug' => 'auto', 'name' => 'Automobile', 'sort_order' => 1],
-            ['slug' => 'voyage', 'name' => 'Voyage', 'sort_order' => 2],
-            ['slug' => 'habitation', 'name' => 'Habitation', 'sort_order' => 3],
-            ['slug' => 'personne', 'name' => 'Santé', 'sort_order' => 4],
-            ['slug' => 'professionnelle', 'name' => 'Professionnelle', 'sort_order' => 5],
-            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'sort_order' => 6],
-            ['slug' => 'autres', 'name' => 'Autres assurances', 'sort_order' => 7],
+            ['slug' => 'auto', 'name' => 'Automobile', 'name_en' => 'Motor Insurance', 'form_type' => 'quote', 'sort_order' => 1],
+            ['slug' => 'voyage', 'name' => 'Voyage', 'name_en' => 'Travel Insurance', 'form_type' => 'quote', 'sort_order' => 2],
+            ['slug' => 'habitation', 'name' => 'Habitation', 'name_en' => 'Home Insurance', 'form_type' => 'quote', 'sort_order' => 3],
+            ['slug' => 'personne', 'name' => 'Santé', 'name_en' => 'Health Insurance', 'form_type' => 'quote', 'sort_order' => 4],
+            ['slug' => 'professionnelle', 'name' => 'Professionnelle', 'name_en' => 'Business Insurance', 'form_type' => 'quote', 'sort_order' => 5],
+            ['slug' => 'responsabilite-civile', 'name' => 'Responsabilité Civile', 'name_en' => 'Public Liability', 'form_type' => 'quote', 'sort_order' => 6],
+            ['slug' => 'autres', 'name' => 'Autres assurances', 'name_en' => 'Other Insurance', 'form_type' => 'quote', 'sort_order' => 7],
         ];
 
         foreach ($categories as $category) {
             Category::updateOrCreate(
                 ['slug' => $category['slug']],
-                ['name' => $category['name'], 'sort_order' => $category['sort_order'], 'is_active' => true]
+                [
+                    'name'       => $category['name'],
+                    'name_en'    => $category['name_en'],
+                    'form_type'  => $category['form_type'],
+                    'sort_order' => $category['sort_order'],
+                    'is_active'  => true,
+                ]
             );
         }
     }

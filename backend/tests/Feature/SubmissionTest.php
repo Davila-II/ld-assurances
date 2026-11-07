@@ -120,4 +120,41 @@ class SubmissionTest extends TestCase
 
         $this->postJson('/api/submissions', $base)->assertStatus(422);
     }
+
+    public function test_submission_is_linked_to_authenticated_client(): void
+    {
+        $client = \App\Models\User::factory()->create([
+            'email' => 'clientauth@example.com',
+            'role'  => 'client',
+        ]);
+
+        $payload = $this->validQuotePayload();
+        $payload['email'] = 'clientauth@example.com';
+
+        \Laravel\Sanctum\Sanctum::actingAs($client, ['client']);
+
+        $res = $this->postJson('/api/submissions', $payload)->assertCreated();
+
+        $submission = Submission::where('reference', $res->json('reference'))->firstOrFail();
+        $this->assertSame($client->id, $submission->user_id);
+    }
+
+    public function test_submission_with_bearer_token_header_is_linked_to_client(): void
+    {
+        $client = \App\Models\User::factory()->create([
+            'email' => 'tokenclient@example.com',
+            'role'  => 'client',
+        ]);
+        $token = $client->createToken('test')->plainTextToken;
+
+        $payload = $this->validQuotePayload();
+        $payload['email'] = 'tokenclient@example.com';
+
+        $res = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/submissions', $payload)
+            ->assertCreated();
+
+        $submission = Submission::where('reference', $res->json('reference'))->firstOrFail();
+        $this->assertSame($client->id, $submission->user_id);
+    }
 }

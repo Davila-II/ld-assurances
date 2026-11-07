@@ -17,6 +17,7 @@ export interface ClientSubmission {
   status: string;
   status_label: string;
   category: string | null;
+  category_en?: string | null;
   rejection_reason?: string | null;
   created_at: string;
   updated_at: string;

@@ -9,7 +9,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 
 export default function QuotePage() {
   const { slug = '' } = useParams();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const product = PRODUCTS.find((p) => p.key === slug || p.slug === slug);
 
   const [category, setCategory] = useState<Category | null>(null);
@@ -57,7 +57,7 @@ export default function QuotePage() {
 
   const label = product
     ? (product.labelKey ? t(product.labelKey) : product.label)
-    : (category?.name ?? slug);
+    : (lang === 'en' && category?.name_en ? category.name_en : (category?.name ?? slug));
 
   return (
     <main className="page">

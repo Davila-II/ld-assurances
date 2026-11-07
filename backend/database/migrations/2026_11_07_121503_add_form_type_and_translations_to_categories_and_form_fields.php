@@ -6,23 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('categories_and_form_fields', function (Blueprint $table) {
-            //
+        Schema::table('categories', function (Blueprint $table) {
+            $table->string('name_en')->nullable()->after('name');
+            $table->string('form_type')->nullable()->after('slug'); // 'quote' ou 'claim'
+        });
+
+        Schema::table('form_fields', function (Blueprint $table) {
+            $table->string('label_en')->nullable()->after('label');
+            $table->string('placeholder_en')->nullable()->after('placeholder');
+            $table->string('section_en')->nullable()->after('section');
+            $table->json('options_en')->nullable()->after('options');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('categories_and_form_fields', function (Blueprint $table) {
-            //
+        Schema::table('categories', function (Blueprint $table) {
+            $table->dropColumn(['name_en', 'form_type']);
+        });
+
+        Schema::table('form_fields', function (Blueprint $table) {
+            $table->dropColumn(['label_en', 'placeholder_en', 'section_en', 'options_en']);
         });
     }
 };

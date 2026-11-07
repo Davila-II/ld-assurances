@@ -43,10 +43,13 @@ interface EditorState {
   id?: number;
   name: string;
   label: string;
+  label_en: string;
   field_type: FieldType;
   is_required: boolean;
   section: string;
+  section_en: string;
   placeholder: string;
+  placeholder_en: string;
   optionsList: string[];
   newOptionText: string;
   useCondition: boolean;
@@ -59,10 +62,13 @@ const EMPTY_EDITOR: EditorState = {
   mode: 'add',
   name: '',
   label: '',
+  label_en: '',
   field_type: 'text',
   is_required: false,
   section: '',
+  section_en: '',
   placeholder: '',
+  placeholder_en: '',
   optionsList: [],
   newOptionText: '',
   useCondition: false,
@@ -118,25 +124,33 @@ export default function FormBuilderPage() {
   // Modale d'édition d'une question
   const [editor, setEditor] = useState<EditorState | null>(null);
 
-  // Ajout / renommage de catégorie
+  // Ajout / renommage de catégorie (bilingue)
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryNameEn, setNewCategoryNameEn] = useState('');
   const [editingCategory, setEditingCategory] = useState<BuilderCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryNameEn, setEditCategoryNameEn] = useState('');
 
-  // Rechargement des catégories
-  const loadCategories = useCallback(async () => {
+  // Rechargement des catégories filtrées selon le mode (devis ou sinistre)
+  const loadCategories = useCallback(async (typeToLoad?: FormType) => {
     try {
-      const data = await getBuilderCategories();
+      const targetType = typeToLoad ?? formType;
+      const data = await getBuilderCategories(targetType);
       setCategories(data);
-      if (selectedId === null && data.length > 0) {
-        const defaultCat =
-          data.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ?? data[0];
-        setSelectedId(defaultCat.id);
+      if (data.length > 0) {
+        setSelectedId((prev) => {
+          if (prev !== null && data.some((c) => c.id === prev)) {
+            return prev;
+          }
+          return data[0].id;
+        });
+      } else {
+        setSelectedId(null);
       }
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, [formType, selectedId]);
+  }, [formType]);
 
   // Rechargement des questions
   const loadFields = useCallback(async (categoryId: number, type: FormType) => {
@@ -151,14 +165,15 @@ export default function FormBuilderPage() {
   // Chargement initial
   useEffect(() => {
     let cancelled = false;
-    getBuilderCategories()
+    getBuilderCategories(formType)
       .then((data) => {
         if (cancelled) return;
         setCategories(data);
         if (data.length > 0) {
-          const defaultCat =
-            data.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ?? data[0];
-          setSelectedId((prev) => prev ?? defaultCat.id);
+          setSelectedId((prev) => {
+            if (prev !== null && data.some((c) => c.id === prev)) return prev;
+            return data[0].id;
+          });
         }
       })
       .catch((err: unknown) => {
@@ -220,14 +235,14 @@ export default function FormBuilderPage() {
 
   // Regroupement des questions par section dans l'ordre d'affichage
   const sectionGroups = useMemo(() => {
-    const groups: { name: string; fields: BuilderField[] }[] = [];
+    const groups: { name: string; name_en?: string | null; fields: BuilderField[] }[] = [];
     const fieldsToProcess = showInactive ? fields : fields.filter((f) => f.is_active);
 
     fieldsToProcess.forEach((field) => {
       const secName = field.section?.trim() || 'Général';
       let group = groups.find((g) => g.name === secName);
       if (!group) {
-        group = { name: secName, fields: [] };
+        group = { name: secName, name_en: field.section_en?.trim(), fields: [] };
         groups.push(group);
       }
       group.fields.push(field);
@@ -246,30 +261,25 @@ export default function FormBuilderPage() {
     setNotice('');
   };
 
-  const changeFormType = (type: FormType) => {
+  const changeFormType = async (type: FormType) => {
     if (type !== formType) {
       setFormType(type);
       setFields([]);
       setLoadedKey(null);
-
-      // Conserver la catégorie courante si elle a des questions pour ce mode,
-      // sinon sélectionner la première catégorie qui a des questions pour ce mode
-      const currentCat = categories.find((c) => c.id === selectedId);
-      const currentCount = currentCat
-        ? (type === 'quote' ? currentCat.quote_count : currentCat.claim_count)
-        : 0;
-
-      if (!currentCat || currentCount === 0) {
-        const bestCat =
-          categories.find((c) => (type === 'quote' ? c.quote_count : c.claim_count) > 0) ??
-          categories[0];
-        if (bestCat) {
-          setSelectedId(bestCat.id);
+      setEditor(null);
+      setNotice('');
+      try {
+        const data = await getBuilderCategories(type);
+        setCategories(data);
+        if (data.length > 0) {
+          setSelectedId(data[0].id);
+        } else {
+          setSelectedId(null);
         }
+      } catch (err) {
+        setError(errorMessage(err));
       }
     }
-    setEditor(null);
-    setNotice('');
   };
 
   // Suppression définitive d'une catégorie
@@ -283,28 +293,30 @@ export default function FormBuilderPage() {
       const remaining = categories.filter((c) => c.id !== cat.id);
       setCategories(remaining);
       if (selectedId === cat.id) {
-        const nextCat =
-          remaining.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ??
-          remaining[0] ??
-          null;
-        setSelectedId(nextCat ? nextCat.id : null);
+        setSelectedId(remaining.length > 0 ? remaining[0].id : null);
       }
-      await loadCategories();
+      await loadCategories(formType);
     } catch (err) {
       setError(errorMessage(err));
     }
   };
 
-  // Ajout d'une nouvelle catégorie
+  // Ajout d'une nouvelle catégorie (bilingue)
   const handleAddCategory = async (e: FormEvent) => {
     e.preventDefault();
     const name = newCategoryName.trim();
+    const name_en = newCategoryNameEn.trim();
     if (!name) return;
     setError('');
     try {
-      const created = await createBuilderCategory(name);
+      const created = await createBuilderCategory({
+        name,
+        name_en: name_en || undefined,
+        form_type: formType,
+      });
       setNewCategoryName('');
-      await loadCategories();
+      setNewCategoryNameEn('');
+      await loadCategories(formType);
       setSelectedId(created.id);
       setNotice(t('builder.notice_cat_created', { name: created.name }));
     } catch (err) {
@@ -312,17 +324,21 @@ export default function FormBuilderPage() {
     }
   };
 
-  // Renommage d'une catégorie
+  // Renommage d'une catégorie (bilingue)
   const handleUpdateCategoryName = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingCategory) return;
     const name = editCategoryName.trim();
+    const name_en = editCategoryNameEn.trim();
     if (!name) return;
     setError('');
     try {
-      await updateBuilderCategory(editingCategory.id, { name });
+      await updateBuilderCategory(editingCategory.id, {
+        name,
+        name_en: name_en || undefined,
+      });
       setEditingCategory(null);
-      await loadCategories();
+      await loadCategories(formType);
       setNotice(t('builder.notice_cat_renamed'));
     } catch (err) {
       setError(errorMessage(err));
@@ -361,10 +377,13 @@ export default function FormBuilderPage() {
       id: field.id,
       name: field.name,
       label: field.label,
+      label_en: field.label_en ?? '',
       field_type: field.field_type,
       is_required: field.is_required,
       section: field.section ?? '',
+      section_en: field.section_en ?? '',
       placeholder: field.placeholder ?? '',
+      placeholder_en: field.placeholder_en ?? '',
       optionsList: field.options ?? [],
       newOptionText: '',
       useCondition: Boolean(field.condition?.field),
@@ -400,10 +419,13 @@ export default function FormBuilderPage() {
 
     const payload = {
       label: trimmedLabel,
+      label_en: editor.label_en.trim() || null,
       field_type: editor.field_type,
       is_required: editor.is_required,
       section: editor.section.trim() || null,
+      section_en: editor.section_en.trim() || null,
       placeholder: editor.placeholder.trim() || null,
+      placeholder_en: editor.placeholder_en.trim() || null,
       options: editor.optionsList.length > 0 ? editor.optionsList : null,
       condition,
     };
@@ -651,12 +673,17 @@ export default function FormBuilderPage() {
               {displayedCategories.map((cat) => {
                 const count = formType === 'quote' ? cat.quote_count : cat.claim_count;
                 const isSelected = cat.id === selectedId;
+                const catTitle = lang === 'en' && cat.name_en ? cat.name_en : cat.name;
+                const catSub = lang === 'en' ? cat.name : (cat.name_en || null);
 
                 return (
                   <li key={cat.id} className={`builder-cat-item ${isSelected ? 'selected' : ''}`}>
                     <div className="builder-cat-main" onClick={() => selectCategory(cat.id)}>
                       <div className="builder-cat-title-row">
-                        <span className="builder-cat-name">{cat.name}</span>
+                        <span className="builder-cat-name">
+                          {catTitle}
+                          {catSub && <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748b', fontWeight: 400 }}>{catSub}</span>}
+                        </span>
                         <span className={`cat-status-dot ${cat.is_active ? 'active' : 'inactive'}`} />
                       </div>
                       <div className="builder-cat-sub">
@@ -675,6 +702,7 @@ export default function FormBuilderPage() {
                           e.stopPropagation();
                           setEditingCategory(cat);
                           setEditCategoryName(cat.name);
+                          setEditCategoryNameEn(cat.name_en ?? '');
                         }}
                       >
                         <Edit3 size={14} />
@@ -706,13 +734,20 @@ export default function FormBuilderPage() {
               })}
             </ul>
 
-            {/* Formulaire ajout de catégorie */}
-            <form onSubmit={handleAddCategory} className="builder-cat-add-form">
+            {/* Formulaire ajout de catégorie (bilingue) */}
+            <form onSubmit={handleAddCategory} className="builder-cat-add-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <input
                 type="text"
+                required
                 placeholder={t('builder.new_category_placeholder')}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder={t('builder.new_category_en_placeholder')}
+                value={newCategoryNameEn}
+                onChange={(e) => setNewCategoryNameEn(e.target.value)}
               />
               <button type="submit" className="btn btn-sm">
                 <Plus size={14} /> {t('builder.add')}
@@ -728,7 +763,7 @@ export default function FormBuilderPage() {
                 <div className="builder-active-banner">
                   <div>
                     <h2 className="builder-active-title">
-                      {selectedCategory.name}
+                      {lang === 'en' && selectedCategory.name_en ? selectedCategory.name_en : selectedCategory.name}
                       <span className={`badge ${selectedCategory.is_active ? 'badge-success' : 'badge-warning'}`}>
                         {selectedCategory.is_active ? t('builder.active_on_site') : t('builder.deactivated')}
                       </span>
@@ -998,13 +1033,23 @@ export default function FormBuilderPage() {
             </div>
             <form onSubmit={handleUpdateCategoryName}>
               <div className="field">
-                <label htmlFor="cat-edit-name">{t('builder.cat_name_label')}</label>
+                <label htmlFor="cat-edit-name">{t('builder.cat_name_label')} (FR) <span className="req">*</span></label>
                 <input
                   id="cat-edit-name"
                   type="text"
                   required
                   value={editCategoryName}
                   onChange={(e) => setEditCategoryName(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="cat-edit-name-en">{t('builder.cat_name_en_label')}</label>
+                <input
+                  id="cat-edit-name-en"
+                  type="text"
+                  placeholder="Ex : Motor Insurance"
+                  value={editCategoryNameEn}
+                  onChange={(e) => setEditCategoryNameEn(e.target.value)}
                 />
               </div>
               <div className="builder-modal-actions">
@@ -1032,26 +1077,39 @@ export default function FormBuilderPage() {
             </div>
 
             <form onSubmit={saveEditor} className="builder-modal-form">
-              {/* Libellé */}
-              <div className="field">
-                <label htmlFor="f-label">
-                  {t('builder.label_field')} <span className="req">*</span>
-                </label>
-                <input
-                  id="f-label"
-                  type="text"
-                  required
-                  placeholder={t('builder.label_placeholder')}
-                  value={editor.label}
-                  onChange={(e) => {
-                    const newLabel = e.target.value;
-                    const updates: Partial<EditorState> = { label: newLabel };
-                    if (editor.mode === 'add' && editor.autoSlug) {
-                      updates.name = slugify(newLabel);
-                    }
-                    setEditor({ ...editor, ...updates });
-                  }}
-                />
+              {/* Libellé FR et EN */}
+              <div className="grid-2-col">
+                <div className="field">
+                  <label htmlFor="f-label">
+                    {t('builder.label_field')} (FR) <span className="req">*</span>
+                  </label>
+                  <input
+                    id="f-label"
+                    type="text"
+                    required
+                    placeholder={t('builder.label_placeholder')}
+                    value={editor.label}
+                    onChange={(e) => {
+                      const newLabel = e.target.value;
+                      const updates: Partial<EditorState> = { label: newLabel };
+                      if (editor.mode === 'add' && editor.autoSlug) {
+                        updates.name = slugify(newLabel);
+                      }
+                      setEditor({ ...editor, ...updates });
+                    }}
+                  />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="f-label-en">{t('builder.label_field_en')}</label>
+                  <input
+                    id="f-label-en"
+                    type="text"
+                    placeholder={t('builder.label_placeholder_en')}
+                    value={editor.label_en}
+                    onChange={(e) => setEditor({ ...editor, label_en: e.target.value })}
+                  />
+                </div>
               </div>
 
               {/* Identifiant technique */}
@@ -1093,27 +1151,28 @@ export default function FormBuilderPage() {
                 )}
               </div>
 
-              {/* Type de réponse et Section */}
+              {/* Type de réponse */}
+              <div className="field">
+                <label htmlFor="f-type">{t('builder.response_type')}</label>
+                <select
+                  id="f-type"
+                  value={editor.field_type}
+                  onChange={(e) =>
+                    setEditor({ ...editor, field_type: e.target.value as FieldType })
+                  }
+                >
+                  {Object.entries(FIELD_TYPE_DESCRIPTIONS).map(([type, desc]) => (
+                    <option key={type} value={type}>
+                      {getFieldTypeLabel(type, lang)} — {desc}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Section FR et EN */}
               <div className="grid-2-col">
                 <div className="field">
-                  <label htmlFor="f-type">{t('builder.response_type')}</label>
-                  <select
-                    id="f-type"
-                    value={editor.field_type}
-                    onChange={(e) =>
-                      setEditor({ ...editor, field_type: e.target.value as FieldType })
-                    }
-                  >
-                    {Object.entries(FIELD_TYPE_DESCRIPTIONS).map(([type, desc]) => (
-                      <option key={type} value={type}>
-                        {getFieldTypeLabel(type, lang)} — {desc}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="f-section">{t('builder.section_field')}</label>
+                  <label htmlFor="f-section">{t('builder.section_field')} (FR)</label>
                   <input
                     id="f-section"
                     type="text"
@@ -1128,12 +1187,23 @@ export default function FormBuilderPage() {
                     ))}
                   </datalist>
                 </div>
+
+                <div className="field">
+                  <label htmlFor="f-section-en">{t('builder.section_field_en')}</label>
+                  <input
+                    id="f-section-en"
+                    type="text"
+                    placeholder={t('builder.section_placeholder_en')}
+                    value={editor.section_en}
+                    onChange={(e) => setEditor({ ...editor, section_en: e.target.value })}
+                  />
+                </div>
               </div>
 
-              {/* Placeholder et Obligatoire */}
+              {/* Placeholder FR et EN */}
               <div className="grid-2-col">
                 <div className="field">
-                  <label htmlFor="f-placeholder">{t('builder.placeholder_field')}</label>
+                  <label htmlFor="f-placeholder">{t('builder.placeholder_field')} (FR)</label>
                   <input
                     id="f-placeholder"
                     type="text"
@@ -1143,16 +1213,28 @@ export default function FormBuilderPage() {
                   />
                 </div>
 
-                <div className="field flex-align-end">
-                  <label className="choice big-toggle">
-                    <input
-                      type="checkbox"
-                      checked={editor.is_required}
-                      onChange={(e) => setEditor({ ...editor, is_required: e.target.checked })}
-                    />
-                    <span>{t('builder.required_toggle')}</span>
-                  </label>
+                <div className="field">
+                  <label htmlFor="f-placeholder-en">{t('builder.placeholder_field_en')}</label>
+                  <input
+                    id="f-placeholder-en"
+                    type="text"
+                    placeholder={t('builder.placeholder_help_en')}
+                    value={editor.placeholder_en}
+                    onChange={(e) => setEditor({ ...editor, placeholder_en: e.target.value })}
+                  />
                 </div>
+              </div>
+
+              {/* Obligatoire */}
+              <div className="field" style={{ marginBottom: '16px' }}>
+                <label className="choice big-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.is_required}
+                    onChange={(e) => setEditor({ ...editor, is_required: e.target.checked })}
+                  />
+                  <span>{t('builder.required_toggle')}</span>
+                </label>
               </div>
 
               {/* Gestionnaire d'options pour select ou multiselect */}

@@ -21,10 +21,12 @@ class FormController extends Controller
         $query = Category::where('is_active', true)->orderBy('sort_order');
 
         if ($type !== null) {
-            $query->whereHas('fields', fn ($q) => $q->where('form_type', $type)->where('is_active', true));
+            $query->where(function ($q) use ($type) {
+                $q->where('form_type', $type)->orWhereNull('form_type');
+            })->whereHas('fields', fn ($q) => $q->where('form_type', $type)->where('is_active', true));
         }
 
-        return response()->json($query->get(['id', 'name', 'slug']));
+        return response()->json($query->get(['id', 'name', 'name_en', 'slug', 'form_type']));
     }
 
     // Renvoie les questions d'une catégorie pour un type de formulaire
@@ -38,18 +40,38 @@ class FormController extends Controller
 
         $category = Category::where('slug', $slug)
             ->where('is_active', true)
-            ->firstOrFail();
+            ->where(function ($q) use ($type) {
+                $q->where('form_type', $type)->orWhereNull('form_type');
+            })
+            ->first() ?? Category::where('slug', $slug)->where('is_active', true)->firstOrFail();
 
         $fields = $category->fields()
             ->where('form_type', $type)
             ->where('is_active', true)
-            ->get(['id', 'name', 'label', 'placeholder', 'section', 'field_type', 'is_required', 'options', 'condition', 'sort_order']);
+            ->get([
+                'id',
+                'name',
+                'label',
+                'label_en',
+                'placeholder',
+                'placeholder_en',
+                'section',
+                'section_en',
+                'field_type',
+                'is_required',
+                'options',
+                'options_en',
+                'condition',
+                'sort_order',
+            ]);
 
         return response()->json([
             'category'  => [
-                'id'   => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
+                'id'        => $category->id,
+                'name'      => $category->name,
+                'name_en'   => $category->name_en,
+                'slug'      => $category->slug,
+                'form_type' => $category->form_type,
             ],
             'form_type' => $type,
             'fields'    => $fields,

@@ -49,9 +49,11 @@ class AuthController extends Controller
         $user->save();
 
         // Le compte est actif : on rattache immédiatement les demandes faites sans compte avec cette adresse
-        Submission::whereNull('user_id')
-            ->whereRaw('LOWER(email) = ?', [Str::lower($user->email)])
-            ->update(['user_id' => $user->id]);
+        Submission::where(function ($q) {
+            $q->whereNull('user_id')->orWhere('user_id', 0);
+        })
+        ->whereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))])
+        ->update(['user_id' => $user->id]);
 
         // Envoi d'un email de confirmation de création de compte
         try {
@@ -91,9 +93,11 @@ class AuthController extends Controller
         }
 
         // Rattache les soumissions envoyées avec cette adresse email
-        Submission::whereNull('user_id')
-            ->whereRaw('LOWER(email) = ?', [Str::lower($user->email)])
-            ->update(['user_id' => $user->id]);
+        Submission::where(function ($q) {
+            $q->whereNull('user_id')->orWhere('user_id', 0);
+        })
+        ->whereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))])
+        ->update(['user_id' => $user->id]);
 
         return response()->json([
             'token' => $this->newToken($user),

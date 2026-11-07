@@ -48,10 +48,11 @@ class SubmissionController extends Controller
 
         // Si un client connecté envoie le formulaire (ou s'il possède déjà un compte client avec cet email), le dossier est rattaché à son compte
         $client = $request->user('sanctum');
+        $cleanEmail = Str::lower(trim($base['email']));
         $userId = ($client && $client->role === 'client')
             ? $client->id
             : \App\Models\User::where('role', 'client')
-                ->whereRaw('LOWER(email) = ?', [Str::lower($base['email'])])
+                ->whereRaw('LOWER(TRIM(email)) = ?', [$cleanEmail])
                 ->value('id');
 
         // 2. Les questions de ce formulaire, telles qu'enregistrées en base

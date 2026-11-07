@@ -87,7 +87,7 @@ const CLAIM_ITEMS: ClaimItem[] = [
 
 // Vue « devis » : une carte par type d'assurance (connectée en direct aux catégories du constructeur de formulaires)
 function QuoteHub() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
@@ -106,10 +106,11 @@ function QuoteHub() {
   const items = categories.length > 0
     ? categories.map((cat) => {
         const known = PRODUCTS.find((p) => p.slug === cat.slug || p.key === cat.slug);
+        const fallbackName = lang === 'en' && cat.name_en ? cat.name_en : cat.name;
         return {
           key: known?.key ?? cat.slug,
-          label: known?.labelKey ? t(known.labelKey) : (known?.label ?? cat.name),
-          desc: known?.descKey ? t(known.descKey) : (known?.description ?? 'Demandez votre devis personnalisé en ligne'),
+          label: known?.labelKey ? t(known.labelKey) : (known?.label ?? fallbackName),
+          desc: known?.descKey ? t(known.descKey) : (known?.description ?? (lang === 'en' ? 'Request your personalized quote online' : 'Demandez votre devis personnalisé en ligne')),
           icon: known?.icon ?? <Shield size={32} />,
           tone: known?.tone ?? 'blue',
           link: `/devis/${known?.key ?? cat.slug}`,
@@ -197,21 +198,24 @@ function ClaimHub() {
 }
 
 const CLAIM_TYPE_TO_SLUG: Record<string, string> = {
-  automobile: 'auto',
-  habitation: 'habitation',
-  'santé': 'personne',
-  sante: 'personne',
-  entreprise: 'professionnelle',
-  'responsabilité civile': 'responsabilite-civile',
-  'responsabilite civile': 'responsabilite-civile',
-  transport: 'voyage',
-  agricole: 'autres',
-  autre: 'autres',
+  automobile: 'sinistre-auto',
+  auto: 'sinistre-auto',
+  habitation: 'sinistre-habitation',
+  'santé': 'sinistre-sante',
+  sante: 'sinistre-sante',
+  entreprise: 'sinistre-professionnelle',
+  professionnel: 'sinistre-professionnelle',
+  'responsabilité civile': 'sinistre-rc',
+  'responsabilite civile': 'sinistre-rc',
+  transport: 'sinistre-voyage',
+  voyage: 'sinistre-voyage',
+  agricole: 'sinistre-autres',
+  autre: 'sinistre-autres',
 };
 
 // Vue « formulaire de sinistre » pour le type sélectionné
 function ClaimFlow({ selectedType }: { selectedType?: string }) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -224,10 +228,11 @@ function ClaimFlow({ selectedType }: { selectedType?: string }) {
     getCategories('claim')
       .then((categories) => {
         const targetSlug = selectedType
-          ? (CLAIM_TYPE_TO_SLUG[selectedType.toLowerCase()] ?? currentItem?.key)
+          ? (CLAIM_TYPE_TO_SLUG[selectedType.toLowerCase()] ?? `sinistre-${selectedType.toLowerCase()}`)
           : undefined;
         const found =
           (targetSlug ? categories.find((c) => c.slug === targetSlug) : null) ??
+          categories.find((c) => c.slug === currentItem?.key) ??
           categories[0] ??
           null;
         setCategory(found);
@@ -246,7 +251,7 @@ function ClaimFlow({ selectedType }: { selectedType?: string }) {
       </Link>
 
       <h1 className="page-title accent">
-        {t('claims.title')}{currentItem ? ` - ${t(currentItem.titleKey)}` : ''}
+        {t('claims.title')}{currentItem ? ` - ${t(currentItem.titleKey)}` : (category ? ` - ${lang === 'en' && category.name_en ? category.name_en : category.name}` : '')}
       </h1>
       <p className="page-subtitle">{t('claims.form_subtitle')}</p>
 

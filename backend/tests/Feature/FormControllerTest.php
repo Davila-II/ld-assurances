@@ -36,7 +36,7 @@ class FormControllerTest extends TestCase
 
     public function test_claim_form_has_identification_as_last_section(): void
     {
-        $response = $this->getJson('/api/categories/auto/form?type=claim')->assertOk();
+        $response = $this->getJson('/api/categories/sinistre-auto/form?type=claim')->assertOk();
         $fields = collect($response->json('fields'));
         $sections = $fields->pluck('section')->unique()->values()->all();
 
