@@ -26,6 +26,17 @@ class SubmissionPdfService
                 'dpi'                  => 150,
             ]);
 
+        $pdf->render();
+
+        // Ajout du pied de page officiel sur chaque page (LD ASSURANCES SA + pagination)
+        $dompdf = $pdf->getDomPDF();
+        $canvas = $dompdf->getCanvas();
+        $fontMetrics = $dompdf->getFontMetrics();
+        $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $canvas->page_text(42.5, 812, 'LD ASSURANCES SA — Document généré électroniquement', $font, 7, [0.4, 0.47, 0.54]);
+        $canvas->page_text(525, 812, 'Page {PAGE_NUM}', $font, 7, [0.4, 0.47, 0.54]);
+        $canvas->line(42.5, 804, 552.5, 804, [0.84, 0.88, 0.91], 0.5);
+
         return $pdf->output();
     }
 
@@ -49,22 +60,25 @@ class SubmissionPdfService
             'agencies'        => 'Douala · Yaoundé · Bafoussam',
         ]);
 
-        // Logos & Filigrane avec cascade de fallbacks garantissant la disponibilité des assets
+        // Logos & Filigrane avec cascade de fallbacks garantissant la disponibilité des assets (JPEG prioritaire car nativement supporté par DomPDF sans extension GD)
         $logoBase64 = $this->resolveImageBase64([
+            public_path('logo1.jpg'),
+            resource_path('images/logo1.jpg'),
+            base_path('../frontend/src/images/logo1.jpg'),
             config('company.logo_path'),
             public_path('logo-icon.jpg'),
             resource_path('images/logo-icon.jpg'),
-            public_path('logo-icon.png'),
-            resource_path('images/logo-icon.png'),
             base_path('../frontend/dist/logo-icon.jpg'),
-            base_path('../frontend/dist/logo-icon.png'),
-            base_path('../frontend/public/logo-icon.png'),
+            public_path('logo1-tight.png'),
+            public_path('logo1.png'),
+            base_path('../frontend/src/images/logo1.png'),
         ]);
 
         $watermarkBase64 = $this->resolveImageBase64([
             config('company.watermark_path'),
             public_path('logo-watermark.jpg'),
             resource_path('images/logo-watermark.jpg'),
+            public_path('logo1.jpg'),
             public_path('logo-icon.jpg'),
             resource_path('images/logo-icon.jpg'),
         ]) ?: $logoBase64;
@@ -75,17 +89,22 @@ class SubmissionPdfService
             ?? $answers['nom_complet']
             ?? $answers['name']
             ?? $answers['nom']
-            ?? null;
+            ?? 'Client';
+        $clientEmail = $submission->email
+            ?? $answers['email']
+            ?? $answers['courriel']
+            ?? 'Non renseigné';
         $clientPhone = $answers['phone']
             ?? $answers['telephone']
-            ?? null;
+            ?? 'Non renseigné';
         $clientCity  = $answers['city']
             ?? $answers['ville']
-            ?? null;
+            ?? 'Douala';
 
         $submittedAt = $submission->created_at ?? now();
-        $dateFormatted = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d F Y à H:i');
-        $dateOnly      = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d/m/Y');
+        $dateFormatted  = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d F Y à H:i');
+        $dateOnly       = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d/m/Y');
+        $registeredDate = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d F Y');
 
         // Titre du document selon la nature
         $isQuote = ($submission->form_type === 'quote');
@@ -93,9 +112,15 @@ class SubmissionPdfService
             ? 'Récépissé de Demande de Devis'
             : 'Récépissé de Déclaration de Sinistre';
 
+        $docTitle = $isQuote
+            ? 'RÉCÉPISSÉ DE DEMANDE DE DEVIS'
+            : 'RÉCÉPISSÉ DE DÉCLARATION DE SINISTRE';
+
         $docSubTitle = $isQuote
             ? 'DEMANDE DE DEVIS D’ASSURANCE'
             : 'DÉCLARATION DE SINISTRE';
+
+        $categoryName = $submission->category?->name ?? ($isQuote ? 'Santé' : 'Automobile');
 
         // Statut réel & mise en forme
         $statusInfo = $this->resolveStatusInfo($submission->status ?? 'received', $submission->form_type ?? 'quote');
@@ -118,18 +143,43 @@ class SubmissionPdfService
             }
         }
 
+        // Textes d'accompagnement conformes aux maquettes officielles de LD ASSURANCES SA
+        $greetingText = $isQuote
+            ? "Bonjour {$clientName}, votre demande de devis a bien été transmise à LD ASSURANCES SA. Voici le récapitulatif des informations communiquées."
+            : "Bonjour {$clientName}, votre déclaration de sinistre a été enregistrée sur la plateforme de LD ASSURANCES SA. Ce document récapitule les informations transmises.";
+
+        $nextStepsText = $isQuote
+            ? "Un conseiller pourra examiner votre demande et vous contacter pour la suite du traitement. Des informations ou pièces complémentaires pourront être demandées."
+            : "Votre déclaration sera examinée par les services compétents. Un gestionnaire pourra vous contacter si des informations ou justificatifs supplémentaires sont nécessaires. Conservez cette référence pour vos échanges.";
+
+        $legalNoticeText = $isQuote
+            ? "Ce récépissé confirme uniquement la réception et l'enregistrement de votre demande de devis. Il ne constitue ni un devis tarifaire, ni une acceptation du risque, ni un contrat d'assurance, ni une attestation de garantie."
+            : "Ce récépissé confirme la réception technique de votre déclaration et des pièces transmises. Il ne constitue ni une reconnaissance de responsabilité, ni une acceptation de garantie, ni une décision d'indemnisation. La suite du dossier dépend de son examen et des dispositions applicables à votre contrat.";
+
+        $contactLabel = $isQuote ? "Besoin d'aide ?" : "Contact :";
+        $policyNumber = $answers['policy_number'] ?? $answers['numero_police'] ?? $answers['police'] ?? null;
+
         return [
             'submission'       => $submission,
             'company'          => $company,
             'isQuote'          => $isQuote,
             'typeLabel'        => $typeLabel,
+            'docTitle'         => $docTitle,
             'docSubTitle'      => $docSubTitle,
+            'categoryName'     => $categoryName,
             'clientName'       => $clientName,
+            'clientEmail'      => $clientEmail,
             'clientPhone'      => $clientPhone,
             'clientCity'       => $clientCity,
             'dateFormatted'    => $dateFormatted,
             'dateOnly'         => $dateOnly,
+            'registeredDate'   => $registeredDate,
             'statusInfo'       => $statusInfo,
+            'greetingText'     => $greetingText,
+            'nextStepsText'    => $nextStepsText,
+            'legalNoticeText'  => $legalNoticeText,
+            'contactLabel'     => $contactLabel,
+            'policyNumber'     => $policyNumber,
             'sections'         => $sections,
             'attachments'      => $attachments,
             'quoteCalculation' => $quoteCalculation,
@@ -225,6 +275,8 @@ class SubmissionPdfService
             'received' => [
                 'code'        => 'received',
                 'label'       => $isQuote ? 'Demande reçue' : 'Déclaration reçue',
+                'badge'       => $isQuote ? 'DEMANDE REÇUE' : 'DÉCLARATION REÇUE',
+                'status_line' => $isQuote ? 'Demande reçue — en attente de traitement' : "Déclaration reçue — en attente d'examen",
                 'description' => $isQuote
                     ? 'Votre demande de devis a été enregistrée avec succès. Elle est en attente d’attribution à un conseiller commercial.'
                     : 'Votre déclaration de sinistre a été enregistrée avec succès. Elle est transmise au service d’indemnisation.',
@@ -236,6 +288,8 @@ class SubmissionPdfService
             'in_progress' => [
                 'code'        => 'in_progress',
                 'label'       => $isQuote ? 'En cours de traitement' : 'En cours d’instruction',
+                'badge'       => $isQuote ? 'EN COURS DE TRAITEMENT' : 'EN COURS D\'INSTRUCTION',
+                'status_line' => $isQuote ? 'En cours de traitement — analyse technique' : "En cours d'instruction technique",
                 'description' => $isQuote
                     ? 'Votre dossier est actuellement en cours d’analyse technique et d’évaluation par notre service souscription.'
                     : 'Votre dossier de sinistre est en cours d’instruction technique par nos gestionnaires.',
@@ -247,6 +301,8 @@ class SubmissionPdfService
             'answered' => [
                 'code'        => 'answered',
                 'label'       => $isQuote ? 'Devis disponible' : 'Réponse transmise',
+                'badge'       => $isQuote ? 'DEVIS DISPONIBLE' : 'RÉPONSE TRANSMISE',
+                'status_line' => $isQuote ? 'Devis disponible — proposition commerciale prête' : "Réponse officielle transmise au souscripteur",
                 'description' => $isQuote
                     ? 'L’étude de votre dossier est finalisée. Votre proposition commerciale et tarifaire personnalisée est prête.'
                     : 'Une réponse officielle ou une proposition de prise en charge vous a été communiquée par nos services.',
@@ -258,6 +314,8 @@ class SubmissionPdfService
             'closed' => [
                 'code'        => 'closed',
                 'label'       => 'Dossier clôturé',
+                'badge'       => 'DOSSIER CLÔTURÉ',
+                'status_line' => 'Dossier clôturé et archivé',
                 'description' => 'Le traitement de ce dossier est achevé et archivé dans notre système.',
                 'color'       => '#475569',
                 'bg'          => '#f1f5f9',
@@ -267,6 +325,8 @@ class SubmissionPdfService
             'rejected' => [
                 'code'        => 'rejected',
                 'label'       => $isQuote ? 'Non retenu' : 'Rejeté / Non garanti',
+                'badge'       => $isQuote ? 'NON RETENU' : 'REJETÉ / NON GARANTI',
+                'status_line' => $isQuote ? 'Demande non retenue' : 'Dossier rejeté / non garanti',
                 'description' => $isQuote
                     ? 'Cette demande n’a pas pu recevoir de suite favorable au vu des critères de souscription.'
                     : 'Les dommages ou circonstances déclarés ne sont pas couverts au titre des garanties souscrites.',
@@ -278,6 +338,8 @@ class SubmissionPdfService
             default => [
                 'code'        => $status,
                 'label'       => ucfirst($status),
+                'badge'       => strtoupper($status),
+                'status_line' => ucfirst($status),
                 'description' => 'État de traitement enregistré : ' . $status,
                 'color'       => '#0c2340',
                 'bg'          => '#f1f5f9',
