@@ -10,6 +10,8 @@ import type {
   FormType,
   LoginResult,
   Paginated,
+  PricingRule,
+  QuoteCalculation,
   SubmissionDetail,
   SubmissionFilters,
   SubmissionResult,
@@ -237,7 +239,13 @@ export const getBuilderCategories = (formType?: FormType) =>
     true
   );
 
-export const createBuilderCategory = (data: { name: string; name_en?: string; form_type?: FormType }) =>
+export const createBuilderCategory = (data: {
+  name: string;
+  name_en?: string;
+  form_type?: FormType;
+  pricing_rule_id?: number | null;
+  new_pricing_rule?: Partial<PricingRule>;
+}) =>
   request<BuilderCategory>(
     '/admin/form-builder/categories',
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
@@ -246,13 +254,69 @@ export const createBuilderCategory = (data: { name: string; name_en?: string; fo
 
 export const updateBuilderCategory = (
   id: number,
-  data: Partial<{ name: string; name_en?: string; form_type?: FormType; is_active: boolean }>
+  data: Partial<{
+    name: string;
+    name_en?: string;
+    form_type?: FormType;
+    is_active: boolean;
+    sort_order: number;
+    pricing_rule_id: number | null;
+  }>
 ) =>
   request<BuilderCategory>(
     `/admin/form-builder/categories/${id}`,
     { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
     true
   );
+
+// --- Règles de tarification & Calculs de devis ---
+
+export const getPricingRules = () =>
+  request<PricingRule[]>('/admin/pricing-rules', {}, true);
+
+export const getPricingRule = (id: number) =>
+  request<PricingRule>(`/admin/pricing-rules/${id}`, {}, true);
+
+export const createPricingRule = (data: Partial<PricingRule>) =>
+  request<PricingRule>(
+    '/admin/pricing-rules',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const updatePricingRule = (id: number, data: Partial<PricingRule>) =>
+  request<PricingRule>(
+    `/admin/pricing-rules/${id}`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+export const deletePricingRule = (id: number) =>
+  request<{ message: string }>(`/admin/pricing-rules/${id}`, { method: 'DELETE' }, true);
+
+export const testPricingRule = (
+  id: number,
+  data: { answers: Record<string, unknown>; parameters?: Record<string, unknown> }
+) =>
+  request<QuoteCalculation | { has_calculation: false }>(
+    `/admin/pricing-rules/${id}/test`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+    true
+  );
+
+// Simulation / calcul direct public d'un devis
+export const calculateQuote = (categorySlug: string, answers: Record<string, unknown>) =>
+  request<{
+    calculated: boolean;
+    category?: string;
+    pricing_rule?: PricingRule;
+    calculation: QuoteCalculation | null;
+    message?: string;
+  }>('/quotes/calculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: categorySlug, answers }),
+  });
 
 export const deleteBuilderCategory = (id: number) =>
   request<{ message: string }>(`/admin/form-builder/categories/${id}`, { method: 'DELETE' }, true);

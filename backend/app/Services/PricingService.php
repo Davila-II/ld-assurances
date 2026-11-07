@@ -38,14 +38,28 @@ class PricingService
             return null;
         }
 
+        $formattedBreakdown = array_map(function ($item) {
+            $amt = (float) ($item['amount'] ?? 0);
+            return array_merge($item, [
+                'formatted' => number_format($amt, 0, ',', ' ') . ' FCFA',
+            ]);
+        }, $result['breakdown'] ?? []);
+
         return array_merge([
-            'has_calculation'     => true,
-            'rule_id'             => $rule->id,
-            'rule_name'           => $rule->name,
-            'rule_code'           => $rule->code,
-            'driver'              => $driver,
-            'formatted_prime_ttc' => number_format($result['prime_ttc'], 0, ',', ' ') . ' FCFA',
-        ], $result);
+            'has_calculation'        => true,
+            'rule_id'                => $rule->id,
+            'rule_name'              => $rule->name,
+            'rule_code'              => $rule->code,
+            'driver'                 => $driver,
+            'currency'               => 'FCFA',
+            'prime_nette_formatted'  => number_format((float) ($result['prime_nette'] ?? 0), 0, ',', ' ') . ' FCFA',
+            'accessoires_formatted'  => number_format((float) ($result['accessoires'] ?? 0), 0, ',', ' ') . ' FCFA',
+            'taxe_unique_formatted'  => number_format((float) ($result['taxe_unique'] ?? 0), 0, ',', ' ') . ' FCFA',
+            'prime_ttc_formatted'    => number_format((float) ($result['prime_ttc'] ?? 0), 0, ',', ' ') . ' FCFA',
+            'formatted_prime_ttc'    => number_format((float) ($result['prime_ttc'] ?? 0), 0, ',', ' ') . ' FCFA',
+        ], $result, [
+            'breakdown' => $formattedBreakdown,
+        ]);
     }
 
     /**
@@ -249,32 +263,109 @@ class PricingService
 
         $primeBaseIndiv = $tauxJournalier * $duree;
 
-        // 3. Majoration liée à l'âge du voyageur
-        $ageRaw = (int) $this->extractNumber($answers, ['travelers_ages', 'age_voyageur'], 35);
-        $coeffAge = 1.0;
-        if ($ageRaw > 65 && $ageRaw <= 75) {
-            $coeffAge = 1.5;
-        } elseif ($ageRaw > 75) {
-            $coeffAge = 2.0;
-        }
-
-        $primeAjusteeIndiv = round($primeBaseIndiv * $coeffAge);
+        // 3. Calcul personnalisé par voyageur selon l'âge
         $nbrePersonnes = max(1, (int) $this->extractNumber($answers, ['travelers_count', 'nbre_personnes', 'nombre_voyageurs'], 1));
 
+        $agesRaw = $this->extractValue($answers, ['travelers_ages', 'ages_voyageurs', 'age_voyageur'], '35');
+        $agesList = [];
+        $hasDistinctAges = false;
+        if (is_array($agesRaw)) {
+            $agesList = array_map('intval', $agesRaw);
+            $hasDistinctAges = count($agesList) > 1;
+        } elseif (is_string($agesRaw) && preg_match('/[\s,;-]/', $agesRaw)) {
+            $parts = preg_split('/[\s,;-]+/', trim($agesRaw));
+            foreach ($parts as $p) {
+                if (is_numeric($p)) {
+                    $agesList[] = (int) $p;
+                }
+            }
+            $hasDistinctAges = count($agesList) > 1;
+        } elseif (is_numeric($agesRaw)) {
+            $agesList = [(int) $agesRaw];
+        }
+
+        if (empty($agesList)) {
+            $agesList = [35];
+        }
+
+        // Si l'utilisateur a renseigné un âge unique de référence (ex: 68 ans) pour N personnes,
+        // cet âge s'applique aux personnes du groupe. S'il a listé des âges distincts (ex: 35, 70),
+        // chaque voyageur est calculé selon sa tranche d'âge individuelle.
+        if (! $hasDistinctAges) {
+            $refAge = $agesList[0];
+            $agesList = array_fill(0, $nbrePersonnes, $refAge);
+        } else {
+            while (count($agesList) < $nbrePersonnes) {
+                $agesList[] = 35;
+            }
+            if (count($agesList) > $nbrePersonnes) {
+                $nbrePersonnes = count($agesList);
+            }
+        }
+
+        $primeNetteTotale = 0;
+        $senior65Count = 0;
+        $senior75Count = 0;
+
+        foreach ($agesList as $age) {
+            $coeff = 1.0;
+            if ($age > 75) {
+                $coeff = (float) ($params['age_brackets'][1]['multiplier'] ?? 2.0);
+                $senior75Count++;
+            } elseif ($age > 65) {
+                $coeff = (float) ($params['age_brackets'][0]['multiplier'] ?? 1.5);
+                $senior65Count++;
+            }
+
+            $primeNetteTotale += round($primeBaseIndiv * $coeff);
+        }
+
         // 4. Calcul global et taxes
-        $primeNetteTotale = $primeAjusteeIndiv * $nbrePersonnes;
         $accessoires = (float) ($params['accessoires'] ?? 3000);
         $taxeRate    = (float) ($params['taxe_unique'] ?? 0.15);
         $taxeUnique  = round($primeNetteTotale * $taxeRate);
         $primeTtc    = $primeNetteTotale + $accessoires + $taxeUnique;
 
-        $breakdown = [
-            ['label' => "Taux journalier ({$zone} : " . number_format($tauxJournalier, 0, ',', ' ') . " FCFA/j × {$duree} j)", 'amount' => $primeBaseIndiv],
-            ['label' => 'Majoration tranche d’âge (Coeff ' . $coeffAge . ')', 'amount' => ($primeAjusteeIndiv - $primeBaseIndiv) * $nbrePersonnes],
-            ['label' => "Prime Nette ({$nbrePersonnes} voyageur(s))", 'amount' => $primeNetteTotale],
-            ['label' => 'Accessoires & Attestation d’assistance', 'amount' => $accessoires],
-            ['label' => 'Taxe unique sur les assurances (15%)', 'amount' => $taxeUnique],
-            ['label' => 'Total Prime Voyage TTC', 'amount' => $primeTtc],
+        $breakdown = [];
+        $breakdown[] = [
+            'label'  => "Tarif de base journalier ({$zone} : " . number_format($tauxJournalier, 0, ',', ' ') . " FCFA/j × {$duree} j)",
+            'amount' => $primeBaseIndiv * $nbrePersonnes,
+            'detail' => "{$nbrePersonnes} voyageur(s) × {$duree} jour(s)",
+        ];
+
+        if ($senior65Count > 0) {
+            $maj65 = round($primeBaseIndiv * 0.5 * $senior65Count);
+            $breakdown[] = [
+                'label'  => "Surprime Senior 66-75 ans (+50% morbidité CIMA)",
+                'amount' => $maj65,
+                'detail' => "{$senior65Count} voyageur(s) concerné(s)",
+            ];
+        }
+
+        if ($senior75Count > 0) {
+            $maj75 = round($primeBaseIndiv * 1.0 * $senior75Count);
+            $breakdown[] = [
+                'label'  => "Surprime Grand Senior > 75 ans (+100% morbidité CIMA)",
+                'amount' => $maj75,
+                'detail' => "{$senior75Count} voyageur(s) concerné(s)",
+            ];
+        }
+
+        $breakdown[] = [
+            'label'  => "Prime Nette HT ({$nbrePersonnes} voyageur(s))",
+            'amount' => $primeNetteTotale,
+        ];
+        $breakdown[] = [
+            'label'  => 'Accessoires & Attestation d’assistance',
+            'amount' => $accessoires,
+        ];
+        $breakdown[] = [
+            'label'  => 'Taxe unique sur les assurances (15%)',
+            'amount' => $taxeUnique,
+        ];
+        $breakdown[] = [
+            'label'  => 'Total Prime Voyage TTC',
+            'amount' => $primeTtc,
         ];
 
         return [

@@ -14,6 +14,13 @@ import {
   formatSize,
 } from './labels';
 
+function formatFcfa(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === '') return '0 FCFA';
+  if (typeof val === 'string' && val.includes('FCFA')) return val;
+  const num = Number(val);
+  return isNaN(num) ? String(val) : num.toLocaleString('fr-FR') + ' FCFA';
+}
+
 export default function SubmissionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [loadedSubmission, setLoadedSubmission] = useState<{
@@ -274,6 +281,65 @@ export default function SubmissionDetailPage() {
 
             {notice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{notice}</p>}
           </section>
+
+          {submission.quote_calculation && (
+            <section className="card" style={{ borderLeft: '4px solid #b45309' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <h2 style={{ margin: 0 }}>📊 Tarification calculée (Code CIMA)</h2>
+                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px' }}>
+                  {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
+                <div>
+                  <small style={{ color: '#64748b' }}>Prime Nette</small>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    {formatFcfa(submission.quote_calculation.prime_nette_formatted || submission.quote_calculation.prime_nette)}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: '#64748b' }}>Accessoires / Vignette</small>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    {formatFcfa(submission.quote_calculation.accessoires_formatted || submission.quote_calculation.accessoires)}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: '#64748b' }}>Taxe Unique (15%)</small>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    {formatFcfa(submission.quote_calculation.taxe_unique_formatted || submission.quote_calculation.taxe_unique)}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: '#b45309', fontWeight: 600 }}>Prime Totale TTC</small>
+                  <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#b45309' }}>
+                    {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
+                  </div>
+                </div>
+              </div>
+              {submission.quote_calculation.breakdown?.length > 0 && (
+                <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', marginTop: '10px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                      <th style={{ padding: '8px 4px' }}>Garantie / Éléments</th>
+                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submission.quote_calculation.breakdown.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 4px' }}>
+                          {item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                        </td>
+                        <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
+                          {formatFcfa(item.formatted || item.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          )}
 
           <section className="card">
             <h2>Réponses du client</h2>

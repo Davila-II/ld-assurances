@@ -358,3 +358,151 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ---------- Carte de Simulation / Tarification en Direct (CIMA) ---------- */
+.quote-pricing-card {
+  margin: 24px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #cbd5e1;
+  border-left: 5px solid #0284c7;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
+  animation: fadeIn 0.3s ease;
+}
+
+.quote-pricing-card.calculated {
+  border-left-color: #059669;
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+}
+
+.quote-pricing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.quote-pricing-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.quote-pricing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.quote-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.quote-pricing-item {
+  background: #ffffff;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-pricing-item small {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.quote-pricing-item span {
+  color: #1e293b;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.quote-pricing-item.highlight {
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border-color: #f59e0b;
+}
+
+.quote-pricing-item.highlight small {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.quote-pricing-item.highlight span {
+  color: #b45309;
+  font-size: 1.25rem;
+}
+
+.quote-pricing-toggle-breakdown {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quote-pricing-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.quote-pricing-breakdown-table th,
+.quote-pricing-breakdown-table td {
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.quote-pricing-breakdown-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.quote-pricing-breakdown-table td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.quote-pricing-breakdown-table tr:last-child td {
+  border-bottom: none;
+}
+
+.quote-pricing-note {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
+}
+

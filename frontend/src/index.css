@@ -1820,6 +1820,92 @@ input:checked + .slider:before {
   }
 }
 
+/* Modales & Composants de Tarification FormBuilder */
+.builder-modal-xl {
+  max-width: 840px !important;
+}
+
+.pricing-tabs-header {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.pricing-tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.pricing-tab-btn:hover {
+  color: #0f172a;
+}
+
+.pricing-tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
+
+.pricing-params-group {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.pricing-params-group h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.pricing-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.pricing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pricing-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.pricing-field input,
+.pricing-field select {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #ffffff;
+}
+
+.pricing-field input:focus,
+.pricing-field select:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
 /* Utilisateurs qui préfèrent moins d'animations */
 @media (prefers-reduced-motion: reduce) {
   * {

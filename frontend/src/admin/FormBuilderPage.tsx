@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  Calculator,
   Check,
   ChevronDown,
   ChevronUp,
@@ -29,13 +30,24 @@ import {
   deleteBuilderField,
   getBuilderCategories,
   getBuilderFields,
+  getPricingRules,
   reorderBuilderFields,
+  testPricingRule,
   updateBuilderCategory,
   updateBuilderField,
+  updatePricingRule,
 } from '../api';
 import DynamicForm from '../components/DynamicForm';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { BuilderCategory, BuilderField, FieldType, FormType } from '../types';
+import type {
+  BuilderCategory,
+  BuilderField,
+  FieldType,
+  FormType,
+  PricingDriver,
+  PricingRule,
+  QuoteCalculation,
+} from '../types';
 import { getFieldTypeLabel, errorMessage } from './labels';
 
 interface EditorState {
@@ -87,6 +99,13 @@ function slugify(text: string): string {
     .slice(0, 45);
 }
 
+function formatFcfa(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === '') return '0 FCFA';
+  if (typeof val === 'string' && val.includes('FCFA')) return val;
+  const num = Number(val);
+  return isNaN(num) ? String(val) : num.toLocaleString('fr-FR') + ' FCFA';
+}
+
 const FIELD_TYPE_DESCRIPTIONS: Record<FieldType, string> = {
   text: 'Texte court / Short text',
   textarea: 'Paragraphe / Text area',
@@ -130,6 +149,48 @@ export default function FormBuilderPage() {
   const [editingCategory, setEditingCategory] = useState<BuilderCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
   const [editCategoryNameEn, setEditCategoryNameEn] = useState('');
+
+  // Tarification & Règles de calcul
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [pricingChoice, setPricingChoice] = useState<'existing' | 'new' | 'none'>('existing');
+  const [selectedPricingRuleId, setSelectedPricingRuleId] = useState<number | null>(null);
+  const [newRuleName, setNewRuleName] = useState('');
+  const [newRuleNameEn, setNewRuleNameEn] = useState('');
+  const [newRuleDriver, setNewRuleDriver] = useState<PricingDriver>('automobile');
+  const [newRuleDescription, setNewRuleDescription] = useState('');
+
+  // Modale de configuration du calcul de devis
+  const [pricingModalCategory, setPricingModalCategory] = useState<BuilderCategory | null>(null);
+  const [activePricingRuleId, setActivePricingRuleId] = useState<number | null>(null);
+  const [editingParams, setEditingParams] = useState<Record<string, any>>({});
+  const [ruleName, setRuleName] = useState('');
+  const [ruleDescription, setRuleDescription] = useState('');
+  const [pricingTab, setPricingTab] = useState<'params' | 'rule' | 'test'>('params');
+  const [testInputs, setTestInputs] = useState<Record<string, any>>({});
+  const [testResult, setTestResult] = useState<QuoteCalculation | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [savingPricing, setSavingPricing] = useState(false);
+  const [rawJsonMode, setRawJsonMode] = useState(false);
+  const [rawJsonText, setRawJsonText] = useState('');
+
+  const loadPricingRules = useCallback(async () => {
+    try {
+      const data = await getPricingRules();
+      setPricingRules(data);
+      if (data.length > 0 && selectedPricingRuleId === null) {
+        setSelectedPricingRuleId(data[0].id);
+      }
+    } catch {
+      // ignore
+    }
+  }, [selectedPricingRuleId]);
+
+  useEffect(() => {
+    if (formType === 'quote') {
+      loadPricingRules();
+    }
+  }, [formType, loadPricingRules]);
 
   // Rechargement des catégories filtrées selon le mode (devis ou sinistre)
   const loadCategories = useCallback(async (typeToLoad?: FormType) => {
@@ -301,26 +362,169 @@ export default function FormBuilderPage() {
     }
   };
 
-  // Ajout d'une nouvelle catégorie (bilingue)
+  // Ajout d'une nouvelle catégorie (avec options de tarification pour les devis)
   const handleAddCategory = async (e: FormEvent) => {
     e.preventDefault();
     const name = newCategoryName.trim();
     const name_en = newCategoryNameEn.trim();
     if (!name) return;
     setError('');
+
+    const payload: {
+      name: string;
+      name_en?: string;
+      form_type: FormType;
+      pricing_rule_id?: number | null;
+      new_pricing_rule?: Partial<PricingRule>;
+    } = {
+      name,
+      name_en: name_en || undefined,
+      form_type: formType,
+    };
+
+    if (formType === 'quote') {
+      if (pricingChoice === 'existing' && selectedPricingRuleId) {
+        payload.pricing_rule_id = selectedPricingRuleId;
+      } else if (pricingChoice === 'new') {
+        payload.new_pricing_rule = {
+          name: newRuleName.trim() || `Tarification ${name}`,
+          name_en: newRuleNameEn.trim() || undefined,
+          driver: newRuleDriver,
+          description: newRuleDescription.trim() || undefined,
+        };
+      } else {
+        payload.pricing_rule_id = null;
+      }
+    }
+
     try {
-      const created = await createBuilderCategory({
-        name,
-        name_en: name_en || undefined,
-        form_type: formType,
-      });
+      const created = await createBuilderCategory(payload);
       setNewCategoryName('');
       setNewCategoryNameEn('');
+      setShowAddCategoryModal(false);
       await loadCategories(formType);
+      await loadPricingRules();
       setSelectedId(created.id);
       setNotice(t('builder.notice_cat_created', { name: created.name }));
     } catch (err) {
       setError(errorMessage(err));
+    }
+  };
+
+  // Ouverture et gestion de la modale de tarification
+  const openPricingModal = (cat: BuilderCategory) => {
+    setPricingModalCategory(cat);
+    const assignedId = cat.pricing_rule_id ?? (cat.pricing_rule ? cat.pricing_rule.id : null);
+    setActivePricingRuleId(assignedId);
+
+    const rule = cat.pricing_rule || pricingRules.find((r) => r.id === assignedId);
+    if (rule) {
+      setRuleName(rule.name);
+      setRuleDescription(rule.description || '');
+      const p = rule.parameters ? JSON.parse(JSON.stringify(rule.parameters)) : {};
+      setEditingParams(p);
+      setRawJsonText(JSON.stringify(p, null, 2));
+    } else {
+      setRuleName('');
+      setRuleDescription('');
+      setEditingParams({});
+      setRawJsonText('{}');
+    }
+    setTestInputs({});
+    setTestResult(null);
+    setPricingTab(assignedId ? 'params' : 'rule');
+    setRawJsonMode(false);
+  };
+
+  const handleApplyRuleToCategory = async () => {
+    if (!pricingModalCategory) return;
+    setSavingPricing(true);
+    setError('');
+    try {
+      await updateBuilderCategory(pricingModalCategory.id, {
+        pricing_rule_id: activePricingRuleId,
+      });
+      await loadCategories(formType);
+      const rule = pricingRules.find((r) => r.id === activePricingRuleId) || null;
+      setPricingModalCategory({
+        ...pricingModalCategory,
+        pricing_rule_id: activePricingRuleId,
+        pricing_rule: rule,
+      });
+      if (rule) {
+        setRuleName(rule.name);
+        setRuleDescription(rule.description || '');
+        const p = rule.parameters ? JSON.parse(JSON.stringify(rule.parameters)) : {};
+        setEditingParams(p);
+        setRawJsonText(JSON.stringify(p, null, 2));
+      }
+      setNotice('Règle de tarification associée avec succès à la catégorie.');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingPricing(false);
+    }
+  };
+
+  const handleSaveRuleParameters = async () => {
+    if (!activePricingRuleId) return;
+    setSavingPricing(true);
+    setError('');
+
+    let paramsToSave = editingParams;
+    if (rawJsonMode) {
+      try {
+        paramsToSave = JSON.parse(rawJsonText);
+        setEditingParams(paramsToSave);
+      } catch {
+        setError('Le JSON des paramètres est invalide.');
+        setSavingPricing(false);
+        return;
+      }
+    }
+
+    try {
+      const updated = await updatePricingRule(activePricingRuleId, {
+        name: ruleName.trim() || undefined,
+        description: ruleDescription.trim() || undefined,
+        parameters: paramsToSave,
+      });
+      await loadPricingRules();
+      await loadCategories(formType);
+      setNotice(`Paramètres de l'algorithme "${updated.name}" sauvegardés.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingPricing(false);
+    }
+  };
+
+  const handleRunSimulation = async () => {
+    if (!activePricingRuleId) return;
+    setTesting(true);
+    setError('');
+    try {
+      let params = editingParams;
+      if (rawJsonMode) {
+        try {
+          params = JSON.parse(rawJsonText);
+        } catch {
+          // ignore
+        }
+      }
+      const res = await testPricingRule(activePricingRuleId, {
+        answers: testInputs,
+        parameters: params,
+      });
+      if ('prime_ttc' in res) {
+        setTestResult(res as QuoteCalculation);
+      } else {
+        setTestResult(null);
+      }
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -717,6 +921,21 @@ export default function FormBuilderPage() {
                         <span className="slider round" />
                       </label>
 
+                      {formType === 'quote' && (
+                        <button
+                          type="button"
+                          className="cat-btn-icon"
+                          title="Paramétrer le calcul de prime"
+                          style={{ color: cat.pricing_rule ? '#0284c7' : '#64748b' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPricingModal(cat);
+                          }}
+                        >
+                          <Calculator size={14} />
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         className="cat-btn-icon cat-btn-delete"
@@ -734,25 +953,41 @@ export default function FormBuilderPage() {
               })}
             </ul>
 
-            {/* Formulaire ajout de catégorie (bilingue) */}
-            <form onSubmit={handleAddCategory} className="builder-cat-add-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <input
-                type="text"
-                required
-                placeholder={t('builder.new_category_placeholder')}
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder={t('builder.new_category_en_placeholder')}
-                value={newCategoryNameEn}
-                onChange={(e) => setNewCategoryNameEn(e.target.value)}
-              />
-              <button type="submit" className="btn btn-sm">
-                <Plus size={14} /> {t('builder.add')}
+            {/* Bouton ou Formulaire ajout de catégorie */}
+            {formType === 'quote' ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                style={{ width: '100%', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                onClick={() => {
+                  setNewCategoryName('');
+                  setNewCategoryNameEn('');
+                  setPricingChoice('existing');
+                  setShowAddCategoryModal(true);
+                }}
+              >
+                <Plus size={14} /> Nouvelle catégorie de devis
               </button>
-            </form>
+            ) : (
+              <form onSubmit={handleAddCategory} className="builder-cat-add-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="text"
+                  required
+                  placeholder={t('builder.new_category_placeholder')}
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder={t('builder.new_category_en_placeholder')}
+                  value={newCategoryNameEn}
+                  onChange={(e) => setNewCategoryNameEn(e.target.value)}
+                />
+                <button type="submit" className="btn btn-sm">
+                  <Plus size={14} /> {t('builder.add')}
+                </button>
+              </form>
+            )}
           </aside>
 
           {/* Zone principale : Éditeur ou Aperçu en direct */}
@@ -767,6 +1002,16 @@ export default function FormBuilderPage() {
                       <span className={`badge ${selectedCategory.is_active ? 'badge-success' : 'badge-warning'}`}>
                         {selectedCategory.is_active ? t('builder.active_on_site') : t('builder.deactivated')}
                       </span>
+                      {formType === 'quote' && (
+                        <span
+                          className={`badge ${selectedCategory.pricing_rule ? 'badge-info' : 'badge-neutral'}`}
+                          style={{ cursor: 'pointer', marginLeft: '6px' }}
+                          onClick={() => openPricingModal(selectedCategory)}
+                          title="Cliquez pour configurer le calcul de prime"
+                        >
+                          {selectedCategory.pricing_rule ? `Calcul : ${selectedCategory.pricing_rule.name}` : 'Calcul manuel'}
+                        </span>
+                      )}
                     </h2>
                     <p className="builder-active-meta">
                       {formType === 'quote' ? t('builder.quotes_tab') : t('builder.claims_tab')} ·{' '}
@@ -775,6 +1020,17 @@ export default function FormBuilderPage() {
                   </div>
 
                   <div className="builder-active-actions">
+                    {formType === 'quote' && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => openPricingModal(selectedCategory)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Calculator size={15} />
+                        Tarification & Calcul
+                      </button>
+                    )}
                     {viewMode === 'editor' && (
                       <>
                         <label className="choice filter-inactive-toggle">
@@ -1366,6 +1622,1061 @@ export default function FormBuilderPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE D'AJOUT DE CATÉGORIE (AVEC 3 CHOIX DE TARIFICATION) */}
+      {showAddCategoryModal && (
+        <div className="builder-modal-backdrop" onClick={() => setShowAddCategoryModal(false)}>
+          <div className="builder-modal builder-modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="builder-modal-header">
+              <h3>{formType === 'quote' ? 'Nouvelle catégorie de devis' : 'Nouvelle catégorie'}</h3>
+              <button type="button" className="close-btn" onClick={() => setShowAddCategoryModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCategory} className="builder-modal-form">
+              <div className="grid-2-col">
+                <div className="field">
+                  <label htmlFor="modal-cat-name">
+                    Nom de la catégorie (FR) <span className="req">*</span>
+                  </label>
+                  <input
+                    id="modal-cat-name"
+                    type="text"
+                    required
+                    placeholder="Ex: Assurance Flotte Automobile"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="modal-cat-name-en">Nom en anglais (EN)</label>
+                  <input
+                    id="modal-cat-name-en"
+                    type="text"
+                    placeholder="Ex: Motor Fleet Insurance"
+                    value={newCategoryNameEn}
+                    onChange={(e) => setNewCategoryNameEn(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {formType === 'quote' && (
+                <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ fontWeight: 700, fontSize: '0.95rem', display: 'block', marginBottom: '12px', color: '#0f172a' }}>
+                    Choix du mode de calcul de la prime :
+                  </label>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Option 1: Calcul existant */}
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${pricingChoice === 'existing' ? '#0284c7' : '#cbd5e1'}`,
+                        background: pricingChoice === 'existing' ? '#f0f9ff' : '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="pricingChoice"
+                        value="existing"
+                        checked={pricingChoice === 'existing'}
+                        onChange={() => setPricingChoice('existing')}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: '#0f172a' }}>1. Utiliser un calcul existant</strong>
+                        <p style={{ margin: '2px 0 8px', fontSize: '0.85rem', color: '#64748b' }}>
+                          Sélectionnez parmi les algorithmes CIMA et formules déjà configurés dans LD Assurances.
+                        </p>
+                        {pricingChoice === 'existing' && (
+                          <select
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                            value={selectedPricingRuleId ?? ''}
+                            onChange={(e) => setSelectedPricingRuleId(Number(e.target.value) || null)}
+                          >
+                            {pricingRules.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} ({r.driver.toUpperCase()})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </label>
+
+                    {/* Option 2: Nouveau calcul */}
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${pricingChoice === 'new' ? '#0284c7' : '#cbd5e1'}`,
+                        background: pricingChoice === 'new' ? '#f0f9ff' : '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="pricingChoice"
+                        value="new"
+                        checked={pricingChoice === 'new'}
+                        onChange={() => setPricingChoice('new')}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: '#0f172a' }}>2. Entrer un nouveau calcul (personnalisé)</strong>
+                        <p style={{ margin: '2px 0 8px', fontSize: '0.85rem', color: '#64748b' }}>
+                          Créer une nouvelle règle de calcul spécifique avec son propre barème ou sa base algorithmique.
+                        </p>
+                        {pricingChoice === 'new' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                            <div className="grid-2-col">
+                              <div>
+                                <label style={{ fontSize: '0.8rem', color: '#475569' }}>Nom du calcul (FR)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ex: Tarification Flotte Entreprise"
+                                  value={newRuleName}
+                                  onChange={(e) => setNewRuleName(e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.8rem', color: '#475569' }}>Nom du calcul (EN, optionnel)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ex: Fleet Business Pricing"
+                                  value={newRuleNameEn}
+                                  onChange={(e) => setNewRuleNameEn(e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.8rem', color: '#475569' }}>Moteur algorithmique de base</label>
+                                <select
+                                  value={newRuleDriver}
+                                  onChange={(e) => setNewRuleDriver(e.target.value as PricingDriver)}
+                                >
+                                  <option value="automobile">Automobile (Grille CIMA + Véhicule)</option>
+                                  <option value="voyage">Voyage (Zone géographique + Âge + Durée)</option>
+                                  <option value="habitation">Habitation (Matériaux + Sécurité)</option>
+                                  <option value="sante">Santé (Tranches d'âge + Formule)</option>
+                                  <option value="professionnelle">Professionnelle (Secteur + Risque)</option>
+                                  <option value="responsabilite_civile">Responsabilité Civile (Famille / Pro)</option>
+                                  <option value="autres">Autres assurances (Forfaits / Taux)</option>
+                                  <option value="custom">Calcul personnalisé (Formule sur mesure)</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.8rem', color: '#475569' }}>Description (facultative)</label>
+                              <input
+                                type="text"
+                                placeholder="Description succincte des règles appliquées..."
+                                value={newRuleDescription}
+                                onChange={(e) => setNewRuleDescription(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+
+                    {/* Option 3: Aucun calcul */}
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${pricingChoice === 'none' ? '#0284c7' : '#cbd5e1'}`,
+                        background: pricingChoice === 'none' ? '#f0f9ff' : '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="pricingChoice"
+                        value="none"
+                        checked={pricingChoice === 'none'}
+                        onChange={() => setPricingChoice('none')}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: '#0f172a' }}>3. Aucun calcul automatique</strong>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                          Évaluation manuelle par l'équipe LD Assurances sans chiffrage temps réel lors de la soumission.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="builder-modal-actions" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddCategoryModal(false)}>
+                  Annuler
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Créer la catégorie
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DE CONFIGURATION, PARAMÉTRAGE ET TEST DU CALCUL DE PRIME */}
+      {pricingModalCategory && (
+        <div className="builder-modal-backdrop" onClick={() => setPricingModalCategory(null)}>
+          <div className="builder-modal builder-modal-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="builder-modal-header">
+              <div>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calculator size={20} style={{ color: '#0284c7' }} />
+                  Tarification & Calcul — {pricingModalCategory.name}
+                </h3>
+                <small style={{ color: '#64748b' }}>
+                  Configuration des algorithmes CIMA et simulation en temps réel pour cette catégorie.
+                </small>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setPricingModalCategory(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Onglets */}
+            <div className="pricing-tabs-header">
+              <button
+                type="button"
+                className={`pricing-tab-btn ${pricingTab === 'params' ? 'active' : ''}`}
+                onClick={() => setPricingTab('params')}
+              >
+                <Sliders size={16} /> Barèmes & Paramètres
+              </button>
+              <button
+                type="button"
+                className={`pricing-tab-btn ${pricingTab === 'rule' ? 'active' : ''}`}
+                onClick={() => setPricingTab('rule')}
+              >
+                <Layers size={16} /> Changer d'algorithme
+              </button>
+              <button
+                type="button"
+                className={`pricing-tab-btn ${pricingTab === 'test' ? 'active' : ''}`}
+                onClick={() => setPricingTab('test')}
+              >
+                <Sparkles size={16} /> Testeur en direct
+              </button>
+            </div>
+
+            {/* Contenu Onglet 1: Paramètres de l'algorithme */}
+            {pricingTab === 'params' && (
+              <div>
+                {activePricingRuleId ? (
+                  <div>
+                    <div className="grid-2-col" style={{ marginBottom: '14px' }}>
+                      <div className="pricing-field">
+                        <label>Nom de la règle</label>
+                        <input
+                          type="text"
+                          value={ruleName}
+                          onChange={(e) => setRuleName(e.target.value)}
+                        />
+                      </div>
+                      <div className="pricing-field">
+                        <label>Description</label>
+                        <input
+                          type="text"
+                          value={ruleDescription}
+                          onChange={(e) => setRuleDescription(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Paramètres fiscaux et généraux */}
+                    <div className="pricing-params-group">
+                      <h4>Frais & Fiscalité Cameroun (Code CIMA)</h4>
+                      <div className="pricing-grid-3">
+                        <div className="pricing-field">
+                          <label>Accessoires / Frais de dossier (FCFA)</label>
+                          <input
+                            type="number"
+                            value={editingParams.accessoires ?? 5000}
+                            onChange={(e) =>
+                              setEditingParams({ ...editingParams, accessoires: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                        <div className="pricing-field">
+                          <label>Taxe Unique sur les primes (ex: 0.15 pour 15%)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editingParams.taxe_unique ?? 0.15}
+                            onChange={(e) =>
+                              setEditingParams({ ...editingParams, taxe_unique: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Paramètres selon le driver */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'automobile' && (
+                      <div className="pricing-params-group">
+                        <h4>Grille Automobile & Risques Conducteur</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Base RC Commercial (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.commercial_base ?? 45000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, commercial_base: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Multiplicateur Taxi / Transport</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={editingParams.commercial_multiplier ?? 2.5}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, commercial_multiplier: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Surprime Jeune Conducteur (&lt; 2 ans)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.young_driver_surcharge ?? 0.20}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, young_driver_surcharge: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Bonus 0 Sinistre (ex: 0.10 pour -10%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.bonus_no_claims ?? 0.10}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, bonus_no_claims: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Malus &gt; 2 Sinistres (ex: 0.40 pour +40%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.malus_claims_surcharge ?? 0.40}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, malus_claims_surcharge: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Forfait Bris de Glace (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.flat_bris_glace ?? 15000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, flat_bris_glace: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux Garantie Incendie (ex: 0.005 pour 0.5%)</label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={editingParams.rate_incendie ?? 0.005}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, rate_incendie: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux Garantie Vol (ex: 0.01 pour 1%)</label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={editingParams.rate_vol ?? 0.01}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, rate_vol: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux Tous Risques (ex: 0.035 pour 3.5%)</label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={editingParams.rate_tous_risques ?? 0.035}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, rate_tous_risques: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'voyage' && (
+                      <div className="pricing-params-group">
+                        <h4>Tarifs Journaliers par Zone Médicale CIMA</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Zone Afrique / CIMA (FCFA / jour)</label>
+                            <input
+                              type="number"
+                              value={editingParams.rates_by_zone?.Zone_Afrique ?? 1000}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_by_zone: {
+                                    ...(editingParams.rates_by_zone ?? {}),
+                                    Zone_Afrique: Number(e.target.value),
+                                    Zone_CIMA: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Zone Europe Schengen (FCFA / jour)</label>
+                            <input
+                              type="number"
+                              value={editingParams.rates_by_zone?.Zone_Europe_Schengen ?? 1500}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_by_zone: {
+                                    ...(editingParams.rates_by_zone ?? {}),
+                                    Zone_Europe_Schengen: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Zone Monde / USA / Canada (FCFA / jour)</label>
+                            <input
+                              type="number"
+                              value={editingParams.rates_by_zone?.Zone_Monde ?? 3000}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_by_zone: {
+                                    ...(editingParams.rates_by_zone ?? {}),
+                                    Zone_Monde: Number(e.target.value),
+                                    USA_Canada: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'habitation' && (
+                      <div className="pricing-params-group">
+                        <h4>Barèmes Incendie & Sécurité Habitation</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Taux Incendie Béton Dur (ex: 0.001 pour 1‰)</label>
+                            <input
+                              type="number"
+                              step="0.0005"
+                              value={editingParams.rates_construction?.Beton_Dur ?? 0.0010}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_construction: {
+                                    ...(editingParams.rates_construction ?? {}),
+                                    Beton_Dur: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux Incendie Semi-Dur Tôle (ex: 0.0025)</label>
+                            <input
+                              type="number"
+                              step="0.0005"
+                              value={editingParams.rates_construction?.Semi_Dur_Tole ?? 0.0025}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_construction: {
+                                    ...(editingParams.rates_construction ?? {}),
+                                    Semi_Dur_Tole: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux Incendie Bois / Paille (ex: 0.006)</label>
+                            <input
+                              type="number"
+                              step="0.0005"
+                              value={editingParams.rates_construction?.Bois_Paille ?? 0.0060}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  rates_construction: {
+                                    ...(editingParams.rates_construction ?? {}),
+                                    Bois_Paille: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Forfait Annexe Appartement (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.annexe_appartement ?? 10000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, annexe_appartement: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Forfait Annexe Maison / Villa (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.annexe_autre ?? 7000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, annexe_autre: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sante' && (
+                      <div className="pricing-params-group">
+                        <h4>Barèmes Santé & Majoration Antécédents</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Surprime Antécédents (ex: 0.35 pour +35%)</label>
+                            <input
+                              type="number"
+                              step="0.05"
+                              value={editingParams.medical_surcharge ?? 0.35}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, medical_surcharge: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Forfait par Enfant à Charge (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.child_flat_rate ?? 40000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, child_flat_rate: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Coeff Formule 70%</label>
+                            <input
+                              type="number"
+                              step="0.05"
+                              value={editingParams.formula_multipliers?.['Formule_70%'] ?? 0.85}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  formula_multipliers: {
+                                    ...(editingParams.formula_multipliers ?? {}),
+                                    'Formule_70%': Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Coeff Formule 100%</label>
+                            <input
+                              type="number"
+                              step="0.05"
+                              value={editingParams.formula_multipliers?.['Formule_100%'] ?? 1.40}
+                              onChange={(e) =>
+                                setEditingParams({
+                                  ...editingParams,
+                                  formula_multipliers: {
+                                    ...(editingParams.formula_multipliers ?? {}),
+                                    'Formule_100%': Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode JSON brut pour modification avancée de tous les paramètres */}
+                    <div style={{ marginTop: '14px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                      <label className="choice" style={{ cursor: 'pointer', marginBottom: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={rawJsonMode}
+                          onChange={(e) => {
+                            setRawJsonMode(e.target.checked);
+                            if (e.target.checked) {
+                              setRawJsonText(JSON.stringify(editingParams, null, 2));
+                            }
+                          }}
+                        />
+                        <span>Mode JSON avancé (accéder à l'ensemble brut des barèmes de l'algorithme)</span>
+                      </label>
+                      {rawJsonMode && (
+                        <textarea
+                          rows={10}
+                          style={{ fontFamily: 'monospace', fontSize: '0.82rem', width: '100%', background: '#1e293b', color: '#f8fafc', padding: '10px', borderRadius: '6px' }}
+                          value={rawJsonText}
+                          onChange={(e) => setRawJsonText(e.target.value)}
+                        />
+                      )}
+                    </div>
+
+                    <div className="builder-modal-actions" style={{ marginTop: '20px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setPricingModalCategory(null)}
+                      >
+                        Fermer
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={savingPricing}
+                        onClick={handleSaveRuleParameters}
+                      >
+                        {savingPricing ? 'Enregistrement…' : 'Sauvegarder les barèmes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '24px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
+                    <p style={{ color: '#64748b', margin: '0 0 14px' }}>
+                      Aucun algorithme de calcul automatique n'est actuellement assigné à cette catégorie.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setPricingTab('rule')}
+                    >
+                      Assigner un algorithme de tarification
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Contenu Onglet 2: Changer d'algorithme */}
+            {pricingTab === 'rule' && (
+              <div>
+                <div className="field" style={{ marginBottom: '16px' }}>
+                  <label htmlFor="select-assigned-rule">
+                    Algorithme de calcul pour la catégorie &laquo; {pricingModalCategory.name} &raquo; :
+                  </label>
+                  <select
+                    id="select-assigned-rule"
+                    value={activePricingRuleId ?? ''}
+                    onChange={(e) => {
+                      const id = e.target.value ? Number(e.target.value) : null;
+                      setActivePricingRuleId(id);
+                      if (id) {
+                        const r = pricingRules.find((rule) => rule.id === id);
+                        if (r) {
+                          setRuleName(r.name);
+                          setRuleDescription(r.description || '');
+                          const p = r.parameters ? JSON.parse(JSON.stringify(r.parameters)) : {};
+                          setEditingParams(p);
+                          setRawJsonText(JSON.stringify(p, null, 2));
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">Aucun calcul automatique (Évaluation manuelle)</option>
+                    {pricingRules.map((rule) => (
+                      <option key={rule.id} value={rule.id}>
+                        {rule.name} [{rule.driver.toUpperCase()}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {activePricingRuleId && (
+                  <div style={{ padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
+                    <h4 style={{ margin: '0 0 6px', color: '#0369a1' }}>
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.name}
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#0c4a6e' }}>
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.description}
+                    </p>
+                  </div>
+                )}
+
+                <div className="builder-modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setPricingModalCategory(null)}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={savingPricing}
+                    onClick={handleApplyRuleToCategory}
+                  >
+                    {savingPricing ? 'Application…' : 'Appliquer à la catégorie'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Contenu Onglet 3: Testeur en direct */}
+            {pricingTab === 'test' && (
+              <div>
+                {activePricingRuleId ? (
+                  <div>
+                    <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 16px' }}>
+                      Saisissez des valeurs fictives pour tester le comportement de la formule et des barèmes en temps réel.
+                    </p>
+
+                    {/* Champs de test dynamiques selon le driver */}
+                    <div className="pricing-grid-3" style={{ marginBottom: '16px' }}>
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'automobile' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Puissance fiscale (CV)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 6"
+                              value={testInputs.puissance_fiscale ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, puissance_fiscale: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Usage du véhicule</label>
+                            <select
+                              value={testInputs.usage ?? 'Promenade_Trajet'}
+                              onChange={(e) => setTestInputs({ ...testInputs, usage: e.target.value })}
+                            >
+                              <option value="Promenade_Trajet">Promenade & Trajet</option>
+                              <option value="Transport_Commercial">Transport Commercial</option>
+                              <option value="Taxi">Taxi</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Ancienneté du permis (années)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 5"
+                              value={testInputs.age_permis ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, age_permis: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Historique sinistres (nombre)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 0"
+                              value={testInputs.historique_sinistres ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, historique_sinistres: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Valeur vénale du véhicule (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 5000000"
+                              value={testInputs.valeur_vehicule ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, valeur_vehicule: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'voyage' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Zone de destination</label>
+                            <select
+                              value={testInputs.zone_destination ?? 'Zone_Afrique'}
+                              onChange={(e) => setTestInputs({ ...testInputs, zone_destination: e.target.value })}
+                            >
+                              <option value="Zone_Afrique">Zone Afrique / CIMA</option>
+                              <option value="Zone_Europe_Schengen">Zone Europe Schengen</option>
+                              <option value="Zone_Monde">Zone Monde / USA / Canada</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Durée du séjour (jours)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 15"
+                              value={testInputs.duree_sejour ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, duree_sejour: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Nombre de personnes à assurer</label>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Ex: 1"
+                              value={testInputs.nbre_personnes ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, nbre_personnes: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Âge(s) du/des voyageur(s)</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: 35 ou 35, 32, 8 (ou 72 pour un senior)"
+                              value={testInputs.travelers_ages ?? testInputs.age_voyageur ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({
+                                  ...testInputs,
+                                  travelers_ages: e.target.value,
+                                  age_voyageur: e.target.value,
+                                })
+                              }
+                            />
+                            <small style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                              Si plusieurs personnes : séparez les âges par des virgules (ex: 35, 32, 8). S'il y a un senior (&gt;65 ans), seule sa part subit la surprime.
+                            </small>
+                          </div>
+                        </>
+                      )}
+
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'habitation' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Matériaux de construction</label>
+                            <select
+                              value={testInputs.materiaux_construction ?? 'Beton_Dur'}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, materiaux_construction: e.target.value })
+                              }
+                            >
+                              <option value="Beton_Dur">Béton Dur</option>
+                              <option value="Semi_Dur_Tole">Semi-dur Tôle</option>
+                              <option value="Bois_Paille">Bois / Paille</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Type de logement</label>
+                            <select
+                              value={testInputs.type_logement ?? 'Appartement'}
+                              onChange={(e) => setTestInputs({ ...testInputs, type_logement: e.target.value })}
+                            >
+                              <option value="Appartement">Appartement</option>
+                              <option value="Maison">Maison / Villa</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Dispositif de sécurité</label>
+                            <select
+                              value={testInputs.securite_presence ?? 'Gardiennage_Et_Grilles'}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, securite_presence: e.target.value })
+                              }
+                            >
+                              <option value="Gardiennage_Et_Grilles">Gardiennage & Grilles</option>
+                              <option value="Standard">Standard</option>
+                              <option value="Aucune">Aucune / Non sécurisé</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Capital Mobilier (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 10000000"
+                              value={testInputs.capital_mobilier ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, capital_mobilier: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Capital Immobilier (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 35000000"
+                              value={testInputs.capital_immobilier ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, capital_immobilier: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sante' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Âge du souscripteur</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 35"
+                              value={testInputs.age_proposant ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, age_proposant: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Formule de couverture</label>
+                            <select
+                              value={testInputs.formule_couverture ?? 'Formule_80%'}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, formule_couverture: e.target.value })
+                              }
+                            >
+                              <option value="Formule_70%">Formule 70%</option>
+                              <option value="Formule_80%">Formule 80%</option>
+                              <option value="Formule_100%">Formule 100%</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Antécédents médicaux</label>
+                            <select
+                              value={testInputs.antecedents_medicaux ?? 'Aucun'}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, antecedents_medicaux: e.target.value })
+                              }
+                            >
+                              <option value="Aucun">Aucun</option>
+                              <option value="Hypertension">Hypertension</option>
+                              <option value="Diabete">Diabète</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Enfants à charge</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 2"
+                              value={testInputs.nbre_enfants_charge ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, nbre_enfants_charge: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={testing}
+                      onClick={handleRunSimulation}
+                      style={{ marginBottom: '16px' }}
+                    >
+                      {testing ? 'Calcul en cours…' : 'Calculer la simulation'}
+                    </button>
+
+                    {testResult && (
+                      <div className="quote-pricing-card calculated">
+                        <div className="quote-pricing-header">
+                          <h3 className="quote-pricing-title">
+                            <Calculator size={18} style={{ color: '#059669' }} />
+                            Résultat de la simulation
+                          </h3>
+                          <span className="quote-pricing-badge">Code CIMA Certifié</span>
+                        </div>
+                        <div className="quote-pricing-grid">
+                          <div className="quote-pricing-item">
+                            <small>Prime Nette</small>
+                            <span>{formatFcfa(testResult.prime_nette_formatted || testResult.prime_nette)}</span>
+                          </div>
+                          <div className="quote-pricing-item">
+                            <small>Accessoires / Vignette</small>
+                            <span>{formatFcfa(testResult.accessoires_formatted || testResult.accessoires)}</span>
+                          </div>
+                          <div className="quote-pricing-item">
+                            <small>Taxe Unique (15%)</small>
+                            <span>{formatFcfa(testResult.taxe_unique_formatted || testResult.taxe_unique)}</span>
+                          </div>
+                          <div className="quote-pricing-item highlight">
+                            <small>Prime Totale TTC</small>
+                            <span>{formatFcfa(testResult.prime_ttc_formatted || testResult.prime_ttc)}</span>
+                          </div>
+                        </div>
+
+                        {testResult.breakdown?.length > 0 && (
+                          <table className="quote-pricing-breakdown-table">
+                            <thead>
+                              <tr>
+                                <th>Garantie / Éléments</th>
+                                <th style={{ textAlign: 'right' }}>Montant</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {testResult.breakdown.map((item, idx) => (
+                                <tr key={idx}>
+                                  <td>
+                                    {item.label}{' '}
+                                    {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                                  </td>
+                                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                                    {formatFcfa(item.formatted || item.amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p style={{ color: '#64748b' }}>Veuillez d'abord assigner un algorithme de calcul.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

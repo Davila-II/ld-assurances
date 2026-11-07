@@ -16,6 +16,58 @@ export interface Category {
   name_en?: string | null;
   slug: string;
   form_type?: FormType | null;
+  pricing_rule_id?: number | null;
+  pricing_rule?: PricingRule | null;
+  has_pricing_calculator?: boolean;
+}
+
+export type PricingDriver =
+  | 'automobile'
+  | 'voyage'
+  | 'habitation'
+  | 'sante'
+  | 'professionnelle'
+  | 'responsabilite_civile'
+  | 'autres'
+  | 'custom';
+
+export interface QuoteBreakdownItem {
+  key: string;
+  label: string;
+  label_en?: string;
+  amount: number;
+  formatted: string;
+  detail?: string;
+}
+
+export interface QuoteCalculation {
+  driver: string;
+  rule_id?: number | null;
+  rule_name?: string | null;
+  prime_nette: number;
+  prime_nette_formatted: string;
+  accessoires: number;
+  accessoires_formatted: string;
+  taxe_unique: number;
+  taxe_unique_formatted: string;
+  prime_ttc: number;
+  prime_ttc_formatted: string;
+  breakdown: QuoteBreakdownItem[];
+  currency: string;
+  calculated_at?: string;
+}
+
+export interface PricingRule {
+  id: number;
+  name: string;
+  name_en?: string | null;
+  code: string;
+  description?: string | null;
+  driver: PricingDriver;
+  parameters: Record<string, any>;
+  formula_code?: string | null;
+  is_active: boolean;
+  categories_count?: number;
 }
 
 export interface FieldCondition {
@@ -44,6 +96,8 @@ export interface FormDefinition {
   category: Category;
   form_type: FormType;
   fields: FormField[];
+  pricing_rule?: PricingRule | null;
+  has_pricing_calculator?: boolean;
 }
 
 export type AnswerValue = string | boolean | string[] | FileList | null | undefined;
@@ -136,6 +190,8 @@ export interface BuilderCategory {
   sort_order: number;
   quote_count: number;
   claim_count: number;
+  pricing_rule_id?: number | null;
+  pricing_rule?: PricingRule | null;
 }
 
 export interface BuilderField {
@@ -182,6 +238,7 @@ export interface SubmissionDetail {
   created_at: string;
   answers: SubmissionAnswer[];
   attachments: AttachmentInfo[];
+  quote_calculation?: QuoteCalculation | null;
 }
 
 export interface AdminClient {

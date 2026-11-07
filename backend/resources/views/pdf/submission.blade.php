@@ -443,6 +443,92 @@
     text-transform: uppercase;
   }
 
+  /* ─── BLOC TARIFICATION DU DEVIS ────────────────────────────────── */
+  .pricing-card {
+    background: #f8fafc;
+    border: 1px solid #c59b27;
+    border-top: 3px solid #0c2340;
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+  }
+
+  .pricing-header-table {
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  .pricing-title {
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #0c2340;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pricing-subtitle {
+    font-size: 6.5pt;
+    color: #475569;
+    font-style: italic;
+  }
+
+  .pricing-total-badge {
+    background: #0c2340;
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 3px;
+    display: inline-block;
+    text-align: right;
+  }
+
+  .pricing-total-label {
+    display: block;
+    font-size: 5.5pt;
+    color: #c59b27;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  .pricing-total-val {
+    display: block;
+    font-size: 8.5pt;
+    font-weight: bold;
+    color: #ffffff;
+  }
+
+  .pricing-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+  }
+
+  .pricing-table th {
+    background: #0c2340;
+    color: #ffffff;
+    font-size: 6.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    text-align: left;
+    letter-spacing: 0.4px;
+  }
+
+  .pricing-table td {
+    padding: 3px 6px;
+    font-size: 7pt;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+  }
+
+  .pricing-total-row td {
+    background: #f1f5f9;
+    border-top: 1.5px solid #0c2340;
+    border-bottom: none;
+    font-weight: bold;
+  }
+
   /* ─── ATTESTATION DE RÉCEPTION TECHNIQUE ─────────────────────────── */
   .security-box {
     background: #f8fafc;
@@ -748,6 +834,68 @@
   </div>
   @php $secCounter++; @endphp
 @endforeach
+
+{{-- ── ESTIMATION DE LA TARIFICATION DU DEVIS (ALGORITHME CIMA & LD ASSURANCES) ── --}}
+@if(!empty($quoteCalculation) && !empty($quoteCalculation['has_calculation']))
+  <div class="pricing-card">
+    <table class="pricing-header-table">
+      <tr>
+        <td style="width: 65%;">
+          <div class="pricing-title">ESTIMATION DU DEVIS — {{ $quoteCalculation['rule_name'] ?? 'Tarification Officielle CIMA' }}</div>
+          <div class="pricing-subtitle">Simulation tarifaire selon la grille réglementaire en vigueur</div>
+        </td>
+        <td style="width: 35%; text-align: right;">
+          <div class="pricing-total-badge">
+            <span class="pricing-total-label">PRIME TOTALE ANNUELLE TTC</span>
+            <span class="pricing-total-val">{{ $quoteCalculation['formatted_prime_ttc'] ?? (number_format($quoteCalculation['prime_ttc'] ?? 0, 0, ',', ' ') . ' FCFA') }}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <table class="pricing-table">
+      <thead>
+        <tr>
+          <th style="width: 65%;">Composantes de la tarification</th>
+          <th style="width: 35%; text-align: right;">Montant (FCFA)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if(!empty($quoteCalculation['breakdown']))
+          @foreach($quoteCalculation['breakdown'] as $item)
+            @if(!str_contains(strtolower($item['label']), 'total prime'))
+              <tr>
+                <td>{{ $item['label'] }}</td>
+                <td style="text-align: right; font-weight: {{ str_contains(strtolower($item['label']), 'prime nette') ? 'bold' : 'normal' }};">
+                  {{ number_format($item['amount'], 0, ',', ' ') }} FCFA
+                </td>
+              </tr>
+            @endif
+          @endforeach
+        @else
+          <tr>
+            <td>Prime Nette HT</td>
+            <td style="text-align: right;">{{ number_format($quoteCalculation['prime_nette'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+          <tr>
+            <td>Accessoires & Frais de gestion</td>
+            <td style="text-align: right;">{{ number_format($quoteCalculation['accessoires'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+          <tr>
+            <td>Taxe unique sur les assurances (15%)</td>
+            <td style="text-align: right;">{{ number_format($quoteCalculation['taxe_unique'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+        @endif
+        <tr class="pricing-total-row">
+          <td><strong>PRIME TOTALE ANNUELLE À PAYER (TTC)</strong></td>
+          <td style="text-align: right; color: #0c2340; font-weight: bold; font-size: 7.5pt;">
+            {{ number_format($quoteCalculation['prime_ttc'] ?? 0, 0, ',', ' ') }} FCFA
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+@endif
 
 {{-- ── PIÈCES JOINTES TÉLÉVERSÉES ─────────────────────────────────── --}}
 @php
