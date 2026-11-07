@@ -16,6 +16,7 @@ import { clearToken, getToken } from '../auth';
 import { errorMessage } from './labels';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 import { SITE } from '../siteConfig';
+import logoImg from '../images/logo.png';
 
 export default function AdminLayout() {
   const { t } = useLanguage();
@@ -51,64 +52,75 @@ export default function AdminLayout() {
 
   return (
     <div className="admin-app-layout">
-      {/* Barre supérieure desktop / en-tête principal */}
+      {/* En-tête à deux barres */}
       <header className="admin-header">
-        <div className="admin-header-brand">
-          <Link to="/admin" onClick={closeMenu} className="admin-brand-link">
-            <span className="admin-brand-ld">LD</span> ASSURANCES
-            <span className="admin-brand-badge">Admin</span>
-          </Link>
+
+        {/* Barre supérieure : Gradient bleu → sarcelle */}
+        <div className="admin-header-topbar">
+          <span className="admin-topbar-brand">LD Assurances — Courtier &amp; Conseils en Assurances</span>
+          <div className="admin-topbar-actions">
+            <LanguageToggle />
+          </div>
         </div>
 
-        {/* Navigation Desktop */}
-        <nav className="admin-nav admin-nav-desktop">
-          <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
-            <LayoutDashboard size={16} />
-            <span>{t('admin.nav_dashboard')}</span>
-          </NavLink>
-          <NavLink
-            to="/admin/submissions?form_type=claim"
-            className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
-          >
-            <AlertTriangle size={16} />
-            <span>{t('admin.nav_claims')}</span>
-          </NavLink>
-          <NavLink
-            to="/admin/submissions?form_type=quote"
-            className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
-          >
-            <FileText size={16} />
-            <span>{t('admin.nav_quotes')}</span>
-          </NavLink>
-          <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Users size={16} />
-            <span>{t('admin.nav_clients')}</span>
-          </NavLink>
-          <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Sliders size={16} />
-            <span>{t('admin.nav_forms')}</span>
-          </NavLink>
-        </nav>
+        {/* Barre inférieure : Fond blanc — Logo | Nav | Actions */}
+        <div className="admin-header-bottombar">
+          {/* Logo */}
+          <Link to="/admin" onClick={closeMenu} className="admin-brand-link">
+            <div className="admin-brand-logo-wrap">
+              <img src={logoImg} alt="LD Assurances" className="admin-brand-logo-img" />
+            </div>
+          </Link>
 
-        {/* Actions Desktop */}
-        <div className="admin-header-actions-desktop">
-          <LanguageToggle />
-          <button type="button" disabled={loggingOut} onClick={logout} className="admin-logout-btn">
-            <LogOut size={16} />
-            <span>{loggingOut ? t('admin.logging_out') : t('admin.logout')}</span>
+          {/* Navigation Desktop */}
+          <nav className="admin-nav admin-nav-desktop">
+            <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
+              <LayoutDashboard size={16} />
+              <span>{t('admin.nav_dashboard')}</span>
+            </NavLink>
+            <NavLink
+              to="/admin/submissions?form_type=claim"
+              className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
+            >
+              <AlertTriangle size={16} />
+              <span>{t('admin.nav_claims')}</span>
+            </NavLink>
+            <NavLink
+              to="/admin/submissions?form_type=quote"
+              className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
+            >
+              <FileText size={16} />
+              <span>{t('admin.nav_quotes')}</span>
+            </NavLink>
+            <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Users size={16} />
+              <span>{t('admin.nav_clients')}</span>
+            </NavLink>
+            <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Sliders size={16} />
+              <span>{t('admin.nav_forms')}</span>
+            </NavLink>
+          </nav>
+
+          {/* Actions Desktop */}
+          <div className="admin-header-actions-desktop">
+            <button type="button" disabled={loggingOut} onClick={logout} className="admin-logout-btn">
+              <LogOut size={16} />
+              <span>{loggingOut ? t('admin.logging_out') : t('admin.logout')}</span>
+            </button>
+          </div>
+
+          {/* Bouton Hamburger 3 barres pour Mobile */}
+          <button
+            type="button"
+            className="admin-hamburger-btn"
+            aria-label={menuOpen ? 'Fermer le menu admin' : 'Ouvrir le menu admin'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-
-        {/* Bouton Hamburger 3 barres pour Mobile */}
-        <button
-          type="button"
-          className="admin-hamburger-btn"
-          aria-label={menuOpen ? 'Fermer le menu admin' : 'Ouvrir le menu admin'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
       </header>
 
       {/* Fond estompé derrière le tiroir mobile */}
@@ -118,7 +130,10 @@ export default function AdminLayout() {
       <aside className={`admin-drawer ${menuOpen ? 'open' : ''}`}>
         <div className="admin-drawer-header">
           <div className="admin-drawer-brand">
-            <span className="admin-brand-ld">LD</span> ASSURANCES
+            <div className="admin-brand-logo-wrap">
+              <img src={logoImg} alt="LD Assurances" className="admin-brand-logo-img" />
+            </div>
+            <span className="admin-brand-text">LD ASSURANCES</span>
             <span className="admin-brand-badge">Admin</span>
           </div>
           <button type="button" className="admin-drawer-close" onClick={closeMenu} aria-label="Fermer le menu">

@@ -283,10 +283,10 @@ export default function SubmissionDetailPage() {
           </section>
 
           {submission.quote_calculation && (
-            <section className="card" style={{ borderLeft: '4px solid #b45309' }}>
+            <section className="card" style={{ borderLeft: '4px solid #144983' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <h2 style={{ margin: 0 }}>📊 Tarification calculée (Code CIMA)</h2>
-                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px' }}>
+                <h2 style={{ margin: 0, color: '#144983' }}>📊 Tarification calculée (Code CIMA)</h2>
+                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px', background: '#1aaca8' }}>
                   {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
                 </span>
               </div>
@@ -310,8 +310,8 @@ export default function SubmissionDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: '#b45309', fontWeight: 600 }}>Prime Totale TTC</small>
-                  <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#b45309' }}>
+                  <small style={{ color: '#144983', fontWeight: 600 }}>Prime Totale TTC</small>
+                  <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#144983' }}>
                     {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
                   </div>
                 </div>

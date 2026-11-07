@@ -363,17 +363,17 @@
 .quote-pricing-card {
   margin: 24px 0;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #f0fdfa 100%);
   border: 1.5px solid #cbd5e1;
-  border-left: 5px solid #0284c7;
+  border-left: 5px solid #144983;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
+  box-shadow: 0 4px 15px rgba(20, 73, 131, 0.08);
   animation: fadeIn 0.3s ease;
 }
 
 .quote-pricing-card.calculated {
-  border-left-color: #059669;
-  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+  border-left-color: #1aaca8;
+  background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 100%);
 }
 
 .quote-pricing-header {
@@ -439,17 +439,17 @@
 }
 
 .quote-pricing-item.highlight {
-  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
-  border-color: #f59e0b;
+  background: linear-gradient(135deg, #e6f7f7 0%, #edf7ff 100%);
+  border-color: #1aaca8;
 }
 
 .quote-pricing-item.highlight small {
-  color: #92400e;
+  color: #144983;
   font-weight: 600;
 }
 
 .quote-pricing-item.highlight span {
-  color: #b45309;
+  color: #144983;
   font-size: 1.25rem;
 }
 

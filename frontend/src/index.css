@@ -232,92 +232,138 @@ input[type='checkbox'] {
   padding: 0 16px;
 }
 
+/* ====================================================
+   EN-TÊTE ADMIN — Deux barres (top gradient + bottom blanc)
+   ==================================================== */
 .admin-header {
   position: sticky;
   top: 0;
   z-index: 40;
   display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(14, 55, 102, 0.18);
+}
+
+/* Barre supérieure : gradient bleu → sarcelle */
+.admin-header-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 24px;
+  background: linear-gradient(90deg, #0e3766 0%, #1aaca8 100%);
+  color: #fff;
+  min-height: 38px;
+}
+
+.admin-topbar-brand {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Barre inférieure : fond blanc */
+.admin-header-bottombar {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 20px;
-  background: #1e4d8f;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(15, 31, 56, 0.12);
+  padding: 8px 24px;
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
+  min-height: 60px;
 }
 
 .admin-brand-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
-  color: #fff;
   text-decoration: none;
-  font-size: 1.05rem;
+  flex-shrink: 0;
 }
 
-.admin-brand-ld {
-  color: #f59e0b;
-  font-weight: 800;
+.admin-brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
 }
 
-.admin-brand-badge {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.admin-brand-logo-img {
+  height: 46px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
+/* Nav liens — sombres sur fond blanc */
 .admin-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
 }
 
 .admin-nav a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 7px 13px;
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #334155;
   font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
   transition: background-color 0.15s, color 0.15s;
+  position: relative;
 }
 
 .admin-nav a:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: #f1f5f9;
+  color: #144983;
 }
 
 .admin-nav a.active {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
+  background: #eaf4fe;
+  color: #144983;
   font-weight: 600;
+}
+
+.admin-nav a.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #1aaca8;
+  border-radius: 2px 2px 0 0;
 }
 
 .admin-header-actions-desktop {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
+/* Bouton déconnexion — sombre sur fond blanc */
 .admin-logout-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
   border-radius: 6px;
   background: transparent;
-  color: #fff;
+  color: #334155;
   font-size: 0.88rem;
   font-weight: 500;
   cursor: pointer;
@@ -325,8 +371,15 @@ input[type='checkbox'] {
 }
 
 .admin-logout-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: #fff;
+  background: #f1f5f9;
+  color: #144983;
+  border-color: #144983;
+}
+
+/* Champs supprimés (plus utilisés mais laissés vides pour compatibilité) */
+.admin-brand-text,
+.admin-brand-badge {
+  display: none;
 }
 
 /* Bouton Hamburger 3 barres pour mobile */
@@ -402,6 +455,11 @@ input[type='checkbox'] {
 
 /* Responsivité Mobile pour le côté Administrateur */
 @media (max-width: 800px) {
+  /* Masquer la topbar sur petits écrans pour gagner de la place */
+  .admin-topbar-brand {
+    display: none;
+  }
+
   .admin-nav-desktop {
     display: none;
   }
@@ -410,6 +468,7 @@ input[type='checkbox'] {
     display: none;
   }
 
+  /* Le hamburger est dans la barre blanche → icône sombre */
   .admin-hamburger-btn {
     display: inline-flex;
     align-items: center;
@@ -417,15 +476,16 @@ input[type='checkbox'] {
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
     cursor: pointer;
     transition: background-color 0.15s;
   }
 
   .admin-hamburger-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #e2e8f0;
+    color: #144983;
   }
 
   .admin-backdrop {
@@ -476,15 +536,15 @@ input[type='checkbox'] {
   .admin-drawer-brand {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1e4d8f;
+    color: #144983;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .admin-drawer-brand .admin-brand-badge {
-    background: #e0f2fe;
-    color: #0369a1;
+    background: #1aaca8;
+    color: #fff;
   }
 
   .admin-drawer-close {

@@ -557,27 +557,27 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
                 margin: '18px auto',
                 padding: '16px 20px',
                 borderRadius: '10px',
-                background: '#fefce8',
-                border: '1.5px solid #fef08a',
+                background: 'linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 100%)',
+                border: '1.5px solid #1aaca8',
                 maxWidth: '520px',
                 textAlign: 'left',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <strong style={{ color: '#854d0e', fontSize: '0.95rem' }}>
+                <strong style={{ color: '#144983', fontSize: '0.95rem' }}>
                   {lang === 'en' ? 'Estimated Total Premium (TTC)' : 'Estimation de votre prime TTC'}
                 </strong>
                 <span
                   style={{
                     fontWeight: 700,
                     fontSize: '1.25rem',
-                    color: '#b45309',
+                    color: '#144983',
                   }}
                 >
                   {formatFcfa(quoteCalculation.prime_ttc_formatted || quoteCalculation.prime_ttc)}
                 </span>
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#713f12', lineHeight: '1.5' }}>
+              <div style={{ fontSize: '0.85rem', color: '#0f3868', lineHeight: '1.5' }}>
                 {lang === 'en'
                   ? `Breakdown: Net Premium ${formatFcfa(quoteCalculation.prime_nette_formatted || quoteCalculation.prime_nette)} + Accessories ${formatFcfa(quoteCalculation.accessoires_formatted || quoteCalculation.accessoires)} + Tax 15% ${formatFcfa(quoteCalculation.taxe_unique_formatted || quoteCalculation.taxe_unique)}.`
                   : `Décomposition : Prime nette ${formatFcfa(quoteCalculation.prime_nette_formatted || quoteCalculation.prime_nette)} + Accessoires ${formatFcfa(quoteCalculation.accessoires_formatted || quoteCalculation.accessoires)} + Taxe unique 15% ${formatFcfa(quoteCalculation.taxe_unique_formatted || quoteCalculation.taxe_unique)}.`}

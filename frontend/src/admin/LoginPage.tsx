@@ -5,6 +5,7 @@ import { adminLogin } from '../api';
 import { getToken, setToken } from '../auth';
 import { errorMessage } from './labels';
 import PasswordInput from '../components/PasswordInput';
+import logoImg from '../images/logo.png';
 
 function getNotice(state: unknown): string {
   if (
@@ -50,6 +51,13 @@ export default function LoginPage() {
 
   return (
     <main className="login">
+      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+        <img
+          src={logoImg}
+          alt="LD Assurances"
+          style={{ height: '64px', width: 'auto', objectFit: 'contain', background: '#fff', padding: '6px 12px', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}
+        />
+      </div>
       <h1>Administration</h1>
       <p>Connexion réservée aux agents de LD Assurances.</p>
 
