@@ -11,12 +11,13 @@ class Submission extends Model
 {
     protected $fillable = [
         'reference', 'category_id', 'user_id', 'form_type',
-        'email', 'status', 'notes', 'rejection_reason', 'answers', 'form_snapshot',
+        'email', 'status', 'notes', 'rejection_reason', 'answers', 'form_snapshot', 'quote_calculation',
     ];
 
     protected $casts = [
-        'answers'       => 'array',
-        'form_snapshot' => 'array',
+        'answers'           => 'array',
+        'form_snapshot'     => 'array',
+        'quote_calculation' => 'array',
     ];
 
     protected static function booted(): void

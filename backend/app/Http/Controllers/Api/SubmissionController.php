@@ -8,6 +8,7 @@ use App\Mail\SubmissionReceived;
 use App\Models\Category;
 use App\Models\FormField;
 use App\Models\Submission;
+use App\Services\PricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -78,6 +79,20 @@ class SubmissionController extends Controller
             $answers[$field->name] = $request->input("answers.{$field->name}");
         }
 
+        // Calcul automatique de la tarification du devis si applicable
+        $quoteCalculation = null;
+        if ($base['form_type'] === 'quote') {
+            try {
+                $pricingService = app(PricingService::class);
+                $quoteCalculation = $pricingService->calculate($category, $answers);
+                if ($quoteCalculation) {
+                    $answers['_calculated_quote'] = $quoteCalculation;
+                }
+            } catch (Throwable $e) {
+                Log::warning('Échec calcul devis automatique', ['message' => $e->getMessage()]);
+            }
+        }
+
         // 6. Copie des questions au moment de l'envoi (historique)
         $snapshot = $visible->map(fn (FormField $field) => [
             'name'        => $field->name,
@@ -91,15 +106,16 @@ class SubmissionController extends Controller
         $storedPaths = [];
 
         try {
-            $submission = DB::transaction(function () use ($request, $base, $category, $userId, $answers, $snapshot, $visible, &$storedPaths) {
+            $submission = DB::transaction(function () use ($request, $base, $category, $userId, $answers, $snapshot, $quoteCalculation, $visible, &$storedPaths) {
                 $submission = Submission::create([
-                    'category_id'   => $category->id,
-                    'user_id'       => $userId,
-                    'form_type'     => $base['form_type'],
-                    'email'         => $base['email'],
-                    'status'        => 'received',
-                    'answers'       => $answers,
-                    'form_snapshot' => $snapshot,
+                    'category_id'       => $category->id,
+                    'user_id'           => $userId,
+                    'form_type'         => $base['form_type'],
+                    'email'             => $base['email'],
+                    'status'            => 'received',
+                    'answers'           => $answers,
+                    'form_snapshot'     => $snapshot,
+                    'quote_calculation' => $quoteCalculation,
                 ]);
 
                 foreach ($visible->where('field_type', 'file') as $field) {
@@ -153,9 +169,33 @@ class SubmissionController extends Controller
         }
 
         return response()->json([
-            'message'   => 'Votre demande a bien été enregistrée.',
-            'reference' => $submission->reference,
+            'message'           => 'Votre demande a bien été enregistrée.',
+            'reference'         => $submission->reference,
+            'quote_calculation' => $submission->quote_calculation,
         ], 201);
+    }
+
+    /**
+     * Calcule en temps réel le devis estimatif d'une demande.
+     */
+    public function calculateQuote(Request $request, PricingService $pricingService): JsonResponse
+    {
+        $data = $request->validate([
+            'category' => ['required', 'string'],
+            'answers'  => ['nullable', 'array'],
+        ]);
+
+        $category = Category::where('slug', $data['category'])->first();
+        $target = $category ?: $data['category'];
+        $answers = $data['answers'] ?? [];
+
+        $calculation = $pricingService->calculate($target, $answers);
+
+        if (! $calculation) {
+            return response()->json(['has_calculation' => false]);
+        }
+
+        return response()->json($calculation);
     }
 
     // Une question conditionnelle n'est visible que si la condition est remplie

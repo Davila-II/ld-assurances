@@ -38,12 +38,13 @@ class FormController extends Controller
             return response()->json(['message' => 'Type de formulaire invalide.'], 422);
         }
 
-        $category = Category::where('slug', $slug)
+        $category = Category::with('pricingRule')
+            ->where('slug', $slug)
             ->where('is_active', true)
             ->where(function ($q) use ($type) {
                 $q->where('form_type', $type)->orWhereNull('form_type');
             })
-            ->first() ?? Category::where('slug', $slug)->where('is_active', true)->firstOrFail();
+            ->first() ?? Category::with('pricingRule')->where('slug', $slug)->where('is_active', true)->firstOrFail();
 
         $fields = $category->fields()
             ->where('form_type', $type)
@@ -65,13 +66,23 @@ class FormController extends Controller
                 'sort_order',
             ]);
 
+        $hasPricing = ($type === 'quote' && ($category->pricing_rule_id !== null || in_array($category->slug, ['auto', 'voyage', 'habitation', 'personne', 'professionnelle', 'responsabilite-civile', 'autres'], true)));
+
         return response()->json([
             'category'  => [
-                'id'        => $category->id,
-                'name'      => $category->name,
-                'name_en'   => $category->name_en,
-                'slug'      => $category->slug,
-                'form_type' => $category->form_type,
+                'id'                     => $category->id,
+                'name'                   => $category->name,
+                'name_en'                => $category->name_en,
+                'slug'                   => $category->slug,
+                'form_type'              => $category->form_type,
+                'pricing_rule_id'        => $category->pricing_rule_id,
+                'has_pricing_calculator' => $hasPricing,
+                'pricing_rule'           => $category->pricingRule ? [
+                    'id'      => $category->pricingRule->id,
+                    'name'    => $category->pricingRule->name,
+                    'name_en' => $category->pricingRule->name_en,
+                    'driver'  => $category->pricingRule->driver,
+                ] : null,
             ],
             'form_type' => $type,
             'fields'    => $fields,

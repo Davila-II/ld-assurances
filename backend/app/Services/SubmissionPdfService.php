@@ -106,22 +106,35 @@ class SubmissionPdfService
         // Liste des pièces jointes transmises
         $attachments = $this->buildAttachmentsList($submission);
 
+        // Tarification calculée du devis
+        $quoteCalculation = $submission->quote_calculation
+            ?? ($answers['_calculated_quote'] ?? null);
+
+        if (!$quoteCalculation && $isQuote) {
+            try {
+                $quoteCalculation = app(PricingService::class)->calculate($submission->category, $answers);
+            } catch (\Throwable) {
+                // Pas de tarification automatique pour ce dossier
+            }
+        }
+
         return [
-            'submission'      => $submission,
-            'company'         => $company,
-            'isQuote'         => $isQuote,
-            'typeLabel'       => $typeLabel,
-            'docSubTitle'     => $docSubTitle,
-            'clientName'      => $clientName,
-            'clientPhone'     => $clientPhone,
-            'clientCity'      => $clientCity,
-            'dateFormatted'   => $dateFormatted,
-            'dateOnly'        => $dateOnly,
-            'statusInfo'      => $statusInfo,
-            'sections'        => $sections,
-            'attachments'     => $attachments,
-            'logoBase64'      => $logoBase64,
-            'watermarkBase64' => $watermarkBase64,
+            'submission'       => $submission,
+            'company'          => $company,
+            'isQuote'          => $isQuote,
+            'typeLabel'        => $typeLabel,
+            'docSubTitle'      => $docSubTitle,
+            'clientName'       => $clientName,
+            'clientPhone'      => $clientPhone,
+            'clientCity'       => $clientCity,
+            'dateFormatted'    => $dateFormatted,
+            'dateOnly'         => $dateOnly,
+            'statusInfo'       => $statusInfo,
+            'sections'         => $sections,
+            'attachments'      => $attachments,
+            'quoteCalculation' => $quoteCalculation,
+            'logoBase64'       => $logoBase64,
+            'watermarkBase64'  => $watermarkBase64,
         ];
     }
 

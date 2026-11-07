@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\FormField;
+use App\Models\PricingRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -29,21 +30,30 @@ class FormBuilderController extends Controller
         }
 
         $categories = $query
+            ->with(['pricingRule:id,name,name_en,code,driver'])
             ->withCount([
                 'fields as quote_count' => fn ($q) => $q->where('form_type', 'quote')->where('is_active', true),
                 'fields as claim_count' => fn ($q) => $q->where('form_type', 'claim')->where('is_active', true),
             ])
             ->get()
             ->map(fn (Category $c) => [
-                'id'          => $c->id,
-                'name'        => $c->name,
-                'name_en'     => $c->name_en,
-                'slug'        => $c->slug,
-                'form_type'   => $c->form_type,
-                'is_active'   => $c->is_active,
-                'sort_order'  => $c->sort_order,
-                'quote_count' => $c->quote_count,
-                'claim_count' => $c->claim_count,
+                'id'              => $c->id,
+                'name'            => $c->name,
+                'name_en'         => $c->name_en,
+                'slug'            => $c->slug,
+                'form_type'       => $c->form_type,
+                'pricing_rule_id' => $c->pricing_rule_id,
+                'pricing_rule'    => $c->pricingRule ? [
+                    'id'      => $c->pricingRule->id,
+                    'name'    => $c->pricingRule->name,
+                    'name_en' => $c->pricingRule->name_en,
+                    'code'    => $c->pricingRule->code,
+                    'driver'  => $c->pricingRule->driver,
+                ] : null,
+                'is_active'       => $c->is_active,
+                'sort_order'      => $c->sort_order,
+                'quote_count'     => $c->quote_count,
+                'claim_count'     => $c->claim_count,
             ]);
 
         return response()->json($categories);
@@ -52,9 +62,16 @@ class FormBuilderController extends Controller
     public function storeCategory(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'      => ['required', 'string', 'max:100'],
-            'name_en'   => ['nullable', 'string', 'max:100'],
-            'form_type' => ['nullable', 'in:quote,claim'],
+            'name'             => ['required', 'string', 'max:100'],
+            'name_en'          => ['nullable', 'string', 'max:100'],
+            'form_type'        => ['nullable', 'in:quote,claim'],
+            'pricing_rule_id'  => ['nullable', 'integer', 'exists:pricing_rules,id'],
+            'new_pricing_rule' => ['nullable', 'array'],
+            'new_pricing_rule.name'         => ['required_with:new_pricing_rule', 'string', 'max:150'],
+            'new_pricing_rule.name_en'      => ['nullable', 'string', 'max:150'],
+            'new_pricing_rule.driver'       => ['required_with:new_pricing_rule', 'string', 'in:automobile,voyage,habitation,sante,professionnelle,responsabilite_civile,autres,custom'],
+            'new_pricing_rule.parameters'   => ['nullable', 'array'],
+            'new_pricing_rule.formula_code' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $baseSlug = Str::slug($data['name']);
@@ -69,14 +86,54 @@ class FormBuilderController extends Controller
             $counter++;
         }
 
+        $pricingRuleId = $data['pricing_rule_id'] ?? null;
+
+        // Si l'administrateur a choisi de créer un nouveau calcul pour ce devis
+        if (!empty($data['new_pricing_rule'])) {
+            $newRuleData = $data['new_pricing_rule'];
+            $ruleCode = Str::slug($newRuleData['name']);
+            $origRuleCode = $ruleCode;
+            $rCount = 1;
+            while (PricingRule::where('code', $ruleCode)->exists()) {
+                $ruleCode = "{$origRuleCode}-{$rCount}";
+                $rCount++;
+            }
+
+            $parameters = $newRuleData['parameters'] ?? [];
+            if (empty($parameters)) {
+                $templates = PricingRule::defaultTemplates();
+                $parameters = $templates[$newRuleData['driver']]['parameters'] ?? [
+                    'base_amount' => 25000,
+                    'rate'        => 0.01,
+                    'accessoires' => 5000,
+                    'taxe_unique' => 0.15,
+                ];
+            }
+
+            $createdRule = PricingRule::create([
+                'name'         => $newRuleData['name'],
+                'name_en'      => $newRuleData['name_en'] ?? null,
+                'code'         => $ruleCode,
+                'driver'       => $newRuleData['driver'],
+                'parameters'   => $parameters,
+                'formula_code' => $newRuleData['formula_code'] ?? null,
+                'is_active'    => true,
+            ]);
+
+            $pricingRuleId = $createdRule->id;
+        }
+
         $category = Category::create([
-            'name'       => $data['name'],
-            'name_en'    => $data['name_en'] ?? null,
-            'form_type'  => $data['form_type'] ?? null,
-            'slug'       => $slug,
-            'is_active'  => true,
-            'sort_order' => (int) Category::max('sort_order') + 1,
+            'name'            => $data['name'],
+            'name_en'         => $data['name_en'] ?? null,
+            'form_type'       => $data['form_type'] ?? null,
+            'pricing_rule_id' => $pricingRuleId,
+            'slug'            => $slug,
+            'is_active'       => true,
+            'sort_order'      => (int) Category::max('sort_order') + 1,
         ]);
+
+        $category->load('pricingRule:id,name,name_en,code,driver');
 
         return response()->json($category, 201);
     }
@@ -84,14 +141,16 @@ class FormBuilderController extends Controller
     public function updateCategory(Request $request, Category $category): JsonResponse
     {
         $data = $request->validate([
-            'name'       => ['sometimes', 'required', 'string', 'max:100'],
-            'name_en'    => ['nullable', 'string', 'max:100'],
-            'form_type'  => ['nullable', 'in:quote,claim'],
-            'is_active'  => ['sometimes', 'boolean'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
+            'name'            => ['sometimes', 'required', 'string', 'max:100'],
+            'name_en'         => ['nullable', 'string', 'max:100'],
+            'form_type'       => ['nullable', 'in:quote,claim'],
+            'pricing_rule_id' => ['nullable', 'integer', 'exists:pricing_rules,id'],
+            'is_active'       => ['sometimes', 'boolean'],
+            'sort_order'      => ['sometimes', 'integer', 'min:0'],
         ]);
 
         $category->update($data);
+        $category->load('pricingRule:id,name,name_en,code,driver');
 
         return response()->json($category->fresh());
     }

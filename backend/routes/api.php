@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\AdminClientController;
 use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\FormBuilderController;
+use App\Http\Controllers\Api\Admin\PricingRuleController;
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Client\SubmissionController as ClientSubmissionController;
 use App\Http\Controllers\Api\FormController;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 // --- Public ---
 Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
+Route::post('/quotes/calculate', [SubmissionController::class, 'calculateQuote']);
 
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submissions');
@@ -74,6 +76,14 @@ Route::prefix('admin')->group(function () {
         // Gestion des clients
         Route::get('/clients', [AdminClientController::class, 'index']);
         Route::post('/clients', [AdminClientController::class, 'store']);
+
+        // Règles de calcul & Tarification (Algorithmes CIMA et Personnalisés)
+        Route::get('/pricing-rules', [PricingRuleController::class, 'index']);
+        Route::get('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'show']);
+        Route::post('/pricing-rules', [PricingRuleController::class, 'store']);
+        Route::patch('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'update']);
+        Route::delete('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'destroy']);
+        Route::post('/pricing-rules/{pricingRule}/test', [PricingRuleController::class, 'test']);
 
         // Constructeur de formulaires
         Route::get('/form-builder/categories', [FormBuilderController::class, 'categories']);
