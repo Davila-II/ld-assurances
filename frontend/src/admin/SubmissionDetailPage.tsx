@@ -317,26 +317,28 @@ export default function SubmissionDetailPage() {
                 </div>
               </div>
               {submission.quote_calculation.breakdown?.length > 0 && (
-                <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', marginTop: '10px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
-                      <th style={{ padding: '8px 4px' }}>Garantie / Éléments</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Montant</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {submission.quote_calculation.breakdown.map((item, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '8px 4px' }}>
-                          {item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
-                        </td>
-                        <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
-                          {formatFcfa(item.formatted || item.amount)}
-                        </td>
+                <div className="table-responsive" style={{ margin: '10px 0 0' }}>
+                  <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                        <th style={{ padding: '8px 4px' }}>Garantie / Éléments</th>
+                        <th style={{ padding: '8px 4px', textAlign: 'right' }}>Montant</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {submission.quote_calculation.breakdown.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 4px' }}>
+                            {item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                          </td>
+                          <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
+                            {formatFcfa(item.formatted || item.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           )}

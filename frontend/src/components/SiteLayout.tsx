@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { LogIn, Mail, MapPin, Menu, Phone, PhoneCall, User as UserIcon, X } from 'lucide-react';
 import { getClientToken } from '../clientAuth';
-import { getToken } from '../auth';
 import AssistantWidget from './AssistantWidget';
 import {
   FOOTER_LEGAL_LINKS,
@@ -80,7 +79,6 @@ export default function SiteLayout() {
   const close = () => setOpen(false);
 
   const isClientLoggedIn = Boolean(getClientToken());
-  const isAdminLoggedIn = Boolean(getToken());
 
   return (
     <div className="site">
@@ -113,10 +111,6 @@ export default function SiteLayout() {
               <Link className="btn btn-secondary btn-sm" to="/espace-client">
                 <UserIcon size={16} /> {t('nav.client_space')}
               </Link>
-            ) : isAdminLoggedIn ? (
-              <Link className="btn btn-secondary btn-sm" to="/admin">
-                <UserIcon size={16} /> Admin
-              </Link>
             ) : (
               <Link className="btn btn-secondary btn-sm" to="/espace-client/connexion">
                 <LogIn size={16} /> {t('nav.login')}
@@ -146,10 +140,6 @@ export default function SiteLayout() {
             {isClientLoggedIn ? (
               <Link to="/espace-client" onClick={close}>
                 {t('nav.client_space')}
-              </Link>
-            ) : isAdminLoggedIn ? (
-              <Link to="/admin" onClick={close}>
-                Administration
               </Link>
             ) : (
               <Link to="/espace-client/connexion" onClick={close}>
