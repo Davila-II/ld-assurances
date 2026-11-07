@@ -90,6 +90,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Identifiants incorrects.'], 401);
         }
 
+        // Rattache les soumissions envoyées avec cette adresse email
+        Submission::whereNull('user_id')
+            ->whereRaw('LOWER(email) = ?', [Str::lower($user->email)])
+            ->update(['user_id' => $user->id]);
+
         return response()->json([
             'token' => $this->newToken($user),
             'user'  => $this->userData($user),

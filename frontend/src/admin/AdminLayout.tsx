@@ -14,10 +14,11 @@ import {
 import { adminLogout } from '../api';
 import { clearToken, getToken } from '../auth';
 import { errorMessage } from './labels';
-import { LanguageToggle } from '../i18n/LanguageContext';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 import { SITE } from '../siteConfig';
 
 export default function AdminLayout() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -63,29 +64,29 @@ export default function AdminLayout() {
         <nav className="admin-nav admin-nav-desktop">
           <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
             <LayoutDashboard size={16} />
-            <span>Tableau de bord</span>
+            <span>{t('admin.nav_dashboard')}</span>
           </NavLink>
           <NavLink
             to="/admin/submissions?form_type=claim"
             className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
           >
             <AlertTriangle size={16} />
-            <span>Déclarations</span>
+            <span>{t('admin.nav_claims')}</span>
           </NavLink>
           <NavLink
             to="/admin/submissions?form_type=quote"
             className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
           >
             <FileText size={16} />
-            <span>Devis</span>
+            <span>{t('admin.nav_quotes')}</span>
           </NavLink>
           <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')}>
             <Users size={16} />
-            <span>Clients</span>
+            <span>{t('admin.nav_clients')}</span>
           </NavLink>
           <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')}>
             <Sliders size={16} />
-            <span>Formulaires</span>
+            <span>{t('admin.nav_forms')}</span>
           </NavLink>
         </nav>
 
@@ -94,7 +95,7 @@ export default function AdminLayout() {
           <LanguageToggle />
           <button type="button" disabled={loggingOut} onClick={logout} className="admin-logout-btn">
             <LogOut size={16} />
-            <span>{loggingOut ? 'Déconnexion…' : 'Déconnexion'}</span>
+            <span>{loggingOut ? t('admin.logging_out') : t('admin.logout')}</span>
           </button>
         </div>
 
@@ -128,7 +129,7 @@ export default function AdminLayout() {
         <nav className="admin-drawer-nav">
           <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
             <LayoutDashboard size={18} />
-            <span>Tableau de bord</span>
+            <span>{t('admin.nav_dashboard')}</span>
           </NavLink>
           <NavLink
             to="/admin/submissions?form_type=claim"
@@ -136,7 +137,7 @@ export default function AdminLayout() {
             onClick={closeMenu}
           >
             <AlertTriangle size={18} />
-            <span>Déclarations de sinistres</span>
+            <span>{t('admin.nav_claims_long')}</span>
           </NavLink>
           <NavLink
             to="/admin/submissions?form_type=quote"
@@ -144,15 +145,15 @@ export default function AdminLayout() {
             onClick={closeMenu}
           >
             <FileText size={18} />
-            <span>Demandes de devis</span>
+            <span>{t('admin.nav_quotes_long')}</span>
           </NavLink>
           <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
             <Users size={18} />
-            <span>Gestion des clients</span>
+            <span>{t('admin.nav_clients')}</span>
           </NavLink>
           <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
             <Sliders size={18} />
-            <span>Constructeur de formulaires</span>
+            <span>{t('admin.nav_forms')}</span>
           </NavLink>
         </nav>
 
@@ -164,12 +165,12 @@ export default function AdminLayout() {
 
           <Link to={SITE.mainUrl} className="admin-drawer-link" onClick={closeMenu}>
             <ArrowLeft size={16} />
-            <span>Retour au site principal</span>
+            <span>{t('admin.back_to_site')}</span>
           </Link>
 
           <button type="button" disabled={loggingOut} onClick={logout} className="admin-drawer-logout-btn">
             <LogOut size={16} />
-            <span>{loggingOut ? 'Déconnexion…' : 'Se déconnecter'}</span>
+            <span>{loggingOut ? t('admin.logging_out') : t('admin.logout')}</span>
           </button>
         </div>
       </aside>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getCategories, getSubmissions } from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { Category, Paginated, SubmissionSummary } from '../types';
 import StatusBadge from './StatusBadge';
 import {
@@ -14,6 +15,7 @@ import {
 } from './labels';
 
 export default function SubmissionsPage() {
+  const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const formType = params.get('form_type') ?? '';
@@ -100,10 +102,10 @@ export default function SubmissionsPage() {
       <div style={{ marginBottom: '20px' }}>
         <h1 style={{ margin: '0 0 6px 0' }}>
           {formType === 'claim'
-            ? 'Déclarations de sinistres'
+            ? t('admin.submissions_title_claims')
             : formType === 'quote'
-              ? 'Demandes de devis'
-              : 'Toutes les déclarations et demandes'}
+              ? t('admin.submissions_title_quotes')
+              : t('admin.submissions_title_all')}
         </h1>
         <p style={{ margin: 0, color: '#44556a' }}>
           {formType === 'claim'
@@ -116,25 +118,25 @@ export default function SubmissionsPage() {
 
       <form className="filters" onSubmit={handleSearch}>
         <div className="field">
-          <label htmlFor="search">Recherche</label>
+          <label htmlFor="search">{t('admin.btn_search')}</label>
           <input
             key={query}
             id="search"
             name="q"
             type="text"
-            placeholder="Numéro de dossier ou email"
+            placeholder={t('admin.search_placeholder')}
             defaultValue={query}
           />
         </div>
 
         <div className="field">
-          <label htmlFor="status">Statut</label>
+          <label htmlFor="status">{t('admin.th_status')}</label>
           <select
             id="status"
             value={status}
             onChange={(event) => update({ status: event.target.value })}
           >
-            <option value="">Tous</option>
+            <option value="">{t('admin.filter_all_statuses')}</option>
             {STATUSES.map((item) => (
               <option key={item} value={item}>
                 {STATUS_LABELS[item]}

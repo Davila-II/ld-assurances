@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Mail, Phone, Plus, Search, User, UserPlus, X } from 'lucide-react';
 import { createClient, getClients } from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { AdminClient, Paginated } from '../types';
 import PhoneInput from '../components/PhoneInput';
 import { errorMessage, formatDate } from './labels';
 
 export default function ClientsPage() {
+  const { t } = useLanguage();
   const [clients, setClients] = useState<Paginated<AdminClient> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -111,26 +113,26 @@ export default function ClientsPage() {
     <>
       <div className="detail-head" style={{ justifyContent: 'space-between' }}>
         <div>
-          <h1>Clients</h1>
+          <h1>{t('admin_clients.title')}</h1>
           <p style={{ margin: '4px 0 0', color: '#44556a' }}>
-            Consultez les comptes clients et ajoutez-en de nouveaux avec envoi direct de leurs accès par email.
+            {t('admin_clients.subtitle')}
           </p>
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleOpenModal}>
           <UserPlus size={18} style={{ marginRight: '6px' }} />
-          Ajouter un client
+          {t('admin_clients.add_btn')}
         </button>
       </div>
 
       {/* Barre de recherche */}
       <form className="filters" onSubmit={handleSearchSubmit} style={{ marginTop: '20px' }}>
         <div className="field" style={{ flex: 1 }}>
-          <label htmlFor="search-clients">Recherche par nom, email ou téléphone</label>
+          <label htmlFor="search-clients">{t('admin_clients.search_label')}</label>
           <input
             id="search-clients"
             type="text"
-            placeholder="Ex : Dupont, client@exemple.com, 69911..."
+            placeholder={t('admin_clients.search_placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -138,7 +140,7 @@ export default function ClientsPage() {
 
         <div className="filter-actions">
           <button type="submit" className="btn">
-            <Search size={16} style={{ marginRight: '4px' }} /> Rechercher
+            <Search size={16} style={{ marginRight: '4px' }} /> {t('admin.btn_search')}
           </button>
           {search && (
             <button type="button" className="btn" onClick={handleResetSearch}>
@@ -156,23 +158,23 @@ export default function ClientsPage() {
       {!loading && clients && (
         <>
           <p className="count">
-            {clients.total} client{clients.total > 1 ? 's' : ''} enregistré{clients.total > 1 ? 's' : ''}
+            {clients.total} client{clients.total > 1 ? 's' : ''}
           </p>
 
           {clients.data.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '36px' }}>
               <User size={36} style={{ color: '#8fa0b8', marginBottom: '8px' }} />
-              <p style={{ margin: 0, color: '#44556a' }}>Aucun client ne correspond à votre recherche.</p>
+              <p style={{ margin: 0, color: '#44556a' }}>{t('admin_clients.no_clients')}</p>
             </div>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Nom du client</th>
-                  <th>Email</th>
-                  <th>Téléphone</th>
-                  <th>Dossiers rattachés</th>
-                  <th>Inscrit le</th>
+                  <th>{t('admin_clients.th_name')}</th>
+                  <th>{t('admin_clients.th_email')}</th>
+                  <th>{t('admin_clients.th_phone')}</th>
+                  <th>{t('admin_clients.th_submissions')}</th>
+                  <th>{t('admin_clients.th_registered')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,7 +233,7 @@ export default function ClientsPage() {
         <div className="admin-modal-backdrop" onClick={handleCloseModal}>
           <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h2>Ajouter un nouveau client</h2>
+              <h2>{t('admin_clients.modal_title')}</h2>
               <button type="button" className="admin-modal-close" onClick={handleCloseModal} aria-label="Fermer">
                 <X size={20} />
               </button>
@@ -327,10 +329,10 @@ export default function ClientsPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
                   <button type="button" className="btn" onClick={handleCloseModal} disabled={creating}>
-                    Annuler
+                    {t('builder.btn_cancel')}
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={creating}>
-                    {creating ? 'Création et envoi en cours…' : 'Créer et envoyer les coordonnées'}
+                    {creating ? t('admin_clients.creating') : t('admin_clients.btn_create')}
                   </button>
                 </div>
               </form>

@@ -196,6 +196,19 @@ function ClaimHub() {
   );
 }
 
+const CLAIM_TYPE_TO_SLUG: Record<string, string> = {
+  automobile: 'auto',
+  habitation: 'habitation',
+  'santé': 'personne',
+  sante: 'personne',
+  entreprise: 'professionnelle',
+  'responsabilité civile': 'responsabilite-civile',
+  'responsabilite civile': 'responsabilite-civile',
+  transport: 'voyage',
+  agricole: 'autres',
+  autre: 'autres',
+};
+
 // Vue « formulaire de sinistre » pour le type sélectionné
 function ClaimFlow({ selectedType }: { selectedType?: string }) {
   const { t } = useLanguage();
@@ -209,12 +222,22 @@ function ClaimFlow({ selectedType }: { selectedType?: string }) {
 
   useEffect(() => {
     getCategories('claim')
-      .then((categories) =>
-        setCategory(categories.find((c) => c.slug === 'sinistre') ?? categories[0] ?? null)
-      )
+      .then((categories) => {
+        const targetSlug = selectedType
+          ? (CLAIM_TYPE_TO_SLUG[selectedType.toLowerCase()] ?? currentItem?.key)
+          : undefined;
+        const found =
+          (targetSlug ? categories.find((c) => c.slug === targetSlug) : null) ??
+          categories[0] ??
+          null;
+        setCategory(found);
+        if (!found) {
+          setError(t('claims.empty_category_error') ?? 'Formulaire de déclaration non disponible pour le moment.');
+        }
+      })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Erreur inattendue.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [currentItem?.key, selectedType, t]);
 
   return (
     <main className="page">

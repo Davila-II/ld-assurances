@@ -65,6 +65,19 @@ class FormBuilderController extends Controller
         return response()->json($category->fresh());
     }
 
+    public function destroyCategory(Category $category): JsonResponse
+    {
+        if ($category->submissions()->exists()) {
+            return response()->json([
+                'message' => 'Impossible de supprimer cette catégorie car elle est rattachée à des dossiers existants. Vous pouvez la désactiver à la place.',
+            ], 422);
+        }
+
+        $category->delete();
+
+        return response()->json(['message' => 'Catégorie supprimée avec succès.']);
+    }
+
     // Questions d'une catégorie pour un type de formulaire
     public function fields(Request $request, Category $category): JsonResponse
     {

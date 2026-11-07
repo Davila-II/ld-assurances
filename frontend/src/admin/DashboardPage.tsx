@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getStats } from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { AdminStats } from '../types';
 import StatusBadge from './StatusBadge';
-import { FORM_TYPE_LABELS, STATUSES, STATUS_LABELS, errorMessage, formatDate } from './labels';
+import { STATUSES, errorMessage, formatDate } from './labels';
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState('');
 
@@ -17,7 +19,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <h1>Tableau de bord</h1>
+      <h1>{t('admin.nav_dashboard')}</h1>
 
       {error && <p className="alert" role="alert">{error}</p>}
       {!stats && !error && <p role="status">Chargement…</p>}
@@ -27,28 +29,28 @@ export default function DashboardPage() {
           <div className="admin-stats">
             <div className="admin-stat">
               <strong>{stats.total}</strong>
-              <span>Total des dossiers</span>
+              <span>{t('admin.total_files')}</span>
             </div>
             {STATUSES.map((status) => (
               <div className="admin-stat" key={status}>
                 <strong>{stats.by_status[status] ?? 0}</strong>
-                <span>{STATUS_LABELS[status]}</span>
+                <span>{t(`status.${status}` as const)}</span>
               </div>
             ))}
           </div>
 
           <section className="card">
-            <h2>Dernières demandes</h2>
+            <h2>{t('admin.recent_submissions')}</h2>
             {stats.recent.length === 0 ? (
-              <p>Aucune demande pour le moment.</p>
+              <p>{t('admin.no_recent_submissions')}</p>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th scope="col">Dossier</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Statut</th>
-                    <th scope="col">Reçu le</th>
+                    <th scope="col">{t('admin.th_reference')}</th>
+                    <th scope="col">{t('admin.th_type')}</th>
+                    <th scope="col">{t('admin.th_status')}</th>
+                    <th scope="col">{t('admin.th_date')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -57,7 +59,7 @@ export default function DashboardPage() {
                       <td data-label="Dossier">
                         <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
                       </td>
-                      <td data-label="Type">{FORM_TYPE_LABELS[submission.form_type]}</td>
+                      <td data-label="Type">{submission.form_type === 'quote' ? t('status.quote') : t('status.claim')}</td>
                       <td data-label="Statut">
                         <StatusBadge status={submission.status} />
                       </td>

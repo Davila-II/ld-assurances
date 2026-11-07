@@ -133,4 +133,44 @@ class FormBuilderTest extends TestCase
         $slugs = collect($this->getJson('/api/categories?type=quote')->json())->pluck('slug');
         $this->assertFalse($slugs->contains('auto'));
     }
+
+    public function test_admin_can_delete_category_without_submissions(): void
+    {
+        Sanctum::actingAs($this->admin());
+
+        $newCat = Category::create([
+            'name' => 'Catégorie Temporaire',
+            'slug' => 'temporaire',
+            'is_active' => true,
+            'sort_order' => 99,
+        ]);
+
+        $this->deleteJson("/api/admin/form-builder/categories/{$newCat->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Catégorie supprimée avec succès.');
+
+        $this->assertDatabaseMissing('categories', ['id' => $newCat->id]);
+    }
+
+    public function test_admin_cannot_delete_category_with_submissions(): void
+    {
+        Sanctum::actingAs($this->admin());
+        $category = Category::where('slug', 'habitation')->firstOrFail();
+
+        // Crée une soumission liée à cette catégorie
+        \App\Models\Submission::create([
+            'category_id' => $category->id,
+            'form_type' => 'quote',
+            'email' => 'client@test.com',
+            'status' => 'received',
+            'answers' => ['logement_type' => 'Appartement'],
+            'form_snapshot' => [],
+        ]);
+
+        $this->deleteJson("/api/admin/form-builder/categories/{$category->id}")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Impossible de supprimer cette catégorie car elle est rattachée à des dossiers existants. Vous pouvez la désactiver à la place.']);
+
+        $this->assertDatabaseHas('categories', ['id' => $category->id]);
+    }
 }

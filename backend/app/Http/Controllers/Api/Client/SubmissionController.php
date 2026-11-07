@@ -14,6 +14,11 @@ class SubmissionController extends Controller
     {
         $request->validate(['type' => ['nullable', 'in:claim,quote']]);
 
+        // Rattache automatiquement les soumissions envoyées avec cette adresse email
+        Submission::whereNull('user_id')
+            ->whereRaw('LOWER(email) = ?', [\Illuminate\Support\Str::lower($request->user()->email)])
+            ->update(['user_id' => $request->user()->id]);
+
         $query = Submission::with('category:id,name')
             ->where('user_id', $request->user()->id)
             ->latest();

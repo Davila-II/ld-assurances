@@ -74,6 +74,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/form-builder/categories', [FormBuilderController::class, 'categories']);
         Route::post('/form-builder/categories', [FormBuilderController::class, 'storeCategory']);
         Route::patch('/form-builder/categories/{category}', [FormBuilderController::class, 'updateCategory']);
+        Route::delete('/form-builder/categories/{category}', [FormBuilderController::class, 'destroyCategory']);
         Route::get('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'fields']);
         Route::post('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'storeField']);
         Route::post('/form-builder/categories/{category}/fields/reorder', [FormBuilderController::class, 'reorder']);

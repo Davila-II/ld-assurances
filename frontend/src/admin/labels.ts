@@ -40,6 +40,24 @@ export const FIELD_TYPE_LABELS: Record<string, string> = {
   file: 'Fichier',
 };
 
+export const FIELD_TYPE_LABELS_EN: Record<string, string> = {
+  text: 'Text',
+  textarea: 'Text area',
+  number: 'Number',
+  date: 'Date',
+  select: 'Dropdown list',
+  multiselect: 'Multiple choice',
+  checkbox: 'Checkbox',
+  file: 'File upload',
+};
+
+export function getFieldTypeLabel(type: string, lang: 'fr' | 'en' = 'fr'): string {
+  if (lang === 'en') {
+    return FIELD_TYPE_LABELS_EN[type] || FIELD_TYPE_LABELS[type] || type;
+  }
+  return FIELD_TYPE_LABELS[type] || type;
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', {
     dateStyle: 'medium',

@@ -875,6 +875,11 @@ input[type='checkbox'] {
   color: #0f172a;
 }
 
+.cat-btn-icon.cat-btn-delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 /* Switch Toggle Apple-style */
 .switch {
   position: relative;

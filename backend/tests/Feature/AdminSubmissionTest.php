@@ -26,7 +26,7 @@ class AdminSubmissionTest extends TestCase
 
     private function makeSubmission(): Submission
     {
-        $category = Category::where('slug', 'sinistre')->firstOrFail();
+        $category = Category::where('slug', 'auto')->first() ?? Category::firstOrFail();
 
         return Submission::create([
             'reference'     => 'SIN-2026-TEST01',

@@ -222,6 +222,9 @@ export const updateBuilderCategory = (id: number, data: Partial<{ name: string; 
     true
   );
 
+export const deleteBuilderCategory = (id: number) =>
+  request<{ message: string }>(`/admin/form-builder/categories/${id}`, { method: 'DELETE' }, true);
+
 export const getBuilderFields = (categoryId: number, type: FormType) =>
   request<BuilderField[]>(`/admin/form-builder/categories/${categoryId}/fields?type=${type}`, {}, true);
 

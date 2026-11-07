@@ -46,9 +46,13 @@ class SubmissionController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        // Si un client connecté envoie le formulaire, le dossier est rattaché à son compte
+        // Si un client connecté envoie le formulaire (ou s'il possède déjà un compte client avec cet email), le dossier est rattaché à son compte
         $client = $request->user('sanctum');
-        $userId = ($client && $client->role === 'client') ? $client->id : null;
+        $userId = ($client && $client->role === 'client')
+            ? $client->id
+            : \App\Models\User::where('role', 'client')
+                ->whereRaw('LOWER(email) = ?', [Str::lower($base['email'])])
+                ->value('id');
 
         // 2. Les questions de ce formulaire, telles qu'enregistrées en base
         $fields = $category->fields()

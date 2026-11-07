@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Check,
@@ -10,18 +11,21 @@ import {
   Edit3,
   Eye,
   EyeOff,
+  FileText,
   Layers,
   Monitor,
   Plus,
   RefreshCw,
   Sliders,
   Smartphone,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
 import {
   createBuilderCategory,
   createBuilderField,
+  deleteBuilderCategory,
   deleteBuilderField,
   getBuilderCategories,
   getBuilderFields,
@@ -30,8 +34,9 @@ import {
   updateBuilderField,
 } from '../api';
 import DynamicForm from '../components/DynamicForm';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { BuilderCategory, BuilderField, FieldType, FormType } from '../types';
-import { FIELD_TYPE_LABELS, errorMessage } from './labels';
+import { getFieldTypeLabel, errorMessage } from './labels';
 
 interface EditorState {
   mode: 'add' | 'edit';
@@ -77,17 +82,19 @@ function slugify(text: string): string {
 }
 
 const FIELD_TYPE_DESCRIPTIONS: Record<FieldType, string> = {
-  text: 'Texte court (ex : Immatriculation, Marque)',
-  textarea: 'Paragraphe (ex : Circonstances, Description)',
-  number: 'Nombre / Montant (ex : Puissance fiscale, Valeur)',
-  date: 'Date (ex : Date de naissance, Date du sinistre)',
-  select: 'Liste déroulante (Choix unique)',
-  multiselect: 'Cases à cocher (Choix multiples)',
-  checkbox: 'Case unique (Attestation, Accord)',
-  file: 'Pièce jointe / Fichier (PDF, image)',
+  text: 'Texte court / Short text',
+  textarea: 'Paragraphe / Text area',
+  number: 'Nombre ou montant / Number or amount',
+  date: 'Sélecteur de date / Date picker',
+  select: 'Liste déroulante / Dropdown select',
+  multiselect: 'Cases à cocher multiples / Checkboxes',
+  checkbox: 'Case à cocher unique / Single checkbox',
+  file: 'Pièce jointe ou document / File upload',
 };
 
 export default function FormBuilderPage() {
+  const { lang, t } = useLanguage();
+
   const [categories, setCategories] = useState<BuilderCategory[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formType, setFormType] = useState<FormType>('quote');
@@ -122,10 +129,8 @@ export default function FormBuilderPage() {
       const data = await getBuilderCategories();
       setCategories(data);
       if (selectedId === null && data.length > 0) {
-        // Sélectionne par défaut la catégorie la plus pertinente
-        const defaultCat = formType === 'claim'
-          ? data.find((c) => c.slug === 'sinistre') ?? data[0]
-          : data.find((c) => c.slug !== 'sinistre') ?? data[0];
+        const defaultCat =
+          data.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ?? data[0];
         setSelectedId(defaultCat.id);
       }
     } catch (err) {
@@ -151,10 +156,9 @@ export default function FormBuilderPage() {
         if (cancelled) return;
         setCategories(data);
         if (data.length > 0) {
-          const defaultCat = formType === 'claim'
-            ? data.find((c) => c.slug === 'sinistre') ?? data[0]
-            : data.find((c) => c.slug !== 'sinistre') ?? data[0];
-          setSelectedId(defaultCat.id);
+          const defaultCat =
+            data.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ?? data[0];
+          setSelectedId((prev) => prev ?? defaultCat.id);
         }
       })
       .catch((err: unknown) => {
@@ -192,6 +196,17 @@ export default function FormBuilderPage() {
 
   const selectedCategory = categories.find((c) => c.id === selectedId) ?? null;
 
+  // Catégories ordonnées selon le type de formulaire actif (celles ayant des questions en premier)
+  const displayedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const countA = formType === 'quote' ? a.quote_count : a.claim_count;
+      const countB = formType === 'quote' ? b.quote_count : b.claim_count;
+      if (countA > 0 && countB === 0) return -1;
+      if (countB > 0 && countA === 0) return 1;
+      return a.sort_order - b.sort_order;
+    });
+  }, [categories, formType]);
+
   // Sections uniques existantes dans le formulaire courant
   const existingSections = useMemo(() => {
     const set = new Set<string>();
@@ -225,6 +240,7 @@ export default function FormBuilderPage() {
     if (id !== selectedId) {
       setSelectedId(id);
       setFields([]);
+      setLoadedKey(null);
     }
     setEditor(null);
     setNotice('');
@@ -234,17 +250,49 @@ export default function FormBuilderPage() {
     if (type !== formType) {
       setFormType(type);
       setFields([]);
-      // Bascule automatique vers une catégorie appropriée si besoin
-      if (type === 'claim') {
-        const claimCat = categories.find((c) => c.slug === 'sinistre') ?? categories[0];
-        if (claimCat) setSelectedId(claimCat.id);
-      } else {
-        const quoteCat = categories.find((c) => c.slug !== 'sinistre') ?? categories[0];
-        if (quoteCat) setSelectedId(quoteCat.id);
+      setLoadedKey(null);
+
+      // Conserver la catégorie courante si elle a des questions pour ce mode,
+      // sinon sélectionner la première catégorie qui a des questions pour ce mode
+      const currentCat = categories.find((c) => c.id === selectedId);
+      const currentCount = currentCat
+        ? (type === 'quote' ? currentCat.quote_count : currentCat.claim_count)
+        : 0;
+
+      if (!currentCat || currentCount === 0) {
+        const bestCat =
+          categories.find((c) => (type === 'quote' ? c.quote_count : c.claim_count) > 0) ??
+          categories[0];
+        if (bestCat) {
+          setSelectedId(bestCat.id);
+        }
       }
     }
     setEditor(null);
     setNotice('');
+  };
+
+  // Suppression définitive d'une catégorie
+  const handleDeleteCategory = async (cat: BuilderCategory) => {
+    if (!window.confirm(t('builder.confirm_delete_cat', { name: cat.name }))) return;
+    setError('');
+    setNotice('');
+    try {
+      await deleteBuilderCategory(cat.id);
+      setNotice(t('builder.notice_cat_deleted'));
+      const remaining = categories.filter((c) => c.id !== cat.id);
+      setCategories(remaining);
+      if (selectedId === cat.id) {
+        const nextCat =
+          remaining.find((c) => (formType === 'claim' ? c.claim_count : c.quote_count) > 0) ??
+          remaining[0] ??
+          null;
+        setSelectedId(nextCat ? nextCat.id : null);
+      }
+      await loadCategories();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   };
 
   // Ajout d'une nouvelle catégorie
@@ -258,7 +306,7 @@ export default function FormBuilderPage() {
       setNewCategoryName('');
       await loadCategories();
       setSelectedId(created.id);
-      setNotice(`Catégorie "${created.name}" créée et activée.`);
+      setNotice(t('builder.notice_cat_created', { name: created.name }));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -275,7 +323,7 @@ export default function FormBuilderPage() {
       await updateBuilderCategory(editingCategory.id, { name });
       setEditingCategory(null);
       await loadCategories();
-      setNotice('Catégorie renommée avec succès.');
+      setNotice(t('builder.notice_cat_renamed'));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -289,8 +337,8 @@ export default function FormBuilderPage() {
       await loadCategories();
       setNotice(
         category.is_active
-          ? `Catégorie "${category.name}" désactivée sur le site public.`
-          : `Catégorie "${category.name}" activée sur le site public.`
+          ? `${category.name}: ${t('builder.deactivated')}`
+          : `${category.name}: ${t('builder.active_on_site')}`
       );
     } catch (err) {
       setError(errorMessage(err));
@@ -337,11 +385,11 @@ export default function FormBuilderPage() {
     const finalName = (editor.mode === 'add' ? (editor.name.trim() || slugify(trimmedLabel)) : editor.name).trim();
 
     if (!trimmedLabel) {
-      setError('Le libellé de la question est obligatoire.');
+      setError(t('builder.label_field'));
       return;
     }
     if (!finalName) {
-      setError("L'identifiant technique est obligatoire.");
+      setError(t('builder.technical_key'));
       return;
     }
 
@@ -367,10 +415,10 @@ export default function FormBuilderPage() {
           name: finalName,
           form_type: formType,
         });
-        setNotice(`Question "${trimmedLabel}" ajoutée.`);
+        setNotice(t('builder.notice_added', { label: trimmedLabel }));
       } else {
         await updateBuilderField(editor.id as number, payload);
-        setNotice(`Question "${trimmedLabel}" mise à jour.`);
+        setNotice(t('builder.notice_updated', { label: trimmedLabel }));
       }
       await loadFields(selectedId, formType);
       setPreviewRefreshKey((k) => k + 1);
@@ -393,7 +441,6 @@ export default function FormBuilderPage() {
     const targetIndex = fieldIndex + direction;
     if (targetIndex < 0 || targetIndex >= group.fields.length) return;
 
-    // Échange les deux questions dans la liste globale
     const fieldA = group.fields[fieldIndex];
     const fieldB = group.fields[targetIndex];
 
@@ -436,7 +483,6 @@ export default function FormBuilderPage() {
 
     const reorderedFieldIds = newGroups.flatMap((g) => g.fields.map((f) => f.id));
 
-    // Conserve les champs inactifs qui ne sont pas dans newGroups si showInactive est false
     const missingIds = fields
       .map((f) => f.id)
       .filter((id) => !reorderedFieldIds.includes(id));
@@ -446,7 +492,7 @@ export default function FormBuilderPage() {
       await reorderBuilderFields(selectedId, formType, allIds);
       await loadFields(selectedId, formType);
       setPreviewRefreshKey((k) => k + 1);
-      setNotice('Ordre des étapes mis à jour.');
+      setNotice(t('builder.notice_reordered'));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -462,8 +508,8 @@ export default function FormBuilderPage() {
       setPreviewRefreshKey((k) => k + 1);
       setNotice(
         field.is_active
-          ? `Question "${field.label}" désactivée.`
-          : `Question "${field.label}" réactivée.`
+          ? `${field.label}: ${t('builder.deactivated')}`
+          : `${field.label}: ${t('builder.active_on_site')}`
       );
     } catch (err) {
       setError(errorMessage(err));
@@ -472,14 +518,14 @@ export default function FormBuilderPage() {
 
   // Désactiver / retirer une question
   const handleDeactivate = async (field: BuilderField) => {
-    if (!window.confirm(`Voulez-vous retirer la question "${field.label}" ?`)) return;
+    if (!window.confirm(t('builder.confirm_deactivate', { label: field.label }))) return;
     if (selectedId === null) return;
     setError('');
     try {
       await deleteBuilderField(field.id);
       await loadFields(selectedId, formType);
       setPreviewRefreshKey((k) => k + 1);
-      setNotice(`Question "${field.label}" désactivée (historique préservé).`);
+      setNotice(t('builder.notice_deactivated', { label: field.label }));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -507,7 +553,6 @@ export default function FormBuilderPage() {
   const needsOptions =
     editor && (editor.field_type === 'select' || editor.field_type === 'multiselect');
 
-  // Suggestions d'options si le champ déclencheur a des options
   const triggerFieldOptions = useMemo(() => {
     if (!editor || !editor.condition_field) return null;
     const trigger = fields.find((f) => f.name === editor.condition_field);
@@ -519,10 +564,8 @@ export default function FormBuilderPage() {
       {/* En-tête principal */}
       <div className="builder-header">
         <div>
-          <h1>Constructeur de formulaires</h1>
-          <p className="builder-header-desc">
-            Créez, modifiez et ordonnez les questions des formulaires clients en direct.
-          </p>
+          <h1>{t('builder.title')}</h1>
+          <p className="builder-header-desc">{t('builder.subtitle')}</p>
         </div>
 
         <div className="builder-header-controls">
@@ -533,14 +576,16 @@ export default function FormBuilderPage() {
               className={formType === 'quote' ? 'active' : ''}
               onClick={() => changeFormType('quote')}
             >
-              📄 Demandes de devis
+              <FileText size={16} />
+              <span>{t('builder.quotes_tab')}</span>
             </button>
             <button
               type="button"
               className={formType === 'claim' ? 'active' : ''}
               onClick={() => changeFormType('claim')}
             >
-              🚨 Déclarations de sinistres
+              <AlertTriangle size={16} />
+              <span>{t('builder.claims_tab')}</span>
             </button>
           </div>
 
@@ -550,17 +595,19 @@ export default function FormBuilderPage() {
               type="button"
               className={viewMode === 'editor' ? 'active' : ''}
               onClick={() => setViewMode('editor')}
-              title="Modifier les sections et les questions"
+              title={t('builder.mode_editor')}
             >
-              <Sliders size={16} /> Mode Éditeur
+              <Sliders size={16} />
+              <span>{t('builder.mode_editor')}</span>
             </button>
             <button
               type="button"
               className={viewMode === 'preview' ? 'active' : ''}
               onClick={() => setViewMode('preview')}
-              title="Tester le rendu en temps réel comme le verra le client"
+              title={t('builder.mode_preview')}
             >
-              <Eye size={16} /> Aperçu en direct
+              <Eye size={16} />
+              <span>{t('builder.mode_preview')}</span>
             </button>
           </div>
         </div>
@@ -587,7 +634,7 @@ export default function FormBuilderPage() {
         </div>
       )}
 
-      {loading && <p className="center">Chargement des catégories…</p>}
+      {loading && <p className="center">{t('builder.loading_cats')}</p>}
 
       {!loading && (
         <div className="builder-grid">
@@ -595,13 +642,13 @@ export default function FormBuilderPage() {
           <aside className="builder-sidebar">
             <div className="builder-sidebar-header">
               <h2>
-                <Layers size={18} /> Catégories
+                <Layers size={18} /> {t('builder.categories')}
               </h2>
               <span className="badge-count">{categories.length}</span>
             </div>
 
             <ul className="builder-category-list">
-              {categories.map((cat) => {
+              {displayedCategories.map((cat) => {
                 const count = formType === 'quote' ? cat.quote_count : cat.claim_count;
                 const isSelected = cat.id === selectedId;
 
@@ -614,7 +661,7 @@ export default function FormBuilderPage() {
                       </div>
                       <div className="builder-cat-sub">
                         <span>
-                          {count} question{count > 1 ? 's' : ''} ({formType === 'quote' ? 'devis' : 'sinistre'})
+                          {count} question{count > 1 ? 's' : ''} ({formType === 'quote' ? t('status.quote') : t('status.claim')})
                         </span>
                       </div>
                     </div>
@@ -623,7 +670,7 @@ export default function FormBuilderPage() {
                       <button
                         type="button"
                         className="cat-btn-icon"
-                        title="Renommer la catégorie"
+                        title={t('builder.rename_cat_title')}
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingCategory(cat);
@@ -633,7 +680,7 @@ export default function FormBuilderPage() {
                         <Edit3 size={14} />
                       </button>
 
-                      <label className="switch" title={cat.is_active ? 'Désactiver la catégorie' : 'Activer la catégorie'}>
+                      <label className="switch" title={cat.is_active ? t('builder.deactivated') : t('builder.active_on_site')}>
                         <input
                           type="checkbox"
                           checked={cat.is_active}
@@ -641,6 +688,18 @@ export default function FormBuilderPage() {
                         />
                         <span className="slider round" />
                       </label>
+
+                      <button
+                        type="button"
+                        className="cat-btn-icon cat-btn-delete"
+                        title={t('builder.delete_cat_title')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(cat);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </li>
                 );
@@ -651,12 +710,12 @@ export default function FormBuilderPage() {
             <form onSubmit={handleAddCategory} className="builder-cat-add-form">
               <input
                 type="text"
-                placeholder="Nouvelle catégorie (ex : Santé)"
+                placeholder={t('builder.new_category_placeholder')}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
               />
               <button type="submit" className="btn btn-sm">
-                <Plus size={14} /> Ajouter
+                <Plus size={14} /> {t('builder.add')}
               </button>
             </form>
           </aside>
@@ -671,12 +730,12 @@ export default function FormBuilderPage() {
                     <h2 className="builder-active-title">
                       {selectedCategory.name}
                       <span className={`badge ${selectedCategory.is_active ? 'badge-success' : 'badge-warning'}`}>
-                        {selectedCategory.is_active ? 'Active sur le site' : 'Désactivée'}
+                        {selectedCategory.is_active ? t('builder.active_on_site') : t('builder.deactivated')}
                       </span>
                     </h2>
                     <p className="builder-active-meta">
-                      Formulaire {formType === 'quote' ? 'de demande de devis' : 'de déclaration de sinistre'} ·{' '}
-                      {fields.length} question{fields.length > 1 ? 's' : ''} au total
+                      {formType === 'quote' ? t('builder.quotes_tab') : t('builder.claims_tab')} ·{' '}
+                      {fields.length} question{fields.length > 1 ? 's' : ''}
                     </p>
                   </div>
 
@@ -689,11 +748,11 @@ export default function FormBuilderPage() {
                             checked={showInactive}
                             onChange={(e) => setShowInactive(e.target.checked)}
                           />
-                          Voir inactives ({fields.filter((f) => !f.is_active).length})
+                          {t('builder.see_inactive')} ({fields.filter((f) => !f.is_active).length})
                         </label>
 
                         <button type="button" className="btn" onClick={() => openAdd()}>
-                          <Plus size={16} /> Ajouter une question
+                          <Plus size={16} /> {t('builder.add_question')}
                         </button>
                       </>
                     )}
@@ -704,23 +763,23 @@ export default function FormBuilderPage() {
                           type="button"
                           className={`btn-device ${previewDevice === 'desktop' ? 'active' : ''}`}
                           onClick={() => setPreviewDevice('desktop')}
-                          title="Format Ordinateur"
+                          title={t('builder.device_desktop')}
                         >
-                          <Monitor size={16} /> Ordinateur
+                          <Monitor size={16} /> {t('builder.device_desktop')}
                         </button>
                         <button
                           type="button"
                           className={`btn-device ${previewDevice === 'mobile' ? 'active' : ''}`}
                           onClick={() => setPreviewDevice('mobile')}
-                          title="Format Smartphone"
+                          title={t('builder.device_mobile')}
                         >
-                          <Smartphone size={16} /> Mobile
+                          <Smartphone size={16} /> {t('builder.device_mobile')}
                         </button>
                         <button
                           type="button"
                           className="btn-refresh"
                           onClick={() => setPreviewRefreshKey((k) => k + 1)}
-                          title="Réinitialiser l'aperçu"
+                          title={t('builder.reset_preview')}
                         >
                           <RefreshCw size={15} />
                         </button>
@@ -733,7 +792,8 @@ export default function FormBuilderPage() {
                 {viewMode === 'preview' && (
                   <div className={`builder-preview-container ${previewDevice}`}>
                     <div className="builder-preview-header-note">
-                      <span>👁️ Mode interactif : testez le parcours utilisateur en temps réel.</span>
+                      <Eye size={15} />
+                      <span>{t('builder.interactive_note')}</span>
                     </div>
 
                     <div className="builder-preview-viewport">
@@ -752,13 +812,13 @@ export default function FormBuilderPage() {
                 {/* MODE ÉDITEUR : GROUPEMENT PAR SECTIONS */}
                 {viewMode === 'editor' && (
                   <div className="builder-sections-flow">
-                    {loadingFields && <p className="center">Chargement des questions…</p>}
+                    {loadingFields && <p className="center">{t('builder.loading_fields')}</p>}
 
                     {!loadingFields && sectionGroups.length === 0 && (
                       <div className="builder-empty-state">
-                        <p>Aucune question configurée pour ce formulaire.</p>
+                        <p>{t('builder.empty_form')}</p>
                         <button type="button" className="btn" onClick={() => openAdd('Informations')}>
-                          <Plus size={16} /> Créer la première question
+                          <Plus size={16} /> {t('builder.create_first_question')}
                         </button>
                       </div>
                     )}
@@ -768,7 +828,7 @@ export default function FormBuilderPage() {
                         <div key={group.name} className="builder-section-card">
                           <div className="builder-section-card-header">
                             <div className="builder-section-title-wrap">
-                              <span className="step-badge">Étape {secIdx + 1}</span>
+                              <span className="step-badge">{t('builder.step')} {secIdx + 1}</span>
                               <h3>{group.name}</h3>
                               <span className="section-count">
                                 {group.fields.length} question{group.fields.length > 1 ? 's' : ''}
@@ -779,7 +839,7 @@ export default function FormBuilderPage() {
                               <button
                                 type="button"
                                 className="btn-icon"
-                                title="Monter cette étape"
+                                title={t('builder.move_step_up')}
                                 disabled={secIdx === 0}
                                 onClick={() => moveSection(secIdx, -1)}
                               >
@@ -788,7 +848,7 @@ export default function FormBuilderPage() {
                               <button
                                 type="button"
                                 className="btn-icon"
-                                title="Descendre cette étape"
+                                title={t('builder.move_step_down')}
                                 disabled={secIdx === sectionGroups.length - 1}
                                 onClick={() => moveSection(secIdx, 1)}
                               >
@@ -799,7 +859,7 @@ export default function FormBuilderPage() {
                                 className="btn btn-sm btn-outline"
                                 onClick={() => openAdd(group.name)}
                               >
-                                <Plus size={14} /> Ajouter dans cette étape
+                                <Plus size={14} /> {t('builder.add_in_this_step')}
                               </button>
                             </div>
                           </div>
@@ -820,7 +880,7 @@ export default function FormBuilderPage() {
                                         className="btn-order"
                                         disabled={fieldIdx === 0}
                                         onClick={() => moveFieldWithinSection(group.name, fieldIdx, -1)}
-                                        title="Monter la question"
+                                        title={t('builder.move_question_up')}
                                       >
                                         <ArrowUp size={13} />
                                       </button>
@@ -829,7 +889,7 @@ export default function FormBuilderPage() {
                                         className="btn-order"
                                         disabled={fieldIdx === group.fields.length - 1}
                                         onClick={() => moveFieldWithinSection(group.name, fieldIdx, 1)}
-                                        title="Descendre la question"
+                                        title={t('builder.move_question_down')}
                                       >
                                         <ArrowDown size={13} />
                                       </button>
@@ -843,20 +903,21 @@ export default function FormBuilderPage() {
 
                                       <div className="field-badges-line">
                                         <span className={`type-tag type-${field.field_type}`}>
-                                          {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
+                                          {getFieldTypeLabel(field.field_type, lang)}
                                         </span>
 
                                         <span className={`req-tag ${field.is_required ? 'required' : 'optional'}`}>
-                                          {field.is_required ? '● Obligatoire' : '○ Facultatif'}
+                                          {field.is_required ? `● ${t('builder.required_badge')}` : `○ ${t('builder.optional_badge')}`}
                                         </span>
 
                                         {isConditional && (
-                                          <span className="cond-tag" title={`Affiché si ${field.condition?.field} = ${field.condition?.equals}`}>
-                                            ⚡ Si [{field.condition?.field}] = "{field.condition?.equals}"
+                                          <span className="cond-tag" title={`${t('builder.condition_if')} ${field.condition?.field} = ${field.condition?.equals}`}>
+                                            <Sparkles size={12} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                                            {t('builder.condition_if')} [{field.condition?.field}] = "{field.condition?.equals}"
                                           </span>
                                         )}
 
-                                        {!field.is_active && <span className="inactive-tag">Inactif</span>}
+                                        {!field.is_active && <span className="inactive-tag">{t('builder.inactive_badge')}</span>}
                                       </div>
 
                                       {field.options && field.options.length > 0 && (
@@ -875,16 +936,16 @@ export default function FormBuilderPage() {
                                         type="button"
                                         className="btn-action edit"
                                         onClick={() => openEdit(field)}
-                                        title="Modifier cette question"
+                                        title={t('builder.edit_btn')}
                                       >
-                                        <Edit3 size={15} /> Modifier
+                                        <Edit3 size={15} /> {t('builder.edit_btn')}
                                       </button>
 
                                       <button
                                         type="button"
                                         className={`btn-action toggle ${field.is_active ? 'active' : 'inactive'}`}
                                         onClick={() => toggleFieldActive(field)}
-                                        title={field.is_active ? 'Désactiver la question' : 'Réactiver la question'}
+                                        title={field.is_active ? t('builder.toggle_title_deactivate') : t('builder.toggle_title_activate')}
                                       >
                                         {field.is_active ? <Eye size={15} /> : <EyeOff size={15} />}
                                       </button>
@@ -893,7 +954,7 @@ export default function FormBuilderPage() {
                                         type="button"
                                         className="btn-action delete"
                                         onClick={() => handleDeactivate(field)}
-                                        title="Retirer cette question"
+                                        title={t('builder.remove_btn')}
                                       >
                                         <Trash2 size={15} />
                                       </button>
@@ -912,14 +973,14 @@ export default function FormBuilderPage() {
                         className="btn btn-secondary btn-new-step"
                         onClick={() => openAdd(`Étape ${sectionGroups.length + 1}`)}
                       >
-                        <Plus size={16} /> Ajouter une nouvelle étape / section
+                        <Plus size={16} /> {t('builder.add_new_step')}
                       </button>
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <p className="center">Sélectionnez une catégorie à gauche pour commencer.</p>
+              <p className="center">{t('builder.select_cat_prompt')}</p>
             )}
           </main>
         </div>
@@ -930,14 +991,14 @@ export default function FormBuilderPage() {
         <div className="builder-modal-backdrop" onClick={() => setEditingCategory(null)}>
           <div className="builder-modal" onClick={(e) => e.stopPropagation()}>
             <div className="builder-modal-header">
-              <h3>Renommer la catégorie</h3>
+              <h3>{t('builder.rename_cat_title')}</h3>
               <button type="button" className="close-btn" onClick={() => setEditingCategory(null)}>
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleUpdateCategoryName}>
               <div className="field">
-                <label htmlFor="cat-edit-name">Nom de la catégorie</label>
+                <label htmlFor="cat-edit-name">{t('builder.cat_name_label')}</label>
                 <input
                   id="cat-edit-name"
                   type="text"
@@ -948,10 +1009,10 @@ export default function FormBuilderPage() {
               </div>
               <div className="builder-modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setEditingCategory(null)}>
-                  Annuler
+                  {t('builder.btn_cancel')}
                 </button>
                 <button type="submit" className="btn">
-                  Enregistrer
+                  {t('builder.btn_save_changes')}
                 </button>
               </div>
             </form>
@@ -964,7 +1025,7 @@ export default function FormBuilderPage() {
         <div className="builder-modal-backdrop" onClick={() => setEditor(null)}>
           <div className="builder-modal builder-modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="builder-modal-header">
-              <h3>{editor.mode === 'add' ? 'Ajouter une question' : 'Modifier la question'}</h3>
+              <h3>{editor.mode === 'add' ? t('builder.modal_add_title') : t('builder.modal_edit_title')}</h3>
               <button type="button" className="close-btn" onClick={() => setEditor(null)}>
                 <X size={18} />
               </button>
@@ -974,13 +1035,13 @@ export default function FormBuilderPage() {
               {/* Libellé */}
               <div className="field">
                 <label htmlFor="f-label">
-                  Libellé de la question <span className="req">*</span>
+                  {t('builder.label_field')} <span className="req">*</span>
                 </label>
                 <input
                   id="f-label"
                   type="text"
                   required
-                  placeholder="Ex : Numéro d'immatriculation du véhicule"
+                  placeholder={t('builder.label_placeholder')}
                   value={editor.label}
                   onChange={(e) => {
                     const newLabel = e.target.value;
@@ -997,7 +1058,7 @@ export default function FormBuilderPage() {
               <div className="field">
                 <div className="field-title-flex">
                   <label htmlFor="f-name">
-                    Identifiant technique (clé en base) <span className="req">*</span>
+                    {t('builder.technical_key')} <span className="req">*</span>
                   </label>
                   {editor.mode === 'add' && (
                     <label className="choice mini-choice">
@@ -1006,7 +1067,7 @@ export default function FormBuilderPage() {
                         checked={editor.autoSlug}
                         onChange={(e) => setEditor({ ...editor, autoSlug: e.target.checked })}
                       />
-                      Générer auto
+                      {t('builder.auto_gen_slug')}
                     </label>
                   )}
                 </div>
@@ -1027,7 +1088,7 @@ export default function FormBuilderPage() {
                 />
                 {editor.mode === 'edit' && (
                   <small className="help-text">
-                    L'identifiant est verrouillé pour garantir la cohérence des dossiers déjà reçus.
+                    {t('builder.slug_locked_help')}
                   </small>
                 )}
               </div>
@@ -1035,7 +1096,7 @@ export default function FormBuilderPage() {
               {/* Type de réponse et Section */}
               <div className="grid-2-col">
                 <div className="field">
-                  <label htmlFor="f-type">Type de réponse attendu</label>
+                  <label htmlFor="f-type">{t('builder.response_type')}</label>
                   <select
                     id="f-type"
                     value={editor.field_type}
@@ -1045,19 +1106,19 @@ export default function FormBuilderPage() {
                   >
                     {Object.entries(FIELD_TYPE_DESCRIPTIONS).map(([type, desc]) => (
                       <option key={type} value={type}>
-                        {FIELD_TYPE_LABELS[type]} — {desc}
+                        {getFieldTypeLabel(type, lang)} — {desc}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="field">
-                  <label htmlFor="f-section">Section (Étape)</label>
+                  <label htmlFor="f-section">{t('builder.section_field')}</label>
                   <input
                     id="f-section"
                     type="text"
                     list="existing-sections-list"
-                    placeholder="Ex : Votre sinistre"
+                    placeholder={t('builder.section_placeholder')}
                     value={editor.section}
                     onChange={(e) => setEditor({ ...editor, section: e.target.value })}
                   />
@@ -1072,11 +1133,11 @@ export default function FormBuilderPage() {
               {/* Placeholder et Obligatoire */}
               <div className="grid-2-col">
                 <div className="field">
-                  <label htmlFor="f-placeholder">Texte d'aide (placeholder)</label>
+                  <label htmlFor="f-placeholder">{t('builder.placeholder_field')}</label>
                   <input
                     id="f-placeholder"
                     type="text"
-                    placeholder="Ex : AA-123-BB ou format attendu"
+                    placeholder={t('builder.placeholder_help')}
                     value={editor.placeholder}
                     onChange={(e) => setEditor({ ...editor, placeholder: e.target.value })}
                   />
@@ -1089,7 +1150,7 @@ export default function FormBuilderPage() {
                       checked={editor.is_required}
                       onChange={(e) => setEditor({ ...editor, is_required: e.target.checked })}
                     />
-                    <span>Cette question est obligatoire</span>
+                    <span>{t('builder.required_toggle')}</span>
                   </label>
                 </div>
               </div>
@@ -1097,11 +1158,11 @@ export default function FormBuilderPage() {
               {/* Gestionnaire d'options pour select ou multiselect */}
               {needsOptions && (
                 <div className="field-group-box">
-                  <h4>Choix disponibles pour cette question</h4>
+                  <h4>{t('builder.options_title')}</h4>
                   <div className="chip-input-wrap">
                     <input
                       type="text"
-                      placeholder="Saisissez un choix puis appuyez sur Entrée"
+                      placeholder={t('builder.options_input_placeholder')}
                       value={editor.newOptionText}
                       onChange={(e) => setEditor({ ...editor, newOptionText: e.target.value })}
                       onKeyDown={(e) => {
@@ -1112,13 +1173,13 @@ export default function FormBuilderPage() {
                       }}
                     />
                     <button type="button" className="btn btn-sm" onClick={addOptionChip}>
-                      Ajouter
+                      {t('builder.add')}
                     </button>
                   </div>
 
                   <div className="chips-container">
                     {editor.optionsList.length === 0 ? (
-                      <p className="help-text">Aucun choix pour l'instant. Ajoutez au moins une option.</p>
+                      <p className="help-text">{t('builder.options_empty_help')}</p>
                     ) : (
                       editor.optionsList.map((opt, i) => (
                         <span key={opt} className="option-chip">
@@ -1140,7 +1201,7 @@ export default function FormBuilderPage() {
               {/* Logique conditionnelle ("Si... Alors...") */}
               <div className="field-group-box">
                 <div className="field-title-flex">
-                  <h4>Règle conditionnelle (Affichage dynamique)</h4>
+                  <h4>{t('builder.condition_box_title')}</h4>
                   <label className="choice">
                     <input
                       type="checkbox"
@@ -1155,14 +1216,14 @@ export default function FormBuilderPage() {
                         })
                       }
                     />
-                    Activer une condition
+                    {t('builder.condition_toggle')}
                   </label>
                 </div>
 
                 {editor.useCondition && (
                   <div className="condition-builder-grid">
                     <div className="field">
-                      <label htmlFor="cond-trigger">Afficher cette question si</label>
+                      <label htmlFor="cond-trigger">{t('builder.condition_trigger_label')}</label>
                       <select
                         id="cond-trigger"
                         value={editor.condition_field}
@@ -1170,7 +1231,7 @@ export default function FormBuilderPage() {
                           setEditor({ ...editor, condition_field: e.target.value })
                         }
                       >
-                        <option value="">-- Choisir la question déclencheuse --</option>
+                        <option value="">{t('builder.condition_choose_trigger')}</option>
                         {fields
                           .filter((f) => f.name !== editor.name)
                           .map((f) => (
@@ -1182,7 +1243,7 @@ export default function FormBuilderPage() {
                     </div>
 
                     <div className="field">
-                      <label htmlFor="cond-val">A pour réponse exacte</label>
+                      <label htmlFor="cond-val">{t('builder.condition_expected_value')}</label>
                       {triggerFieldOptions && triggerFieldOptions.length > 0 ? (
                         <select
                           id="cond-val"
@@ -1191,7 +1252,7 @@ export default function FormBuilderPage() {
                             setEditor({ ...editor, condition_equals: e.target.value })
                           }
                         >
-                          <option value="">-- Choisir l'option --</option>
+                          <option value="">{t('builder.condition_choose_option')}</option>
                           {triggerFieldOptions.map((opt) => (
                             <option key={opt} value={opt}>
                               {opt}
@@ -1202,7 +1263,7 @@ export default function FormBuilderPage() {
                         <input
                           id="cond-val"
                           type="text"
-                          placeholder="Ex : Oui ou valeur exacte"
+                          placeholder="Ex : Oui"
                           value={editor.condition_equals}
                           onChange={(e) =>
                             setEditor({ ...editor, condition_equals: e.target.value })
@@ -1216,10 +1277,10 @@ export default function FormBuilderPage() {
 
               <div className="builder-modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setEditor(null)}>
-                  Annuler
+                  {t('builder.btn_cancel')}
                 </button>
                 <button type="submit" className="btn">
-                  {editor.mode === 'add' ? 'Créer la question' : 'Enregistrer les modifications'}
+                  {editor.mode === 'add' ? t('builder.btn_create_question') : t('builder.btn_save_changes')}
                 </button>
               </div>
             </form>
