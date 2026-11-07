@@ -222,7 +222,7 @@ class AdminSubmissionController extends Controller
     // Téléchargement du PDF de confirmation de la soumission (admin)
     public function downloadPdf(Submission $submission): Response
     {
-        $submission->loadMissing('category');
+        $submission->loadMissing(['category', 'attachments']);
 
         try {
             $pdfContent = app(SubmissionPdfService::class)->generate($submission);
@@ -234,9 +234,11 @@ class AdminSubmissionController extends Controller
         $filename = $submission->reference . '.pdf';
 
         return response($pdfContent, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Content-Length'      => strlen($pdfContent),
+            'Content-Type'           => 'application/pdf',
+            'Content-Disposition'    => 'attachment; filename="' . $filename . '"',
+            'Content-Length'         => strlen($pdfContent),
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control'          => 'private, no-cache, no-store, must-revalidate',
         ]);
     }
 }

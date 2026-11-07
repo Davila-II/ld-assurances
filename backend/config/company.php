@@ -12,4 +12,6 @@ return [
     'website'         => 'www.ldassurances.cm',
     'agencies'        => 'Douala · Yaoundé · Bafoussam',
     'badges'          => ['CIMA', 'MINFI', 'OHADA'],
+    'logo_path'       => env('COMPANY_LOGO_PATH', public_path('logo-icon.jpg')),
+    'watermark_path'  => env('COMPANY_WATERMARK_PATH', public_path('logo-watermark.jpg')),
 ];

@@ -54,7 +54,7 @@ class TrackingController extends Controller
             'email'     => ['required', 'email', 'max:255'],
         ]);
 
-        $submission = Submission::with('category')
+        $submission = Submission::with(['category', 'attachments'])
             ->where('reference', strtoupper(trim($data['reference'])))
             ->first();
 
@@ -74,9 +74,11 @@ class TrackingController extends Controller
         $filename = $submission->reference . '.pdf';
 
         return response($pdfContent, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Content-Length'      => strlen($pdfContent),
+            'Content-Type'           => 'application/pdf',
+            'Content-Disposition'    => 'attachment; filename="' . $filename . '"',
+            'Content-Length'         => strlen($pdfContent),
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control'          => 'no-store, private',
         ]);
     }
 }

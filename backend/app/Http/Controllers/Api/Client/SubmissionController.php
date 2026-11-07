@@ -48,13 +48,31 @@ class SubmissionController extends Controller
         return response()->json($page);
     }
 
-    // Téléchargement du PDF d'une soumission appartenant au client connecté
+    // Téléchargement du PDF d'une soumission appartenant au client connecté (contrôle d'accès strict)
     public function downloadPdf(Request $request, string $reference): Response
     {
-        $submission = Submission::with('category')
-            ->where('user_id', $request->user()->id)
-            ->where('reference', $reference)
-            ->firstOrFail();
+        $submission = Submission::with(['category', 'attachments'])
+            ->where('reference', strtoupper(trim($reference)))
+            ->first();
+
+        if (! $submission) {
+            abort(404, 'Dossier introuvable.');
+        }
+
+        $user = $request->user();
+        $userEmail = Str::lower(trim($user->email));
+        $subEmail  = Str::lower(trim($submission->email));
+
+        // Contrôle d'accès : le dossier doit appartenir au compte connecté
+        if ((int) $submission->user_id === (int) $user->id) {
+            // Accès autorisé : propriétaire direct
+        } elseif (empty($submission->user_id) && $subEmail === $userEmail) {
+            // Soumission initiale non rattachée : attribution automatique au compte vérifié
+            $submission->update(['user_id' => $user->id]);
+        } else {
+            // Tentative d'accès au document d'un autre client
+            abort(403, 'Accès refusé. Vous n\'êtes pas autorisé à consulter ce document.');
+        }
 
         try {
             $pdfContent = app(SubmissionPdfService::class)->generate($submission);
@@ -65,9 +83,11 @@ class SubmissionController extends Controller
         $filename = $submission->reference . '.pdf';
 
         return response($pdfContent, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Content-Length'      => strlen($pdfContent),
+            'Content-Type'           => 'application/pdf',
+            'Content-Disposition'    => 'attachment; filename="' . $filename . '"',
+            'Content-Length'         => strlen($pdfContent),
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control'          => 'private, no-cache, no-store, must-revalidate',
         ]);
     }
 }

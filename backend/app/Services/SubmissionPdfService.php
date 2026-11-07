@@ -13,7 +13,7 @@ class SubmissionPdfService
      */
     public function generate(Submission $submission): string
     {
-        $submission->loadMissing('category');
+        $submission->loadMissing(['category', 'attachments']);
 
         $data = $this->prepareViewData($submission);
 
@@ -34,6 +34,8 @@ class SubmissionPdfService
      */
     public function prepareViewData(Submission $submission): array
     {
+        $submission->loadMissing(['category', 'attachments']);
+
         $company = config('company', [
             'name'            => 'LD ASSURANCES SA',
             'tagline'         => 'Assurément Proche de Vous',
@@ -47,17 +49,25 @@ class SubmissionPdfService
             'agencies'        => 'Douala · Yaoundé · Bafoussam',
         ]);
 
-        // Logos & Filigrane
-        $logoPath        = public_path('logo-icon.jpg');
-        $watermarkPath   = public_path('logo-watermark.jpg');
+        // Logos & Filigrane avec cascade de fallbacks garantissant la disponibilité des assets
+        $logoBase64 = $this->resolveImageBase64([
+            config('company.logo_path'),
+            public_path('logo-icon.jpg'),
+            resource_path('images/logo-icon.jpg'),
+            public_path('logo-icon.png'),
+            resource_path('images/logo-icon.png'),
+            base_path('../frontend/dist/logo-icon.jpg'),
+            base_path('../frontend/dist/logo-icon.png'),
+            base_path('../frontend/public/logo-icon.png'),
+        ]);
 
-        $logoBase64      = file_exists($logoPath)
-            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
-            : '';
-
-        $watermarkBase64 = file_exists($watermarkPath)
-            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($watermarkPath))
-            : $logoBase64;
+        $watermarkBase64 = $this->resolveImageBase64([
+            config('company.watermark_path'),
+            public_path('logo-watermark.jpg'),
+            resource_path('images/logo-watermark.jpg'),
+            public_path('logo-icon.jpg'),
+            resource_path('images/logo-icon.jpg'),
+        ]) ?: $logoBase64;
 
         // Informations client
         $answers = $submission->answers ?? [];
@@ -93,6 +103,9 @@ class SubmissionPdfService
         // Organisation & formatage fiable des données du formulaire
         $sections = $this->buildSections($submission);
 
+        // Liste des pièces jointes transmises
+        $attachments = $this->buildAttachmentsList($submission);
+
         return [
             'submission'      => $submission,
             'company'         => $company,
@@ -106,9 +119,86 @@ class SubmissionPdfService
             'dateOnly'        => $dateOnly,
             'statusInfo'      => $statusInfo,
             'sections'        => $sections,
+            'attachments'     => $attachments,
             'logoBase64'      => $logoBase64,
             'watermarkBase64' => $watermarkBase64,
         ];
+    }
+
+    /**
+     * Résout l'image en base64 à partir d'une liste ordonnée de chemins candidats.
+     */
+    private function resolveImageBase64(array $candidatePaths): string
+    {
+        foreach ($candidatePaths as $path) {
+            if ($path && is_string($path) && file_exists($path) && is_readable($path)) {
+                $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                $mime = in_array($ext, ['png']) ? 'image/png' : 'image/jpeg';
+                $content = file_get_contents($path);
+                if ($content !== false && strlen($content) > 0) {
+                    return 'data:' . $mime . ';base64,' . base64_encode($content);
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Structure la liste des pièces jointes avec métadonnées professionnelles.
+     */
+    private function buildAttachmentsList(Submission $submission): array
+    {
+        $rawAttachments = $submission->relationLoaded('attachments')
+            ? $submission->attachments
+            : $submission->attachments()->get();
+
+        if ($rawAttachments->isEmpty()) {
+            return [];
+        }
+
+        return $rawAttachments->map(function ($att) {
+            $bytes = (int) ($att->size ?? 0);
+            $sizeFormatted = $bytes >= 1048576
+                ? number_format($bytes / 1048576, 2, ',', ' ') . ' Mo'
+                : number_format(max(1, round($bytes / 1024, 1)), 1, ',', ' ') . ' Ko';
+
+            $mime = strtolower((string) ($att->mime_type ?? ''));
+            $name = $att->original_name ?? 'Pièce justificative';
+            $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+            $badge = 'DOC';
+            $badgeColor = '#334155';
+            $badgeBg = '#f1f5f9';
+            $badgeBorder = '#cbd5e1';
+            $typeLabel = 'Document joint';
+
+            if (str_contains($mime, 'pdf') || $ext === 'pdf') {
+                $badge = 'PDF';
+                $badgeColor = '#b91c1c';
+                $badgeBg = '#fee2e2';
+                $badgeBorder = '#fca5a5';
+                $typeLabel = 'Document PDF';
+            } elseif (str_contains($mime, 'image') || in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                $badge = 'IMAGE';
+                $badgeColor = '#0369a1';
+                $badgeBg = '#e0f2fe';
+                $badgeBorder = '#bae6fd';
+                $typeLabel = 'Fichier image (' . strtoupper($ext ?: 'JPG') . ')';
+            }
+
+            return [
+                'id'             => $att->id,
+                'name'           => $name,
+                'size'           => $bytes,
+                'size_formatted' => $sizeFormatted,
+                'badge'          => $badge,
+                'badge_color'    => $badgeColor,
+                'badge_bg'       => $badgeBg,
+                'badge_border'   => $badgeBorder,
+                'type_label'     => $typeLabel,
+            ];
+        })->values()->all();
     }
 
     /**

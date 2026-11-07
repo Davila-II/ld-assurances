@@ -388,4 +388,180 @@ class SubmissionPdfTest extends TestCase
         $data3 = $service->prepareViewData($sub3);
         $this->assertSame('Devis disponible', $data3['statusInfo']['label']);
     }
+
+    /**
+     * Test de sécurité : Accès non authentifié à l'espace client refusé (401).
+     */
+    public function test_unauthenticated_client_cannot_download_pdf(): void
+    {
+        $submission = $this->createDummySubmission();
+
+        $res = $this->getJson("/api/client/submissions/{$submission->reference}/pdf");
+
+        $res->assertStatus(401);
+    }
+
+    /**
+     * Test de sécurité : Client avec email non vérifié refusé (403).
+     */
+    public function test_unverified_client_cannot_download_pdf(): void
+    {
+        $unverifiedClient = User::factory()->create([
+            'email'             => 'unverified@example.com',
+            'role'              => 'client',
+            'email_verified_at' => null,
+        ]);
+        $submission = $this->createDummySubmission('claim', $unverifiedClient->id);
+
+        Sanctum::actingAs($unverifiedClient, ['client']);
+
+        $res = $this->getJson("/api/client/submissions/{$submission->reference}/pdf");
+
+        $res->assertStatus(403);
+    }
+
+    /**
+     * Test de sécurité critique : Un client A ne peut JAMAIS télécharger le PDF d'un client B (403).
+     */
+    public function test_client_cannot_download_another_clients_pdf(): void
+    {
+        $clientA = User::factory()->create(['email' => 'clientA@example.com', 'role' => 'client', 'email_verified_at' => now()]);
+        $clientB = User::factory()->create(['email' => 'clientB@example.com', 'role' => 'client', 'email_verified_at' => now()]);
+
+        // Soumission appartenant à B
+        $submissionB = $this->createDummySubmission('quote', $clientB->id);
+
+        // Client A tente de télécharger le PDF de B
+        Sanctum::actingAs($clientA, ['client']);
+
+        $res = $this->getJson("/api/client/submissions/{$submissionB->reference}/pdf");
+
+        $res->assertStatus(403);
+    }
+
+    /**
+     * Test de sécurité : Un utilisateur client ne peut pas accéder à l'endpoint admin (403).
+     */
+    public function test_regular_client_cannot_download_via_admin_endpoint(): void
+    {
+        $client = User::factory()->create(['email' => 'client@example.com', 'role' => 'client', 'email_verified_at' => now()]);
+        $submission = $this->createDummySubmission('quote');
+
+        Sanctum::actingAs($client, ['client']);
+
+        $res = $this->getJson("/api/admin/submissions/{$submission->id}/pdf");
+
+        $res->assertStatus(403);
+    }
+
+    /**
+     * Test de sécurité : Le suivi public refuse l'accès si l'email ne correspond pas (404 opaque).
+     */
+    public function test_public_track_pdf_fails_with_wrong_email(): void
+    {
+        $submission = $this->createDummySubmission('claim');
+
+        $res = $this->postJson('/api/track/pdf', [
+            'reference' => $submission->reference,
+            'email'     => 'wrong.email@example.com',
+        ]);
+
+        $res->assertStatus(404);
+    }
+
+    /**
+     * Test métier : Rattachement automatique d'une soumission orpheline avec le même email vérifié.
+     */
+    public function test_client_can_claim_orphan_submission_matching_verified_email(): void
+    {
+        $client = User::factory()->create(['email' => 'orphan@example.com', 'role' => 'client', 'email_verified_at' => now()]);
+
+        // Soumission orpheline créée sans user_id mais avec l'email du client
+        $cat = Category::create([
+            'name'       => 'Habitation',
+            'slug'       => 'hab-' . uniqid(),
+            'form_type'  => 'quote',
+            'is_active'  => true,
+            'sort_order' => 1,
+        ]);
+        $submission = Submission::create([
+            'category_id' => $cat->id,
+            'user_id'     => null,
+            'form_type'   => 'quote',
+            'email'       => 'orphan@example.com',
+            'status'      => 'received',
+            'answers'     => ['full_name' => 'Jean Dupont'],
+        ]);
+
+        Sanctum::actingAs($client, ['client']);
+
+        $res = $this->get("/api/client/submissions/{$submission->reference}/pdf");
+
+        $res->assertOk();
+        $this->assertSame('application/pdf', $res->headers->get('Content-Type'));
+        $this->assertEquals($client->id, $submission->fresh()->user_id);
+    }
+
+    /**
+     * Test Pièces jointes : Affichage professionnel des pièces jointes (PDF + Image) dans les données du PDF.
+     */
+    public function test_pdf_handles_multiple_attachments_with_badges_and_sizes(): void
+    {
+        $submission = $this->createDummySubmission('claim');
+
+        // Créer deux pièces jointes réelles dans la base
+        $submission->attachments()->create([
+            'original_name' => 'permis_conduire.pdf',
+            'path'          => 'submissions/' . $submission->reference . '/permis.pdf',
+            'mime_type'     => 'application/pdf',
+            'size'          => 204800, // 200 Ko
+        ]);
+
+        $submission->attachments()->create([
+            'original_name' => 'constat_photo.jpeg',
+            'path'          => 'submissions/' . $submission->reference . '/constat.jpeg',
+            'mime_type'     => 'image/jpeg',
+            'size'          => 1572864, // 1.5 Mo
+        ]);
+
+        $service = app(SubmissionPdfService::class);
+        $data = $service->prepareViewData($submission);
+
+        $this->assertArrayHasKey('attachments', $data);
+        $this->assertCount(2, $data['attachments']);
+
+        $att1 = $data['attachments'][0];
+        $this->assertSame('permis_conduire.pdf', $att1['name']);
+        $this->assertSame('PDF', $att1['badge']);
+        $this->assertSame('Document PDF', $att1['type_label']);
+        $this->assertSame('200,0 Ko', $att1['size_formatted']);
+
+        $att2 = $data['attachments'][1];
+        $this->assertSame('constat_photo.jpeg', $att2['name']);
+        $this->assertSame('IMAGE', $att2['badge']);
+        $this->assertSame('1,50 Mo', $att2['size_formatted']);
+
+        // Vérifier que la génération binaire inclut les pièces jointes sans erreur
+        $binary = $service->generate($submission);
+        $this->assertNotEmpty($binary);
+        $this->assertStringStartsWith('%PDF-', $binary);
+    }
+
+    /**
+     * Test Assets : Le service résout correctement les logos et filigranes en base64.
+     */
+    public function test_pdf_service_resolves_logo_and_watermark_assets(): void
+    {
+        $submission = $this->createDummySubmission('quote');
+        $service = app(SubmissionPdfService::class);
+        $data = $service->prepareViewData($submission);
+
+        $this->assertArrayHasKey('logoBase64', $data);
+        $this->assertArrayHasKey('watermarkBase64', $data);
+
+        // Si le fichier public/logo-icon.jpg existe, il doit être en base64 valide
+        if (file_exists(public_path('logo-icon.jpg'))) {
+            $this->assertStringStartsWith('data:image/', $data['logoBase64']);
+        }
+    }
 }

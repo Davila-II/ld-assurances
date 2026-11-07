@@ -41,6 +41,11 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Documentation du Récépissé PDF
+
+Pour les spécifications, l'architecture, le contrôle d'accès et la suite de tests du générateur de récépissés PDF officiels de **LD ASSURANCES SA**, consultez la documentation complète :
+- [Documentation Technique du Récépissé PDF](../docs/RECEIPISSE_PDF.md)
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

@@ -390,24 +390,57 @@
   /* ─── BLOC PIÈCES JOINTES TÉLÉVERSÉES ───────────────────────────── */
   .attachment-card {
     background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    border: 1px solid #cbd5e1;
+    border-top: 2px solid #0c2340;
     border-radius: 4px;
-    padding: 5px 8px;
-    margin-top: 8px;
+    padding: 7px 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    page-break-inside: avoid;
   }
 
   .attachment-title {
-    font-size: 7pt;
+    font-size: 7.5pt;
     font-weight: bold;
     color: #0c2340;
     text-transform: uppercase;
-    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
   }
 
-  .attachment-item {
+  .attachment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+  }
+
+  .attachment-table th {
+    background: #0c2340;
+    color: #ffffff;
+    font-size: 6.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    text-align: left;
+    letter-spacing: 0.4px;
+  }
+
+  .attachment-table td {
+    padding: 4px 6px;
     font-size: 7pt;
+    border-bottom: 1px solid #e2e8f0;
     color: #334155;
-    padding: 1px 0;
+    vertical-align: middle;
+  }
+
+  .attachment-badge {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 6pt;
+    font-weight: bold;
+    margin-right: 4px;
+    text-transform: uppercase;
   }
 
   /* ─── ATTESTATION DE RÉCEPTION TECHNIQUE ─────────────────────────── */
@@ -717,14 +750,48 @@
 @endforeach
 
 {{-- ── PIÈCES JOINTES TÉLÉVERSÉES ─────────────────────────────────── --}}
-@if($submission->relationLoaded('attachments') && $submission->attachments->isNotEmpty())
+@php
+  $displayAttachments = $attachments ?? [];
+  if (empty($displayAttachments) && $submission->relationLoaded('attachments') && $submission->attachments->isNotEmpty()) {
+      $displayAttachments = $submission->attachments->map(fn($a) => [
+          'name' => $a->original_name,
+          'size_formatted' => number_format($a->size / 1024, 1, ',', ' ') . ' Ko',
+          'badge' => 'DOC',
+          'badge_color' => '#334155',
+          'badge_bg' => '#f1f5f9',
+          'badge_border' => '#cbd5e1',
+          'type_label' => 'Document joint',
+      ])->all();
+  }
+@endphp
+@if(!empty($displayAttachments))
   <div class="attachment-card">
-    <div class="attachment-title">Pièces Justificatives Transmises ({{ $submission->attachments->count() }})</div>
-    @foreach($submission->attachments as $att)
-      <div class="attachment-item">
-        📎 <strong>{{ $att->original_name }}</strong> ({{ number_format($att->size / 1024, 1, ',', ' ') }} Ko)
-      </div>
-    @endforeach
+    <div class="attachment-title">Pièces Justificatives Transmises ({{ count($displayAttachments) }})</div>
+    <table class="attachment-table">
+      <thead>
+        <tr>
+          <th style="width: 45%;">Nom du document</th>
+          <th style="width: 25%;">Nature</th>
+          <th style="width: 15%;">Taille</th>
+          <th style="width: 15%; text-align: right;">Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach($displayAttachments as $att)
+          <tr>
+            <td>
+              <span class="attachment-badge" style="color: {{ $att['badge_color'] }}; background: {{ $att['badge_bg'] }}; border: 1px solid {{ $att['badge_border'] }};">
+                {{ $att['badge'] }}
+              </span>
+              <strong>{{ $att['name'] }}</strong>
+            </td>
+            <td>{{ $att['type_label'] }}</td>
+            <td>{{ $att['size_formatted'] }}</td>
+            <td style="text-align: right; color: #15803d; font-weight: bold;">✓ Réceptionné</td>
+          </tr>
+        @endforeach
+      </tbody>
+    </table>
   </div>
 @endif
 

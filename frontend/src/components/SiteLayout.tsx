@@ -3,6 +3,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { LogIn, Mail, MapPin, Menu, Phone, PhoneCall, User as UserIcon, X } from 'lucide-react';
 import { getClientToken } from '../clientAuth';
 import { getToken } from '../auth';
+import AssistantWidget from './AssistantWidget';
 import {
   FOOTER_LEGAL_LINKS,
   FOOTER_LINKS,
@@ -297,6 +298,9 @@ export default function SiteLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Widget assistant flottant */}
+      <AssistantWidget />
     </div>
   );
 }
