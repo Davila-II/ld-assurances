@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>{{ $typeLabel }} — {{ $submission->reference }}</title>
 <style>
-  /* ─── RESET & FORMAT PAGE A4 ────────────────────────────────────── */
+  /* ─── FORMAT PAGE A4 & MARGES ───────────────────────────────────── */
   @page {
     margin: 10mm 12mm 14mm 12mm;
   }
@@ -17,13 +17,13 @@
 
   body {
     font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #1e293b;
     line-height: 1.45;
     background: #ffffff;
   }
 
-  /* ─── FILIGRANE EN ARRIÈRE-PLAN ─────────────────────────────────── */
+  /* ─── FILIGRANE DISCRET EN FOND DE PAGE ─────────────────────────── */
   .watermark {
     position: fixed;
     top: 25%;
@@ -33,26 +33,26 @@
     z-index: -1000;
   }
 
-  /* ─── BARRE SUPÉRIEURE DÉCORATIVE INSTITUTIONNELLE ──────────────── */
+  /* ─── BANDE SUPÉRIEURE CORPORATE ────────────────────────────────── */
   .top-strip {
     width: 100%;
     height: 4px;
     background: #0c2340;
     border-bottom: 2px solid #c59b27;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
-  /* ─── EN-TÊTE : DEUX COLONNES PARFAITEMENT ÉQUILIBRÉES ───────────── */
+  /* ─── EN-TÊTE : DEUX COLONNES (ENTREPRISE / CLIENT) ─────────────── */
   .header-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .header-left {
     width: 58%;
     vertical-align: top;
-    padding-right: 14px;
+    padding-right: 12px;
   }
 
   .header-right {
@@ -60,20 +60,20 @@
     vertical-align: top;
   }
 
-  /* Bloc Entreprise (Gauche) */
+  /* Marque & Coordonnées de l'assureur */
   .brand-table {
     border-collapse: collapse;
     width: 100%;
   }
 
   .brand-logo-cell {
-    width: 62px;
+    width: 60px;
     vertical-align: top;
     padding-right: 10px;
   }
 
   .brand-logo-cell img {
-    width: 58px;
+    width: 55px;
     height: auto;
     display: block;
   }
@@ -100,9 +100,9 @@
   }
 
   .company-details {
-    font-size: 7.5pt;
+    font-size: 7pt;
     color: #475569;
-    line-height: 1.4;
+    line-height: 1.35;
   }
 
   .company-details strong {
@@ -111,7 +111,7 @@
 
   .company-tags {
     margin-top: 4px;
-    font-size: 7pt;
+    font-size: 6.5pt;
     color: #0c2340;
     font-weight: bold;
   }
@@ -122,17 +122,17 @@
     color: #0c2340;
     padding: 1px 5px;
     border-radius: 3px;
-    margin-right: 4px;
+    margin-right: 3px;
     font-size: 6.5pt;
   }
 
-  /* Bloc Client (Droite) */
+  /* Fiche Demandeur / Souscripteur */
   .client-card {
     background: #f8fafc;
     border: 1px solid #cbd5e1;
     border-top: 3px solid #0c2340;
     border-radius: 4px;
-    padding: 8px 10px;
+    padding: 7px 9px;
   }
 
   .client-card-title {
@@ -141,9 +141,9 @@
     color: #0c2340;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    padding-bottom: 4px;
+    padding-bottom: 3px;
     border-bottom: 1px dashed #cbd5e1;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .client-info-table {
@@ -153,7 +153,7 @@
   }
 
   .client-info-table td {
-    padding: 1.5px 0;
+    padding: 1px 0;
     vertical-align: top;
   }
 
@@ -171,17 +171,17 @@
 
   .client-val strong {
     color: #0c2340;
-    font-size: 8.5pt;
+    font-size: 8pt;
   }
 
-  /* ─── BANDEAU PRINCIPAL DU DOSSIER (HERO) ────────────────────────── */
+  /* ─── BANDEAU HERO : DOSSIER & STATUT ───────────────────────────── */
   .ref-banner {
     background: #0c2340;
     color: #ffffff;
     border-left: 5px solid #c59b27;
     border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 14px;
+    padding: 7px 10px;
+    margin-bottom: 10px;
   }
 
   .ref-banner-table {
@@ -191,32 +191,34 @@
 
   .ref-banner-left {
     vertical-align: middle;
+    width: 60%;
   }
 
   .ref-doc-kind {
     font-size: 7pt;
     font-weight: bold;
     color: #f1c40f;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
     margin-bottom: 1px;
   }
 
   .ref-doc-num {
-    font-size: 13pt;
+    font-size: 12pt;
     font-weight: bold;
     color: #ffffff;
-    letter-spacing: 1.2px;
+    letter-spacing: 1px;
     font-family: 'Courier New', Courier, monospace;
   }
 
   .ref-banner-right {
     vertical-align: middle;
     text-align: right;
+    width: 40%;
   }
 
   .ref-meta-label {
-    font-size: 7pt;
+    font-size: 6.5pt;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -226,40 +228,37 @@
     font-size: 8.5pt;
     font-weight: bold;
     color: #ffffff;
+    margin-bottom: 2px;
   }
 
-  .ref-badge {
+  .status-badge {
     display: inline-block;
-    background: #10b981;
-    color: #ffffff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 7.5pt;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 7pt;
     font-weight: bold;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
+  }
+
+  .status-desc-text {
+    font-size: 6.5pt;
+    color: #cbd5e1;
     margin-top: 2px;
+    line-height: 1.25;
   }
 
-  .ref-badge.claim {
-    background: #e11d48;
-  }
-
-  .ref-badge.quote {
-    background: #2563eb;
-  }
-
-  /* ─── SECTIONS DU FORMULAIRE ─────────────────────────────────────── */
+  /* ─── RUBRIQUES DU FORMULAIRE ───────────────────────────────────── */
   .section-block {
-    margin-bottom: 12px;
+    margin-bottom: 9px;
     page-break-inside: avoid;
   }
 
   .section-header {
     background: #f1f5f9;
     border-left: 3px solid #0c2340;
-    padding: 4px 8px;
-    margin-bottom: 6px;
+    padding: 3px 7px;
+    margin-bottom: 4px;
   }
 
   .section-header table {
@@ -268,26 +267,26 @@
   }
 
   .section-title-text {
-    font-size: 8.5pt;
+    font-size: 8pt;
     font-weight: bold;
     color: #0c2340;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.5px;
   }
 
   .section-badge {
     text-align: right;
-    font-size: 7pt;
+    font-size: 6.5pt;
     font-weight: bold;
     color: #64748b;
   }
 
-  /* Grille des réponses */
+  /* Tableau des champs */
   .fields-table {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid #e2e8f0;
-    font-size: 8pt;
+    font-size: 7.5pt;
   }
 
   .fields-table tr:nth-child(even) {
@@ -299,13 +298,13 @@
   }
 
   .fields-table td {
-    padding: 5px 8px;
+    padding: 4px 7px;
     vertical-align: top;
     border-bottom: 1px solid #e2e8f0;
   }
 
   .field-label {
-    width: 40%;
+    width: 38%;
     color: #475569;
     font-weight: bold;
     border-right: 1px solid #e2e8f0;
@@ -313,26 +312,42 @@
 
   .field-label-bullet {
     color: #c59b27;
-    font-size: 8pt;
+    font-size: 7pt;
     margin-right: 3px;
   }
 
   .field-value {
-    width: 60%;
+    width: 62%;
     color: #0f172a;
     font-weight: 500;
   }
 
+  .field-value strong {
+    color: #0c2340;
+  }
+
+  .field-value-currency {
+    color: #0c2340;
+    font-weight: bold;
+    font-size: 8pt;
+  }
+
+  .field-value-number {
+    color: #0c2340;
+    font-weight: bold;
+  }
+
   .field-value.longtext {
     white-space: pre-wrap;
+    word-wrap: break-word;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 3px;
-    padding: 4px 6px;
+    padding: 3px 6px;
     margin-top: 2px;
     color: #1e293b;
-    font-size: 7.5pt;
-    line-height: 1.4;
+    font-size: 7pt;
+    line-height: 1.35;
   }
 
   .field-value.empty {
@@ -344,7 +359,7 @@
     display: inline-block;
     padding: 1px 6px;
     border-radius: 3px;
-    font-size: 7pt;
+    font-size: 6.5pt;
     font-weight: bold;
   }
 
@@ -365,108 +380,135 @@
     background: #e0f2fe;
     color: #0369a1;
     border: 1px solid #bae6fd;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border-radius: 3px;
-    font-size: 7pt;
+    font-size: 6.5pt;
     margin-right: 3px;
     margin-bottom: 2px;
   }
 
-  /* ─── BLOC PIÈCES JOINTES ────────────────────────────────────────── */
+  /* ─── BLOC PIÈCES JOINTES TÉLÉVERSÉES ───────────────────────────── */
   .attachment-card {
     background: #f8fafc;
     border: 1px dashed #cbd5e1;
     border-radius: 4px;
-    padding: 6px 10px;
-    margin-top: 10px;
+    padding: 5px 8px;
+    margin-top: 8px;
   }
 
   .attachment-title {
-    font-size: 7.5pt;
+    font-size: 7pt;
     font-weight: bold;
     color: #0c2340;
     text-transform: uppercase;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
   }
 
   .attachment-item {
-    font-size: 7.5pt;
+    font-size: 7pt;
     color: #334155;
     padding: 1px 0;
   }
 
-  /* ─── BLOC ATTESTATION & SIGNATURES ──────────────────────────────── */
+  /* ─── ATTESTATION DE RÉCEPTION TECHNIQUE ─────────────────────────── */
   .security-box {
-    background: #fffdf5;
-    border: 1px solid #fde68a;
-    border-left: 3px solid #c59b27;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 3px solid #0c2340;
     border-radius: 4px;
     padding: 6px 9px;
-    margin-top: 12px;
-    margin-bottom: 12px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     page-break-inside: avoid;
   }
 
   .security-box-title {
     font-size: 7.5pt;
     font-weight: bold;
-    color: #92400e;
+    color: #0c2340;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
 
   .security-box-text {
-    font-size: 7pt;
-    color: #78350f;
+    font-size: 6.5pt;
+    color: #334155;
     line-height: 1.35;
   }
 
-  .signatures-table {
+  .security-box-warning {
+    font-size: 6pt;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 3px;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 3px;
+  }
+
+  /* ─── BLOC D'AUTHENTIFICATION EN 3 VOLETS ────────────────────────── */
+  .auth-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin-top: 8px;
+    margin-bottom: 8px;
     page-break-inside: avoid;
   }
 
-  .signature-card {
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    background: #ffffff;
-    padding: 8px 10px;
-    height: 75px;
+  .auth-cell {
+    width: 33.33%;
     vertical-align: top;
+    padding: 0 3px;
   }
 
-  .signature-card-title {
-    font-size: 7.5pt;
+  .auth-cell:first-child {
+    padding-left: 0;
+  }
+
+  .auth-cell:last-child {
+    padding-right: 0;
+  }
+
+  .auth-card {
+    border: 1px solid #cbd5e1;
+    border-top: 2px solid #0c2340;
+    border-radius: 3px;
+    background: #ffffff;
+    padding: 6px 7px;
+    min-height: 58px;
+  }
+
+  .auth-card-title {
+    font-size: 6.5pt;
     font-weight: bold;
     color: #0c2340;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 3px;
-    margin-bottom: 4px;
+    padding-bottom: 2px;
+    margin-bottom: 3px;
   }
 
-  .signature-note {
-    font-size: 6.5pt;
-    color: #64748b;
-    font-style: italic;
+  .auth-card-body {
+    font-size: 6pt;
+    color: #475569;
+    line-height: 1.3;
   }
 
-  .electronic-stamp {
-    display: inline-block;
-    border: 1.5px solid #0c2340;
-    border-radius: 4px;
-    padding: 3px 6px;
+  .auth-card-body strong {
     color: #0c2340;
-    font-size: 6.5pt;
+  }
+
+  .auth-system-badge {
+    display: inline-block;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 1px 4px;
+    font-size: 5.5pt;
     font-weight: bold;
-    text-align: center;
-    margin-top: 6px;
-    letter-spacing: 0.5px;
+    color: #0c2340;
+    margin-top: 3px;
     text-transform: uppercase;
   }
 
@@ -476,10 +518,10 @@
     bottom: -8mm;
     left: 0;
     right: 0;
-    height: 10mm;
+    height: 9mm;
     border-top: 1px solid #cbd5e1;
-    padding-top: 4px;
-    font-size: 6.5pt;
+    padding-top: 3px;
+    font-size: 6pt;
     color: #64748b;
   }
 
@@ -490,13 +532,13 @@
 
   .footer-left {
     text-align: left;
-    width: 70%;
-    line-height: 1.3;
+    width: 72%;
+    line-height: 1.25;
   }
 
   .footer-right {
     text-align: right;
-    width: 30%;
+    width: 28%;
     vertical-align: middle;
     font-weight: bold;
     color: #0c2340;
@@ -515,8 +557,8 @@
   <table class="footer-table">
     <tr>
       <td class="footer-left">
-        <strong>LD ASSURANCES SA</strong> — Société Anonyme au capital de 5 000 000 000 FCFA entièrement libéré | Agrément N° 0000815/MINFI du 15 NOV 2024<br>
-        Code CIMA · Acte Uniforme OHADA · Siège : Carrefour Arno, Douala | Tél urgence 24/7 : (+237) 640 65 67 93 | contact@ldassurances.cm
+        <strong>{{ $company['name'] }}</strong> — {{ $company['legal'] }}<br>
+        Siège : {{ $company['address'] }} | Tél urgence 24/7 : {{ $company['emergency_phone'] }} | Email : {{ $company['email'] }}
       </td>
       <td class="footer-right">
         RÉCÉPISSÉ OFFICIEL<br>
@@ -529,7 +571,7 @@
 {{-- ── BANDE DÉCORATIVE SUPÉRIEURE ─────────────────────────────────── --}}
 <div class="top-strip"></div>
 
-{{-- ── EN-TÊTE DEUX COLONNES : ENTREPRISE & CLIENT ──────────────────── --}}
+{{-- ── EN-TÊTE : DEUX COLONNES (ENTREPRISE / CLIENT) ────────────────── --}}
 <table class="header-table">
   <tr>
     {{-- GAUCHE : IDENTITÉ DE LA COMPAGNIE --}}
@@ -542,13 +584,13 @@
             </td>
           @endif
           <td class="brand-text-cell">
-            <div class="company-title">LD ASSURANCES SA</div>
-            <div class="company-subtitle">Assurément Proche de Vous</div>
+            <div class="company-title">{{ $company['name'] }}</div>
+            <div class="company-subtitle">{{ $company['tagline'] }}</div>
             <div class="company-details">
-              <strong>Siège social :</strong> Carrefour Arno, Akwa — B.P. 2854 Douala, Cameroun<br>
-              <strong>Téléphones :</strong> (+237) 640 65 67 93 · (+237) 233 43 99 24 · (+237) 233 42 51 82<br>
-              <strong>Email :</strong> contact@ldassurances.cm · <strong>Portail :</strong> www.ldassurances.cm<br>
-              <strong>Réseau :</strong> Direction Générale Douala · Agences Yaoundé · Bafoussam
+              <strong>Siège social :</strong> {{ $company['address'] }} — {{ $company['postal_box'] }}<br>
+              <strong>Téléphones :</strong> {{ implode(' · ', $company['phones']) }}<br>
+              <strong>Email :</strong> {{ $company['email'] }} · <strong>Site :</strong> {{ $company['website'] }}<br>
+              <strong>Agences :</strong> {{ $company['agencies'] }}
             </div>
             <div class="company-tags">
               <span class="tag-pill">CODE CIMA</span>
@@ -565,11 +607,6 @@
     <td class="header-right">
       <div class="client-card">
         <div class="client-card-title">Dossier Souscripteur / Assuré</div>
-        @php
-          $clientName  = $submission->answers['full_name'] ?? $submission->answers['nom_complet'] ?? $submission->answers['nom'] ?? null;
-          $clientPhone = $submission->answers['phone']     ?? $submission->answers['telephone']   ?? null;
-          $clientCity  = $submission->answers['city']      ?? $submission->answers['ville']        ?? null;
-        @endphp
         <table class="client-info-table">
           <tr>
             <td class="client-label">Nom :</td>
@@ -594,9 +631,9 @@
           </tr>
           @endif
           <tr>
-            <td class="client-label">Dépôt :</td>
+            <td class="client-label">Enregistré le :</td>
             <td class="client-val">
-              {{ $submission->created_at ? $submission->created_at->format('d/m/Y à H:i') : now()->format('d/m/Y à H:i') }}
+              {{ $dateFormatted }}
             </td>
           </tr>
         </table>
@@ -605,145 +642,84 @@
   </tr>
 </table>
 
-{{-- ── BANDEAU HERO : RÉFÉRENCE & STATUT DU DOSSIER ─────────────────── --}}
+{{-- ── BANDEAU HERO : DOSSIER & STATUT DU TRAITEMENT ───────────────── --}}
 <div class="ref-banner">
   <table class="ref-banner-table">
     <tr>
       <td class="ref-banner-left">
-        <div class="ref-doc-kind">
-          @if($submission->form_type === 'claim')
-            Récépissé Officiel de Déclaration de Sinistre
-          @else
-            Récépissé Officiel de Demande de Devis d’Assurance
-          @endif
-        </div>
+        <div class="ref-doc-kind">{{ $docSubTitle }}</div>
         <div class="ref-doc-num">{{ $submission->reference }}</div>
       </td>
       <td class="ref-banner-right">
         <div class="ref-meta-label">Branche / Produit</div>
         <div class="ref-meta-val">{{ $submission->category?->name ?? 'Général' }}</div>
         <div>
-          <span class="ref-badge {{ $submission->form_type }}">
-            ● {{ $submission->statusLabel() }}
+          <span class="status-badge" style="background: {{ $statusInfo['bg'] }}; color: {{ $statusInfo['color'] }}; border: 1px solid {{ $statusInfo['border'] }};">
+            ● {{ $statusInfo['label'] }}
           </span>
         </div>
+        <div class="status-desc-text">{{ $statusInfo['description'] }}</div>
       </td>
     </tr>
   </table>
 </div>
 
-{{-- ── CONTENU : DONNÉES DU FORMULAIRE ORGANISÉES PAR RUBRIQUES ─────── --}}
-@php
-  $sections = [];
-  $snapshot = collect($submission->form_snapshot ?? []);
-  $answers  = $submission->answers ?? [];
-
-  // Regroupement par section selon le snapshot de formulaire
-  foreach ($snapshot as $field) {
-    $sec = trim($field['section'] ?? '') ?: 'Informations Générales';
-    if (!isset($sections[$sec])) {
-      $sections[$sec] = [];
-    }
-    $sections[$sec][] = $field;
-  }
-@endphp
-
-@if(empty($sections))
-  {{-- Si aucun snapshot de formulaire n’est associé (données brutes) --}}
+{{-- ── CONTENU DU FORMULAIRE : RUBRIQUES & INFORMATIONS ────────────── --}}
+@php $secCounter = 1; @endphp
+@foreach($sections as $sec)
   <div class="section-block">
     <div class="section-header">
-      <div class="section-title-text">Données Enregistrées</div>
+      <table>
+        <tr>
+          <td class="section-title-text">{{ $sec['name'] }}</td>
+          <td class="section-badge">Rubrique {{ $secCounter }} / {{ count($sections) }}</td>
+        </tr>
+      </table>
     </div>
+
     <table class="fields-table">
-      @foreach($answers as $key => $val)
+      @foreach($sec['fields'] as $f)
         <tr>
           <td class="field-label">
             <span class="field-label-bullet">■</span>
-            {{ ucfirst(str_replace('_', ' ', $key)) }}
+            {{ $f['label'] }}
           </td>
           <td class="field-value">
-            @if(is_array($val))
-              @foreach($val as $item)
-                <span class="tag-chip">{{ $item }}</span>
+            @if($f['type'] === 'currency')
+              <span class="field-value-currency">{{ $f['formatted'] }}</span>
+            @elseif($f['type'] === 'number')
+              <span class="field-value-number">{{ $f['formatted'] }}</span>
+            @elseif($f['type'] === 'unit')
+              <strong>{{ $f['formatted'] }}</strong>
+            @elseif($f['type'] === 'boolean')
+              @if(!empty($f['is_yes']))
+                <span class="bool-pill bool-yes">✓ Oui</span>
+              @else
+                <span class="bool-pill bool-no">Non</span>
+              @endif
+            @elseif($f['type'] === 'list')
+              @foreach($f['formatted'] as $opt)
+                <span class="tag-chip">{{ $opt }}</span>
               @endforeach
-            @elseif($val === true || $val === '1' || $val === 1)
-              <span class="bool-pill bool-yes">✓ OUI</span>
-            @elseif($val === false || $val === '0' || $val === 0)
-              <span class="bool-pill bool-no">NON</span>
-            @elseif($val === '' || $val === null)
+            @elseif($f['type'] === 'empty')
               <span class="field-value empty">— Non renseigné —</span>
-            @elseif(strlen((string)$val) > 80)
-              <div class="field-value longtext">{{ $val }}</div>
+            @elseif(!empty($f['is_multiline']))
+              <div class="field-value longtext">{{ $f['formatted'] }}</div>
             @else
-              {{ $val }}
+              {{ $f['formatted'] }}
             @endif
           </td>
         </tr>
       @endforeach
     </table>
   </div>
-@else
-  @php $sectionIndex = 1; @endphp
-  @foreach($sections as $secName => $fields)
-    <div class="section-block">
-      <div class="section-header">
-        <table>
-          <tr>
-            <td class="section-title-text">
-              {{ $secName }}
-            </td>
-            <td class="section-badge">
-              Rubrique {{ $sectionIndex }} / {{ count($sections) }}
-            </td>
-          </tr>
-        </table>
-      </div>
+  @php $secCounter++; @endphp
+@endforeach
 
-      <table class="fields-table">
-        @foreach($fields as $field)
-          @php
-            $fieldName  = $field['name'];
-            $fieldLabel = $field['label'] ?? ucfirst(str_replace('_', ' ', $fieldName));
-            $fieldVal   = $answers[$fieldName] ?? null;
-          @endphp
-          <tr>
-            <td class="field-label">
-              <span class="field-label-bullet">■</span>
-              {{ $fieldLabel }}
-            </td>
-            <td class="field-value">
-              @if(is_array($fieldVal))
-                @if(empty($fieldVal))
-                  <span class="field-value empty">— Aucun choix —</span>
-                @else
-                  @foreach($fieldVal as $item)
-                    <span class="tag-chip">{{ $item }}</span>
-                  @endforeach
-                @endif
-              @elseif($fieldVal === true || $fieldVal === '1' || $fieldVal === 1)
-                <span class="bool-pill bool-yes">✓ OUI</span>
-              @elseif($fieldVal === false || $fieldVal === '0' || $fieldVal === 0)
-                <span class="bool-pill bool-no">NON</span>
-              @elseif($fieldVal === '' || $fieldVal === null)
-                <span class="field-value empty">— Non renseigné —</span>
-              @elseif(strlen((string)$fieldVal) > 75 || str_contains((string)$fieldVal, "\n"))
-                <div class="field-value longtext">{{ $fieldVal }}</div>
-              @else
-                {{ $fieldVal }}
-              @endif
-            </td>
-          </tr>
-        @endforeach
-      </table>
-    </div>
-    @php $sectionIndex++; @endphp
-  @endforeach
-@endif
-
-{{-- ── LISTE DES PIÈCES JOINTES TÉLÉVERSÉES (SI APPLICABLE) ─────────── --}}
+{{-- ── PIÈCES JOINTES TÉLÉVERSÉES ─────────────────────────────────── --}}
 @if($submission->relationLoaded('attachments') && $submission->attachments->isNotEmpty())
   <div class="attachment-card">
-    <div class="attachment-title">Pièces Justificatives et Documents Transmis ({{ $submission->attachments->count() }})</div>
+    <div class="attachment-title">Pièces Justificatives Transmises ({{ $submission->attachments->count() }})</div>
     @foreach($submission->attachments as $att)
       <div class="attachment-item">
         📎 <strong>{{ $att->original_name }}</strong> ({{ number_format($att->size / 1024, 1, ',', ' ') }} Ko)
@@ -752,39 +728,55 @@
   </div>
 @endif
 
-{{-- ── ATTESTATION ET VALIDITÉ DU DÉPÔT NUMÉRIQUE ───────────────────── --}}
+{{-- ── ATTESTATION DE RÉCEPTION TECHNIQUE (CONFORME AUX EXIGENCES) ─── --}}
 <div class="security-box">
-  <div class="security-box-title">Attestation de Transmission Électronique</div>
+  <div class="security-box-title">Attestation de Réception et d'Enregistrement Technique</div>
   <div class="security-box-text">
-    Le présent document certifie que la déclaration / demande ci-dessus a été enregistrée avec succès dans le système informatique central de <strong>LD ASSURANCES SA</strong>. Ce récépissé fait foi de dépôt sous la référence <strong>{{ $submission->reference }}</strong>, sous réserve de la vérification des pièces justificatives par nos gestionnaires agréés conformément aux dispositions du Code CIMA.
+    <strong>{{ $company['name'] }}</strong> atteste par le présent document de la réception technique et de l'enregistrement de la présente demande sous la référence <strong>{{ $submission->reference }}</strong>, enregistrée sur notre plateforme numérique le <strong>{{ $dateFormatted }}</strong>. L’ensemble des éléments et réponses figurant sur ce récépissé ont été transmis et intégrés à notre système de gestion informatique.
+  </div>
+  <div class="security-box-warning">
+    * Avis d'information : Le présent récépissé atteste exclusivement de l'enregistrement technique de la demande auprès de nos services. Il ne constitue ni une acceptation du risque, ni une validation de contrat d'assurance, ni un engagement de garantie de la part de LD ASSURANCES SA.
   </div>
 </div>
 
-{{-- ── BLOC DE SIGNATURES OFFICIELLES (DOUBLE ENCADRÉ) ──────────────── --}}
-<table class="signatures-table">
+{{-- ── BLOC D'AUTHENTIFICATION EN 3 VOLETS CLAIRS ET VÉRIDIQUES ─────── --}}
+<table class="auth-table">
   <tr>
-    {{-- SIGNATURE DEMANDEUR --}}
-    <td style="width: 50%; padding-right: 6px;">
-      <div class="signature-card">
-        <div class="signature-card-title">Pour le Souscripteur / Demandeur</div>
-        <div class="signature-note">
-          Date de dépôt : {{ $submission->created_at ? $submission->created_at->format('d/m/Y') : now()->format('d/m/Y') }}<br>
-          Transmission validée en ligne par :<br>
-          <strong>{{ $clientName ?: $submission->email }}</strong>
+    {{-- Volet 1 : Demandeur --}}
+    <td class="auth-cell">
+      <div class="auth-card">
+        <div class="auth-card-title">1. Souscripteur / Demandeur</div>
+        <div class="auth-card-body">
+          Transmission en ligne effectuée par :<br>
+          <strong>{{ $clientName ?: $submission->email }}</strong><br>
+          Date : {{ $dateOnly }}<br>
+          <span style="color: #64748b; font-style: italic;">Formulaire validé par le client</span>
         </div>
       </div>
     </td>
 
-    {{-- VISA COMPAGNIE D'ASSURANCE --}}
-    <td style="width: 50%; padding-left: 6px;">
-      <div class="signature-card">
-        <div class="signature-card-title">Pour LD ASSURANCES SA</div>
-        <div class="signature-note">
-          Direction des Opérations & Souscription<br>
-          Carrefour Arno, Douala (Cameroun)
+    {{-- Volet 2 : Plateforme technique --}}
+    <td class="auth-cell">
+      <div class="auth-card">
+        <div class="auth-card-title">2. Plateforme Numérique</div>
+        <div class="auth-card-body">
+          Système : LD Assurances Central<br>
+          Réf. : <strong>{{ $submission->reference }}</strong><br>
+          <div class="auth-system-badge">
+            ✓ Document généré électroniquement
+          </div>
         </div>
-        <div class="electronic-stamp">
-          ✓ ENREGISTRÉ NUMÉRIQUEMENT · CERTIFIÉ CONFORME
+      </div>
+    </td>
+
+    {{-- Volet 3 : Service Gestionnaire --}}
+    <td class="auth-cell">
+      <div class="auth-card">
+        <div class="auth-card-title">3. Prise en Charge LD Assurances</div>
+        <div class="auth-card-body">
+          Service : Direction Commerciale & Souscription<br>
+          Statut : <strong>{{ $statusInfo['label'] }}</strong><br>
+          <span style="color: #64748b; font-size: 5.5pt;">{{ $statusInfo['manager'] }}</span>
         </div>
       </div>
     </td>

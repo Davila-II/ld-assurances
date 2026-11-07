@@ -4,16 +4,50 @@ namespace App\Services;
 
 use App\Models\Submission;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class SubmissionPdfService
 {
     /**
-     * Génère le PDF de confirmation d'une soumission et retourne son contenu binaire.
+     * Génère le récépissé officiel PDF d'une soumission et retourne son contenu binaire.
      */
     public function generate(Submission $submission): string
     {
         $submission->loadMissing('category');
 
+        $data = $this->prepareViewData($submission);
+
+        $pdf = Pdf::loadView('pdf.submission', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => false,
+                'defaultFont'          => 'DejaVu Sans',
+                'dpi'                  => 150,
+            ]);
+
+        return $pdf->output();
+    }
+
+    /**
+     * Prépare et structure l'ensemble des données pour un rendu irréprochable.
+     */
+    public function prepareViewData(Submission $submission): array
+    {
+        $company = config('company', [
+            'name'            => 'LD ASSURANCES SA',
+            'tagline'         => 'Assurément Proche de Vous',
+            'legal'           => 'Société Anonyme au capital de 5 000 000 000 FCFA entièrement libéré | Agréée par arrêté N°0000815/MINFI du 15 NOV 2024',
+            'address'         => 'Carrefour Arno, Akwa-Douala',
+            'postal_box'      => 'B.P. 2854 – Douala – Cameroun',
+            'phones'          => ['(+237) 640 65 67 93', '(+237) 233 43 99 24', '(+237) 233 42 51 82'],
+            'emergency_phone' => '(+237) 640 65 67 93',
+            'email'           => 'contact@ldassurances.cm',
+            'website'         => 'www.ldassurances.cm',
+            'agencies'        => 'Douala · Yaoundé · Bafoussam',
+        ]);
+
+        // Logos & Filigrane
         $logoPath        = public_path('logo-icon.jpg');
         $watermarkPath   = public_path('logo-watermark.jpg');
 
@@ -25,24 +59,395 @@ class SubmissionPdfService
             ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($watermarkPath))
             : $logoBase64;
 
-        $typeLabel = $submission->form_type === 'claim'
-            ? 'Déclaration de sinistre'
-            : 'Demande de devis';
+        // Informations client
+        $answers = $submission->answers ?? [];
+        $clientName  = $answers['full_name']
+            ?? $answers['nom_complet']
+            ?? $answers['name']
+            ?? $answers['nom']
+            ?? null;
+        $clientPhone = $answers['phone']
+            ?? $answers['telephone']
+            ?? null;
+        $clientCity  = $answers['city']
+            ?? $answers['ville']
+            ?? null;
 
-        $pdf = Pdf::loadView('pdf.submission', compact(
-            'submission',
-            'typeLabel',
-            'logoBase64',
-            'watermarkBase64',
-        ))
-        ->setPaper('a4', 'portrait')
-        ->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled'      => false,
-            'defaultFont'          => 'DejaVu Sans',
-            'dpi'                  => 150,
-        ]);
+        $submittedAt = $submission->created_at ?? now();
+        $dateFormatted = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d F Y à H:i');
+        $dateOnly      = Carbon::parse($submittedAt)->locale('fr')->translatedFormat('d/m/Y');
 
-        return $pdf->output();
+        // Titre du document selon la nature
+        $isQuote = ($submission->form_type === 'quote');
+        $typeLabel = $isQuote
+            ? 'Récépissé de Demande de Devis'
+            : 'Récépissé de Déclaration de Sinistre';
+
+        $docSubTitle = $isQuote
+            ? 'DEMANDE DE DEVIS D’ASSURANCE'
+            : 'DÉCLARATION DE SINISTRE';
+
+        // Statut réel & mise en forme
+        $statusInfo = $this->resolveStatusInfo($submission->status ?? 'received', $submission->form_type ?? 'quote');
+
+        // Organisation & formatage fiable des données du formulaire
+        $sections = $this->buildSections($submission);
+
+        return [
+            'submission'      => $submission,
+            'company'         => $company,
+            'isQuote'         => $isQuote,
+            'typeLabel'       => $typeLabel,
+            'docSubTitle'     => $docSubTitle,
+            'clientName'      => $clientName,
+            'clientPhone'     => $clientPhone,
+            'clientCity'      => $clientCity,
+            'dateFormatted'   => $dateFormatted,
+            'dateOnly'        => $dateOnly,
+            'statusInfo'      => $statusInfo,
+            'sections'        => $sections,
+            'logoBase64'      => $logoBase64,
+            'watermarkBase64' => $watermarkBase64,
+        ];
+    }
+
+    /**
+     * Résout l'état métier exact de la demande sans inventer de transition automatique.
+     */
+    private function resolveStatusInfo(string $status, string $formType): array
+    {
+        $isQuote = ($formType === 'quote');
+
+        return match ($status) {
+            'received' => [
+                'code'        => 'received',
+                'label'       => $isQuote ? 'Demande reçue' : 'Déclaration reçue',
+                'description' => $isQuote
+                    ? 'Votre demande de devis a été enregistrée avec succès. Elle est en attente d’attribution à un conseiller commercial.'
+                    : 'Votre déclaration de sinistre a été enregistrée avec succès. Elle est transmise au service d’indemnisation.',
+                'color'       => '#1e40af',
+                'bg'          => '#dbeafe',
+                'border'      => '#93c5fd',
+                'manager'     => 'En attente de prise en charge par le service gestionnaire',
+            ],
+            'in_progress' => [
+                'code'        => 'in_progress',
+                'label'       => $isQuote ? 'En cours de traitement' : 'En cours d’instruction',
+                'description' => $isQuote
+                    ? 'Votre dossier est actuellement en cours d’analyse technique et d’évaluation par notre service souscription.'
+                    : 'Votre dossier de sinistre est en cours d’instruction technique par nos gestionnaires.',
+                'color'       => '#b45309',
+                'bg'          => '#fef3c7',
+                'border'      => '#fcd34d',
+                'manager'     => 'Dossier assigné et en cours d’analyse par notre équipe',
+            ],
+            'answered' => [
+                'code'        => 'answered',
+                'label'       => $isQuote ? 'Devis disponible' : 'Réponse transmise',
+                'description' => $isQuote
+                    ? 'L’étude de votre dossier est finalisée. Votre proposition commerciale et tarifaire personnalisée est prête.'
+                    : 'Une réponse officielle ou une proposition de prise en charge vous a été communiquée par nos services.',
+                'color'       => '#15803d',
+                'bg'          => '#dcfce7',
+                'border'      => '#86efac',
+                'manager'     => $isQuote ? 'Proposition de devis finalisée et transmise' : 'Réponse officielle transmise au souscripteur',
+            ],
+            'closed' => [
+                'code'        => 'closed',
+                'label'       => 'Dossier clôturé',
+                'description' => 'Le traitement de ce dossier est achevé et archivé dans notre système.',
+                'color'       => '#475569',
+                'bg'          => '#f1f5f9',
+                'border'      => '#cbd5e1',
+                'manager'     => 'Dossier clôturé dans le système de gestion',
+            ],
+            'rejected' => [
+                'code'        => 'rejected',
+                'label'       => $isQuote ? 'Non retenu' : 'Rejeté / Non garanti',
+                'description' => $isQuote
+                    ? 'Cette demande n’a pas pu recevoir de suite favorable au vu des critères de souscription.'
+                    : 'Les dommages ou circonstances déclarés ne sont pas couverts au titre des garanties souscrites.',
+                'color'       => '#b91c1c',
+                'bg'          => '#fee2e2',
+                'border'      => '#fca5a5',
+                'manager'     => 'Dossier non retenu par le service de souscription',
+            ],
+            default => [
+                'code'        => $status,
+                'label'       => ucfirst($status),
+                'description' => 'État de traitement enregistré : ' . $status,
+                'color'       => '#0c2340',
+                'bg'          => '#f1f5f9',
+                'border'      => '#cbd5e1',
+                'manager'     => 'En cours de suivi',
+            ],
+        };
+    }
+
+    /**
+     * Construit les sections du formulaire en évitant les champs non applicables
+     * et en formatant avec précision les types de données (monnaies, dates, nombres, etc.).
+     */
+    private function buildSections(Submission $submission): array
+    {
+        $snapshot = $submission->form_snapshot ?? [];
+        $answers  = $submission->answers ?? [];
+
+        // Si aucun snapshot n'est enregistré (données directes), on génère une section unique
+        if (empty($snapshot)) {
+            $fields = [];
+            foreach ($answers as $key => $val) {
+                // Ignore les champs réservés redondants avec l'en-tête client
+                if (in_array($key, ['full_name', 'phone', 'city', 'email', 'website'])) {
+                    continue;
+                }
+                $fieldMeta = [
+                    'name'       => $key,
+                    'label'      => ucfirst(str_replace('_', ' ', $key)),
+                    'field_type' => is_numeric($val) ? 'number' : (is_array($val) ? 'multiselect' : 'text'),
+                ];
+                $formatted = $this->formatFieldValue($fieldMeta, $val, $answers);
+                if ($formatted !== null) {
+                    $fields[] = $formatted;
+                }
+            }
+
+            return !empty($fields) ? [['name' => 'Informations Déclarées', 'fields' => $fields]] : [];
+        }
+
+        // Regroupement par section en respectant les conditions d'affichage
+        $sections = [];
+
+        foreach ($snapshot as $field) {
+            $name = $field['name'] ?? '';
+
+            // Écarte les questions conditionnelles dont la condition parent n'est pas remplie
+            if (!empty($field['condition'])) {
+                $condField  = $field['condition']['field'] ?? null;
+                $condEquals = $field['condition']['equals'] ?? null;
+                if ($condField && (!isset($answers[$condField]) || (string) $answers[$condField] !== (string) $condEquals)) {
+                    continue; // Cette question n'était pas applicable au client
+                }
+            }
+
+            $rawVal = $answers[$name] ?? null;
+            $formatted = $this->formatFieldValue($field, $rawVal, $answers);
+
+            // Si le champ est facultatif et complètement vide, on l'omet s'il n'apporte rien
+            if ($formatted === null) {
+                continue;
+            }
+
+            $secName = trim($field['section'] ?? '') ?: 'Informations Générales';
+            if (!isset($sections[$secName])) {
+                $sections[$secName] = [
+                    'name'   => $secName,
+                    'fields' => [],
+                ];
+            }
+
+            $sections[$secName]['fields'][] = $formatted;
+        }
+
+        // Filtrer les sections qui n'ont aucun champ affiché
+        return array_values(array_filter($sections, fn ($s) => !empty($s['fields'])));
+    }
+
+    /**
+     * Formate avec précision une valeur selon son type métier réel.
+     */
+    private function formatFieldValue(array $field, mixed $value, array $allAnswers): ?array
+    {
+        $name      = strtolower($field['name'] ?? '');
+        $label     = $field['label'] ?? ucfirst(str_replace('_', ' ', $name));
+        $fieldType = $field['field_type'] ?? 'text';
+
+        // Champ non renseigné
+        if ($value === null || $value === '' || (is_array($value) && empty($value))) {
+            // Si le champ est obligatoire ou important, on affiche "Non renseigné"
+            if (!empty($field['is_required'])) {
+                return [
+                    'name'         => $name,
+                    'label'        => $label,
+                    'type'         => 'empty',
+                    'formatted'    => 'Non renseigné',
+                    'is_multiline' => false,
+                ];
+            }
+            // Sinon champ facultatif vide : omis pour ne pas surcharger inutilement
+            return null;
+        }
+
+        // 1. Fichiers : traités à part via la relation attachments
+        if ($fieldType === 'file') {
+            return null;
+        }
+
+        // 2. Budget / Montant monétaire en FCFA
+        if ($this->isCurrencyField($name, $label, $fieldType)) {
+            $numeric = (float) preg_replace('/[^\d.]/', '', (string) $value);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'currency',
+                'formatted'    => number_format($numeric, 0, ',', ' ') . ' FCFA',
+                'is_multiline' => false,
+            ];
+        }
+
+        // 3. Superficie (m²)
+        if ($name === 'surface' || str_contains(strtolower($label), 'm²') || str_contains(strtolower($label), 'superficie')) {
+            $numeric = (float) preg_replace('/[^\d.]/', '', (string) $value);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'unit',
+                'formatted'    => number_format($numeric, 0, ',', ' ') . ' m²',
+                'is_multiline' => false,
+            ];
+        }
+
+        // 4. Puissance fiscale (CV)
+        if ($name === 'fiscal_power' || str_contains(strtolower($label), '(cv)')) {
+            $numeric = (int) preg_replace('/[^\d]/', '', (string) $value);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'unit',
+                'formatted'    => $numeric . ' CV',
+                'is_multiline' => false,
+            ];
+        }
+
+        // 5. Nombres entiers stricts (Personnes, pièces, collaborateurs, années...)
+        // GARANTIE : Ne jamais transformer 1 ou 0 en "OUI" ou "NON" !
+        if ($fieldType === 'number' || $this->isCountField($name, $label)) {
+            $numeric = (int) preg_replace('/[^\d-]/', '', (string) $value);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'number',
+                'formatted'    => number_format($numeric, 0, ',', ' '),
+                'is_multiline' => false,
+            ];
+        }
+
+        // 6. Case à cocher booléenne stricte (field_type = checkbox)
+        if ($fieldType === 'checkbox') {
+            $isTrue = in_array($value, [true, 1, '1', 'true', 'on', 'Oui'], true);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'boolean',
+                'formatted'    => $isTrue ? 'Oui' : 'Non',
+                'is_yes'       => $isTrue,
+                'is_multiline' => false,
+            ];
+        }
+
+        // 7. Choix Oui / Non (Select)
+        if (is_string($value) && in_array(strtolower(trim($value)), ['oui', 'non', 'yes', 'no'])) {
+            $isYes = in_array(strtolower(trim($value)), ['oui', 'yes']);
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'boolean',
+                'formatted'    => $isYes ? 'Oui' : 'Non',
+                'is_yes'       => $isYes,
+                'is_multiline' => false,
+            ];
+        }
+
+        // 8. Dates (formatées en français)
+        if ($fieldType === 'date' || (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($value)))) {
+            try {
+                $formattedDate = Carbon::parse($value)->locale('fr')->translatedFormat('d F Y');
+            } catch (\Throwable) {
+                $formattedDate = (string) $value;
+            }
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'date',
+                'formatted'    => $formattedDate,
+                'is_multiline' => false,
+            ];
+        }
+
+        // 9. Choix multiples (Tableaux)
+        if (is_array($value)) {
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'list',
+                'formatted'    => $value,
+                'is_multiline' => false,
+            ];
+        }
+
+        // 10. Textes longs (Textarea / descriptions)
+        if ($fieldType === 'textarea' || strlen((string) $value) > 70 || str_contains((string) $value, "\n")) {
+            return [
+                'name'         => $name,
+                'label'        => $label,
+                'type'         => 'text',
+                'formatted'    => (string) $value,
+                'is_multiline' => true,
+            ];
+        }
+
+        // 11. Texte standard
+        return [
+            'name'         => $name,
+            'label'        => $label,
+            'type'         => 'text',
+            'formatted'    => (string) $value,
+            'is_multiline' => false,
+        ];
+    }
+
+    /**
+     * Détecte si le champ représente un montant monétaire.
+     */
+    private function isCurrencyField(string $name, string $label, string $type): bool
+    {
+        $currencyKeys = [
+            'budget', 'building_value', 'contents_value', 'content_value',
+            'estimated_value', 'turnover', 'annual_income', 'capital', 'salary',
+        ];
+
+        if (in_array($name, $currencyKeys)) {
+            return true;
+        }
+
+        $lowerLabel = strtolower($label);
+
+        return str_contains($lowerLabel, 'fcfa')
+            || str_contains($lowerLabel, 'budget')
+            || str_contains($lowerLabel, 'chiffre d’affaires')
+            || str_contains($lowerLabel, 'chiffre d\'affaires')
+            || str_contains($lowerLabel, 'valeur estimée');
+    }
+
+    /**
+     * Détecte si le champ représente un décompte/nombre de personnes ou d'éléments.
+     */
+    private function isCountField(string $name, string $label): bool
+    {
+        $countKeys = [
+            'people_count', 'travelers_count', 'employees_count',
+            'rooms', 'claims_count', 'first_reg_year',
+        ];
+
+        if (in_array($name, $countKeys)) {
+            return true;
+        }
+
+        $lower = strtolower($label);
+
+        return str_contains($lower, 'nombre de')
+            || str_contains($lower, 'pièces')
+            || str_contains($lower, 'collaborateurs')
+            || str_contains($lower, 'voyageurs');
     }
 }
