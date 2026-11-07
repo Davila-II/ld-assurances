@@ -2216,6 +2216,74 @@ h3 {
   display: block;
 }
 
+/* ── Contenu riche des réponses bot ─────────────────────────────────────── */
+
+/* Liste d'infos (contact, fallback) */
+.assistant-info-lines {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* "Vous cherchez peut-être aussi :" */
+.assistant-suggestions {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(30,77,143,0.1);
+}
+
+.assistant-suggestions-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.assistant-suggestions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--blue);
+}
+
+/* Boutons d'action dans les réponses */
+.assistant-reply-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.assistant-reply-btn {
+  display: inline-block;
+  background: var(--gradient);
+  color: #fff !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 1px 6px rgba(30,77,143,0.2);
+}
+
+.assistant-reply-btn:hover {
+  opacity: 0.85;
+}
+
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .assistant-panel {
