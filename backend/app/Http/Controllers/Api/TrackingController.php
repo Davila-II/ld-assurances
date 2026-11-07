@@ -43,6 +43,44 @@ class TrackingController extends Controller
             'rejection_reason' => $submission->rejection_reason,
             'created_at'       => $submission->created_at?->toIso8601String(),
             'updated_at'       => $submission->updated_at?->toIso8601String(),
+            'processed_at'     => $submission->processed_at?->toIso8601String(),
+            'answers'          => $submission->answers,
+            'form_snapshot'    => $submission->form_snapshot,
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    // Modification publique d'une soumission (uniquement si status === 'received')
+    public function update(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'reference' => ['required', 'string', 'max:40'],
+            'email'     => ['required', 'email', 'max:255'],
+            'answers'   => ['required', 'array'],
+        ]);
+
+        $submission = Submission::where('reference', strtoupper(trim($data['reference'])))->first();
+
+        if (
+            ! $submission
+            || ! hash_equals(strtolower($submission->email), strtolower(trim($data['email'])))
+        ) {
+            return response()->json(['message' => 'Aucun dossier ne correspond à ces informations.'], 404);
+        }
+
+        if ($submission->status !== 'received') {
+            return response()->json([
+                'message' => 'Cette demande ne peut plus être modifiée car elle a déjà été prise en charge.',
+            ], 403);
+        }
+
+        $submission->update([
+            'answers' => array_merge($submission->answers ?? [], $data['answers']),
+        ]);
+
+        return response()->json([
+            'reference'    => $submission->reference,
+            'status'       => $submission->status,
+            'updated_at'   => $submission->updated_at?->toIso8601String(),
         ])->header('Cache-Control', 'no-store');
     }
 

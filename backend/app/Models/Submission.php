@@ -11,13 +11,15 @@ class Submission extends Model
 {
     protected $fillable = [
         'reference', 'category_id', 'user_id', 'form_type',
-        'email', 'status', 'notes', 'rejection_reason', 'answers', 'form_snapshot', 'quote_calculation',
+        'email', 'status', 'answers', 'form_snapshot', 'quote_calculation',
+        'notes', 'rejection_reason', 'processed_at',
     ];
 
     protected $casts = [
         'answers'           => 'array',
         'form_snapshot'     => 'array',
         'quote_calculation' => 'array',
+        'processed_at'      => 'datetime',
     ];
 
     protected static function booted(): void
@@ -25,6 +27,18 @@ class Submission extends Model
         static::creating(function (Submission $submission) {
             if (! $submission->reference) {
                 $submission->reference = static::generateReference($submission->form_type ?? 'claim');
+            }
+        });
+
+        // Enregistre la date de traitement dès que le statut quitte "received"
+        static::updating(function (Submission $submission) {
+            if (
+                $submission->isDirty('status')
+                && $submission->getOriginal('status') === 'received'
+                && $submission->status !== 'received'
+                && $submission->processed_at === null
+            ) {
+                $submission->processed_at = now();
             }
         });
     }

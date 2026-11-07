@@ -64,7 +64,7 @@ export interface PricingRule {
   code: string;
   description?: string | null;
   driver: PricingDriver;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   formula_code?: string | null;
   is_active: boolean;
   categories_count?: number;
@@ -117,6 +117,9 @@ export interface TrackResult {
   rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
+  processed_at?: string | null;
+  answers?: Record<string, unknown> | null;
+  form_snapshot?: Array<{ name: string; label: string; field_type: string }> | null;
 }
 
 // --- Administration ---
@@ -145,6 +148,7 @@ export interface SubmissionSummary {
   type: string | null;
   attachments_count: number;
   created_at: string;
+  processed_at?: string | null;
 }
 
 export interface Paginated<T> {
@@ -236,6 +240,7 @@ export interface SubmissionDetail {
   notes: string | null;
   rejection_reason?: string | null;
   created_at: string;
+  processed_at?: string | null;
   answers: SubmissionAnswer[];
   attachments: AttachmentInfo[];
   quote_calculation?: QuoteCalculation | null;

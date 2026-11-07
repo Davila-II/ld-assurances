@@ -117,6 +117,51 @@ const FIELD_TYPE_DESCRIPTIONS: Record<FieldType, string> = {
   file: 'Pièce jointe ou document / File upload',
 };
 
+interface PricingParameters {
+  accessoires?: number;
+  taxe_unique?: number;
+  commercial_base?: number;
+  commercial_multiplier?: number;
+  young_driver_surcharge?: number;
+  bonus_no_claims?: number;
+  malus_claims_surcharge?: number;
+  flat_bris_glace?: number;
+  rate_incendie?: number;
+  rate_vol?: number;
+  rate_tous_risques?: number;
+  rates_by_zone?: Record<string, number>;
+  rates_construction?: Record<string, number>;
+  annexe_appartement?: number;
+  annexe_autre?: number;
+  medical_surcharge?: number;
+  child_flat_rate?: number;
+  formula_multipliers?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+interface PricingTestInputs {
+  puissance_fiscale?: number;
+  usage?: string;
+  age_permis?: number;
+  historique_sinistres?: number;
+  valeur_vehicule?: number;
+  zone_destination?: string;
+  duree_sejour?: number;
+  nbre_personnes?: number;
+  travelers_ages?: string;
+  age_voyageur?: string | number;
+  materiaux_construction?: string;
+  type_logement?: string;
+  securite_presence?: string;
+  capital_mobilier?: number;
+  capital_immobilier?: number;
+  age_proposant?: number;
+  formule_couverture?: string;
+  antecedents_medicaux?: string;
+  nbre_enfants_charge?: number;
+  [key: string]: string | number | undefined;
+}
+
 export default function FormBuilderPage() {
   const { lang, t } = useLanguage();
 
@@ -163,11 +208,11 @@ export default function FormBuilderPage() {
   // Modale de configuration du calcul de devis
   const [pricingModalCategory, setPricingModalCategory] = useState<BuilderCategory | null>(null);
   const [activePricingRuleId, setActivePricingRuleId] = useState<number | null>(null);
-  const [editingParams, setEditingParams] = useState<Record<string, any>>({});
+  const [editingParams, setEditingParams] = useState<PricingParameters>({});
   const [ruleName, setRuleName] = useState('');
   const [ruleDescription, setRuleDescription] = useState('');
   const [pricingTab, setPricingTab] = useState<'params' | 'rule' | 'test'>('params');
-  const [testInputs, setTestInputs] = useState<Record<string, any>>({});
+  const [testInputs, setTestInputs] = useState<PricingTestInputs>({});
   const [testResult, setTestResult] = useState<QuoteCalculation | null>(null);
   const [testing, setTesting] = useState(false);
   const [savingPricing, setSavingPricing] = useState(false);
@@ -178,19 +223,34 @@ export default function FormBuilderPage() {
     try {
       const data = await getPricingRules();
       setPricingRules(data);
-      if (data.length > 0 && selectedPricingRuleId === null) {
-        setSelectedPricingRuleId(data[0].id);
+      if (data.length > 0) {
+        setSelectedPricingRuleId((prev) => (prev === null ? data[0].id : prev));
       }
     } catch {
       // ignore
     }
-  }, [selectedPricingRuleId]);
+  }, []);
 
   useEffect(() => {
-    if (formType === 'quote') {
-      loadPricingRules();
-    }
-  }, [formType, loadPricingRules]);
+    if (formType !== 'quote') return;
+    let cancelled = false;
+
+    getPricingRules()
+      .then((data) => {
+        if (cancelled) return;
+        setPricingRules(data);
+        if (data.length > 0) {
+          setSelectedPricingRuleId((prev) => (prev === null ? data[0].id : prev));
+        }
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formType]);
 
   // Rechargement des catégories filtrées selon le mode (devis ou sinistre)
   const loadCategories = useCallback(async (typeToLoad?: FormType) => {

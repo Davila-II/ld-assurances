@@ -227,6 +227,7 @@ export default function SubmissionsPage() {
                   <th scope="col">Statut</th>
                   <th scope="col">Pièces</th>
                   <th scope="col">Reçu le</th>
+                  <th scope="col">Date de traitement</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,6 +244,9 @@ export default function SubmissionsPage() {
                     </td>
                     <td data-label="Pièces">{submission.attachments_count}</td>
                     <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+                    <td data-label="Date de traitement">
+                      {submission.processed_at ? formatDate(submission.processed_at) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

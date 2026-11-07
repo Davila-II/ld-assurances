@@ -219,6 +219,12 @@ export default function SubmissionDetailPage() {
                 <dt>Reçu le</dt>
                 <dd>{formatDate(submission.created_at)}</dd>
               </div>
+              {submission.processed_at && (
+                <div className="answer">
+                  <dt>Date de traitement</dt>
+                  <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(submission.processed_at)}</dd>
+                </div>
+              )}
             </dl>
           </section>
 

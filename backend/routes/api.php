@@ -25,6 +25,8 @@ Route::post('/submissions', [SubmissionController::class, 'store'])
 // Suivi : référence + email (POST, pour que l'email ne figure jamais dans l'adresse)
 Route::post('/track', [TrackingController::class, 'show'])
     ->middleware('throttle:tracking');
+Route::put('/track', [TrackingController::class, 'update'])
+    ->middleware('throttle:tracking');
 Route::post('/track/pdf', [TrackingController::class, 'downloadPdf'])
     ->middleware('throttle:tracking');
 
@@ -48,6 +50,7 @@ Route::prefix('client')->group(function () {
     // Connecté ET email vérifié : accès aux données du client
     Route::middleware(['auth:sanctum', EnsureUserIsClient::class . ':verified'])->group(function () {
         Route::get('/submissions', [ClientSubmissionController::class, 'index']);
+        Route::put('/submissions/{reference}', [ClientSubmissionController::class, 'update']);
         Route::get('/submissions/{reference}/pdf', [ClientSubmissionController::class, 'downloadPdf'])
             ->middleware('throttle:30,1');
     });

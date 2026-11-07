@@ -21,6 +21,7 @@ export interface ClientSubmission {
   rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
+  processed_at?: string | null;
 }
 
 export interface ClientPage<T> {

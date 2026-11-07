@@ -75,6 +75,7 @@ class AdminSubmissionController extends Controller
                 : $s->category?->name,
             'attachments_count' => $s->attachments_count,
             'created_at'        => $s->created_at?->toIso8601String(),
+            'processed_at'      => $s->processed_at?->toIso8601String(),
         ]);
 
         return response()->json($page);
@@ -109,6 +110,7 @@ class AdminSubmissionController extends Controller
             'notes'            => $submission->notes,
             'rejection_reason' => $submission->rejection_reason,
             'created_at'       => $submission->created_at?->toIso8601String(),
+            'processed_at'     => $submission->processed_at?->toIso8601String(),
             'answers'     => $answers,
             'attachments' => $submission->attachments->map(fn (Attachment $a) => [
                 'id'            => $a->id,

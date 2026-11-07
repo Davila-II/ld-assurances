@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react';
 import { X, Send } from 'lucide-react';
 import assitImg from '../images/assit.png';
 import whatsappImg from '../images/whatsapp.png';
@@ -239,16 +239,22 @@ function BotBubble({ msg, suggestionsLabel }: { msg: Message; suggestionsLabel: 
 export default function AssistantWidget() {
   const { lang, t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => [
+    { from: 'bot', text: t('assistant.welcome') },
+  ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [showQuick, setShowQuick] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isFirstMount = useRef(true);
 
-  // Initialisation et adaptation automatique du message de bienvenue selon la langue
+  // Adaptation automatique du message de bienvenue lors d'un changement de langue
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setMessages((prev) => {
-      // Si aucune interaction utilisateur n'a eu lieu, on adapte la bulle de bienvenue
       if (prev.length <= 1) {
         return [{ from: 'bot', text: t('assistant.welcome') }];
       }
@@ -271,18 +277,19 @@ export default function AssistantWidget() {
     t('assistant.q_reduce_premium'),
   ];
 
-  function sendMessage(text: string) {
+  const sendMessage = useCallback((text: string) => {
     if (!text.trim()) return;
     setShowQuick(false);
     setMessages((prev) => [...prev, { from: 'user', text: text.trim() }]);
     setInput('');
     setTyping(true);
+    const delay = 800 + (Date.now() % 400);
     setTimeout(() => {
       setTyping(false);
       const { text: botText, content } = getBotReply(text, lang, t);
       setMessages((prev) => [...prev, { from: 'bot', text: botText, content }]);
-    }, 800 + Math.random() * 400);
-  }
+    }, delay);
+  }, [lang, t]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();

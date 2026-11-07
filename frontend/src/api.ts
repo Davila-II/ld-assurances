@@ -132,6 +132,13 @@ export const trackSubmission = (reference: string, email: string) =>
     body: JSON.stringify({ reference, email }),
   });
 
+export const updateTrackSubmission = (reference: string, email: string, answers: Record<string, unknown>) =>
+  request<{ reference: string; status: string; updated_at: string }>('/track', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reference, email, answers }),
+  });
+
 export const downloadTrackPdf = async (reference: string, email: string): Promise<void> => {
   const res = await rawFetch('/track/pdf', {
     method: 'POST',

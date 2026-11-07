@@ -117,6 +117,12 @@ export const clientChangePassword = (payload: {
 export const getMySubmissions = (type?: 'claim' | 'quote') =>
   call<ClientPage<ClientSubmission>>(`/submissions${type ? `?type=${type}` : ''}`);
 
+export const updateMySubmission = (reference: string, answers: Record<string, unknown>) =>
+  call<{ reference: string; status: string; updated_at: string }>(
+    `/submissions/${encodeURIComponent(reference)}`,
+    { method: 'PUT', body: JSON.stringify({ answers }) },
+  );
+
 /**
  * Télécharge le PDF d'une soumission du client et l'ouvre dans un nouvel onglet.
  * Utilise directement fetch pour récupérer le binaire sans JSON parsing.
