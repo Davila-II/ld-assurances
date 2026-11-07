@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { trackSubmission, ApiError } from '../api';
+import { Download } from 'lucide-react';
+import { trackSubmission, downloadTrackPdf, ApiError } from '../api';
 import { formatDate } from '../admin/labels';
 import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -12,6 +13,19 @@ export default function TrackPage() {
   const [result, setResult] = useState<TrackResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadTrackPdf(result.reference, email.trim());
+    } catch {
+      // ignore
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -116,6 +130,19 @@ export default function TrackPage() {
               <dt>{t('track.date_label')}</dt>
               <dd>{formatDate(result.created_at)}</dd>
             </dl>
+
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} />
+                {downloadingPdf ? '…' : 'Télécharger le PDF'}
+              </button>
+            </div>
           </div>
         )}
       </div>

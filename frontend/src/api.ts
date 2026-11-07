@@ -130,6 +130,31 @@ export const trackSubmission = (reference: string, email: string) =>
     body: JSON.stringify({ reference, email }),
   });
 
+export const downloadTrackPdf = async (reference: string, email: string): Promise<void> => {
+  const res = await rawFetch('/track/pdf', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/pdf',
+    },
+    body: JSON.stringify({ reference, email }),
+  });
+
+  if (!res.ok) {
+    throw new ApiError('Impossible de télécharger le PDF.', res.status);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${reference}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
 // --- Administration ---
 
 export const adminLogin = (email: string, password: string) =>
@@ -292,6 +317,28 @@ export async function downloadAttachment(id: number, filename: string): Promise<
   if (!res.ok) {
     throw new ApiError(
       res.status === 404 ? 'Fichier introuvable.' : messageFor(res.status),
+      res.status
+    );
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Télécharge le récapitulatif PDF d'une soumission (Admin)
+export async function downloadSubmissionPdfAdmin(submissionId: number, filename: string): Promise<void> {
+  const res = await rawFetch(`/admin/submissions/${submissionId}/pdf`, {}, true);
+
+  if (!res.ok) {
+    throw new ApiError(
+      res.status === 404 ? 'Dossier introuvable.' : messageFor(res.status),
       res.status
     );
   }

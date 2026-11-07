@@ -14,10 +14,16 @@ class SubmissionPdfService
     {
         $submission->loadMissing('category');
 
-        $logoPath   = public_path('logo-icon.png');
-        $logoBase64 = file_exists($logoPath)
-            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath))
+        $logoPath        = public_path('logo-icon.jpg');
+        $watermarkPath   = public_path('logo-watermark.jpg');
+
+        $logoBase64      = file_exists($logoPath)
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
             : '';
+
+        $watermarkBase64 = file_exists($watermarkPath)
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($watermarkPath))
+            : $logoBase64;
 
         $typeLabel = $submission->form_type === 'claim'
             ? 'Déclaration de sinistre'
@@ -27,6 +33,7 @@ class SubmissionPdfService
             'submission',
             'typeLabel',
             'logoBase64',
+            'watermarkBase64',
         ))
         ->setPaper('a4', 'portrait')
         ->setOptions([

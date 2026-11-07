@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
-import { getMySubmissions } from '../clientApi';
+import { AlertTriangle, ArrowRight, Download, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
+import { getMySubmissions, downloadSubmissionPdf } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import StatusBadge from '../admin/StatusBadge';
 import type { SubmissionStatus } from '../types';
@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const { lang, t } = useLanguage();
   const [submissions, setSubmissions] = useState<ClientSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +28,17 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  const handleDownloadPdf = async (reference: string) => {
+    setDownloading(reference);
+    try {
+      await downloadSubmissionPdf(reference);
+    } catch {
+      // silently ignore
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const quotesCount = submissions.filter((s) => s.form_type === 'quote').length;
   const claimsCount = submissions.filter((s) => s.form_type === 'claim').length;
@@ -120,14 +132,26 @@ export default function DashboardPage() {
                         <StatusBadge status={sub.status as SubmissionStatus} />
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <Link
-                          to={`/suivi?ref=${encodeURIComponent(sub.reference)}`}
-                          className="client-table-action-btn"
-                          title={t('client.track_btn')}
-                        >
-                          <ExternalLink size={13} />
-                          <span>{t('client.track_btn')}</span>
-                        </Link>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="client-table-action-btn"
+                            title={lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}
+                            onClick={() => handleDownloadPdf(sub.reference)}
+                            disabled={downloading === sub.reference}
+                          >
+                            <Download size={13} />
+                            <span>{downloading === sub.reference ? '…' : 'PDF'}</span>
+                          </button>
+                          <Link
+                            to={`/suivi?ref=${encodeURIComponent(sub.reference)}`}
+                            className="client-table-action-btn"
+                            title={t('client.track_btn')}
+                          >
+                            <ExternalLink size={13} />
+                            <span>{t('client.track_btn')}</span>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

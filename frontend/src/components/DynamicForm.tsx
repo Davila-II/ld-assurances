@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Check, CheckCircle2, Sparkles, X } from 'lucide-react';
-import { getForm, submitForm, ApiError } from '../api';
+import { Check, CheckCircle2, Download, Sparkles, X } from 'lucide-react';
+import { getForm, submitForm, downloadTrackPdf, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
 import type { Answers, Category, FormField, FormType } from '../types';
@@ -85,10 +85,23 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
   const [reference, setReference] = useState('');
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const isClaim = formType === 'claim';
   const isLoggedIn = Boolean(getClientToken());
   const activeEmail = (clientUser?.email || email).trim();
+
+  const handleDownloadPdf = async () => {
+    if (!reference || !activeEmail) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadTrackPdf(reference, activeEmail);
+    } catch {
+      // ignore
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Récupération des données du client connecté pour pré-remplir automatiquement ses coordonnées
   useEffect(() => {
@@ -510,6 +523,16 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
                 {t('modal.create_btn')}
               </a>
             )}
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={15} />
+              {downloadingPdf ? '…' : (lang === 'en' ? 'Download PDF summary' : 'Télécharger le récapitulatif PDF')}
+            </button>
             <a className="btn btn-secondary" href={`/suivi?ref=${encodeURIComponent(reference)}`}>
               {t('form.track_link')}
             </a>

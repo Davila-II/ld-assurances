@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { downloadAttachment, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
+import { Download } from 'lucide-react';
+import { downloadAttachment, downloadSubmissionPdfAdmin, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
 import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
 import StatusBadge from './StatusBadge';
 import {
@@ -26,6 +27,7 @@ export default function SubmissionDetailPage() {
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [notes, setNotes] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
@@ -146,6 +148,20 @@ export default function SubmissionDetailPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!submission) return;
+    setDownloadingPdf(true);
+    setActionError(null);
+
+    try {
+      await downloadSubmissionPdfAdmin(submission.id, `${submission.reference}.pdf`);
+    } catch (err) {
+      setActionError({ id: String(submission.id), message: errorMessage(err) });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <>
       <Link to="/admin/submissions" className="back-link">
@@ -157,9 +173,21 @@ export default function SubmissionDetailPage() {
 
       {submission && (
         <>
-          <div className="detail-head">
-            <h1>{submission.reference}</h1>
-            <StatusBadge status={submission.status} />
+          <div className="detail-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h1 style={{ margin: 0 }}>{submission.reference}</h1>
+              <StatusBadge status={submission.status} />
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} />
+              {downloadingPdf ? 'Génération…' : 'Télécharger PDF'}
+            </button>
           </div>
 
           <section className="card">

@@ -23,6 +23,8 @@ Route::post('/submissions', [SubmissionController::class, 'store'])
 // Suivi : référence + email (POST, pour que l'email ne figure jamais dans l'adresse)
 Route::post('/track', [TrackingController::class, 'show'])
     ->middleware('throttle:tracking');
+Route::post('/track/pdf', [TrackingController::class, 'downloadPdf'])
+    ->middleware('throttle:tracking');
 
 // --- Espace client ---
 Route::prefix('client')->group(function () {
