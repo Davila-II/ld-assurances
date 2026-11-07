@@ -10,9 +10,10 @@ import { useLanguage } from '../i18n/LanguageContext';
 export default function QuotePage() {
   const { slug = '' } = useParams();
   const { t } = useLanguage();
-  const product = PRODUCTS.find((p) => p.key === slug);
+  const product = PRODUCTS.find((p) => p.key === slug || p.slug === slug);
 
   const [category, setCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Devis géré sur le site principal : on redirige vers son formulaire
@@ -23,34 +24,30 @@ export default function QuotePage() {
   }, [product]);
 
   useEffect(() => {
-    if (!product || product.mainQuoteUrl) return;
+    if (product?.mainQuoteUrl) return;
 
     let cancelled = false;
     getCategories('quote')
       .then((categories) => {
         if (cancelled) return;
-        const found = categories.find((c) => c.slug === product.slug) ?? null;
+        const targetSlug = product ? product.slug : slug;
+        const found = categories.find((c) => c.slug === targetSlug || c.slug === slug) ?? null;
         setCategory(found);
         if (!found) setError("Ce devis n'est pas encore disponible.");
       })
       .catch(() => {
         if (!cancelled) setError('Impossible de charger le formulaire.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [product]);
+  }, [product, slug]);
 
-  if (!product) {
-    return (
-      <main className="page">
-        <p className="alert">Ce devis n'existe pas.</p>
-      </main>
-    );
-  }
-
-  if (product.mainQuoteUrl) {
+  if (product?.mainQuoteUrl) {
     return (
       <main className="page">
         <p className="center">Redirection…</p>
@@ -58,7 +55,9 @@ export default function QuotePage() {
     );
   }
 
-  const label = product.labelKey ? t(product.labelKey) : product.label;
+  const label = product
+    ? (product.labelKey ? t(product.labelKey) : product.label)
+    : (category?.name ?? slug);
 
   return (
     <main className="page">
@@ -71,7 +70,8 @@ export default function QuotePage() {
       </h1>
       <p className="page-subtitle">{t('quotes.subtitle')}</p>
 
-      {error && <p className="alert">{error}</p>}
+      {loading && <p className="center">Chargement du formulaire…</p>}
+      {error && !loading && <p className="alert">{error}</p>}
 
       {category && (
         <div className="form-wrap">

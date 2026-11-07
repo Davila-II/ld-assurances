@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, FileText, Layers } from 'lucide-react';
 import { getCategories, getSubmissions } from '../api';
 import type { Category, Paginated, SubmissionSummary } from '../types';
 import StatusBadge from './StatusBadge';
@@ -98,37 +97,7 @@ export default function SubmissionsPage() {
 
   return (
     <>
-      {/* Boutons distincts pour séparer Déclarations de sinistres et Demandes de devis */}
-      <div className="submission-type-switcher">
-        <button
-          type="button"
-          className={`submission-switcher-btn ${formType === 'claim' ? 'active active-claim' : ''}`}
-          onClick={() => update({ form_type: 'claim', type: '', category: '' })}
-        >
-          <AlertTriangle size={18} />
-          <span>Déclarations de sinistres</span>
-        </button>
-
-        <button
-          type="button"
-          className={`submission-switcher-btn ${formType === 'quote' ? 'active active-quote' : ''}`}
-          onClick={() => update({ form_type: 'quote', type: '', category: '' })}
-        >
-          <FileText size={18} />
-          <span>Demandes de devis</span>
-        </button>
-
-        <button
-          type="button"
-          className={`submission-switcher-btn ${!formType ? 'active' : ''}`}
-          onClick={() => update({ form_type: '', type: '', category: '' })}
-        >
-          <Layers size={18} />
-          <span>Tous les dossiers</span>
-        </button>
-      </div>
-
-      <div style={{ marginTop: '16px', marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h1 style={{ margin: '0 0 6px 0' }}>
           {formType === 'claim'
             ? 'Déclarations de sinistres'

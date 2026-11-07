@@ -15,6 +15,7 @@ interface Props {
   category: Category;
   formType?: FormType;
   presetAnswers?: Answers;
+  isPreview?: boolean;
 }
 
 interface Step {
@@ -61,7 +62,7 @@ function findError(errors: Record<string, string[]>, name: string): string | nul
   return key ? errors[key][0] : null;
 }
 
-export default function DynamicForm({ category, formType = 'claim', presetAnswers }: Props) {
+export default function DynamicForm({ category, formType = 'claim', presetAnswers, isPreview }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const { t } = useLanguage();
 
@@ -247,6 +248,16 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
       setErrors(localErrors);
       setMessage('Vérifiez les champs signalés.');
       jumpToError(localErrors);
+      return;
+    }
+
+    if (isPreview) {
+      setSending(true);
+      setTimeout(() => {
+        setSending(false);
+        setReference(formType === 'quote' ? 'LD-DV-TEST-APERÇU' : 'LD-DS-TEST-APERÇU');
+        setMessage("Mode test validé : Ce formulaire fonctionne parfaitement ! Aucune donnée réelle n'a été envoyée.");
+      }, 400);
       return;
     }
 

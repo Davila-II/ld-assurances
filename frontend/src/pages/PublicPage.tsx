@@ -85,9 +85,44 @@ const CLAIM_ITEMS: ClaimItem[] = [
   },
 ];
 
-// Vue « devis » : une carte par type d'assurance
+// Vue « devis » : une carte par type d'assurance (connectée en direct aux catégories du constructeur de formulaires)
 function QuoteHub() {
   const { t } = useLanguage();
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCategories('quote')
+      .then((data) => {
+        if (!cancelled) setCategories(data);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const items = categories.length > 0
+    ? categories.map((cat) => {
+        const known = PRODUCTS.find((p) => p.slug === cat.slug || p.key === cat.slug);
+        return {
+          key: known?.key ?? cat.slug,
+          label: known?.labelKey ? t(known.labelKey) : (known?.label ?? cat.name),
+          desc: known?.descKey ? t(known.descKey) : (known?.description ?? 'Demandez votre devis personnalisé en ligne'),
+          icon: known?.icon ?? <Shield size={32} />,
+          tone: known?.tone ?? 'blue',
+          link: `/devis/${known?.key ?? cat.slug}`,
+        };
+      })
+    : PRODUCTS.map((product) => ({
+        key: product.key,
+        label: product.labelKey ? t(product.labelKey) : product.label,
+        desc: product.descKey ? t(product.descKey) : product.description,
+        icon: product.icon,
+        tone: product.tone,
+        link: `/devis/${product.key}`,
+      }));
 
   return (
     <main className="page hub">
@@ -95,28 +130,17 @@ function QuoteHub() {
       <p className="hub-subtitle">{t('quotes.subtitle')}</p>
 
       <div className="hub-grid">
-        {PRODUCTS.map((product) => {
-          const label = product.labelKey ? t(product.labelKey) : product.label;
-          const desc = product.descKey ? t(product.descKey) : product.description;
-
-          const inner = (
-            <>
-              <span className="hub-icon">{product.icon}</span>
-              <span className="hub-name">{label}</span>
-              <span className="hub-desc">{desc}</span>
-            </>
-          );
-
-          return (
-            <Link
-              key={product.key}
-              to={`/devis/${product.key}`}
-              className={`hub-card tone-${product.tone}`}
-            >
-              {inner}
-            </Link>
-          );
-        })}
+        {items.map((item) => (
+          <Link
+            key={item.key}
+            to={item.link}
+            className={`hub-card tone-${item.tone}`}
+          >
+            <span className="hub-icon">{item.icon}</span>
+            <span className="hub-name">{item.label}</span>
+            <span className="hub-desc">{item.desc}</span>
+          </Link>
+        ))}
       </div>
 
       <section className="hub-contact">

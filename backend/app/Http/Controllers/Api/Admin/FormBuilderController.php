@@ -87,6 +87,12 @@ class FormBuilderController extends Controller
     {
         $data = $request->validate($this->storeRules($category));
 
+        if (array_key_exists('condition', $data)) {
+            if (empty($data['condition']['field']) || empty($data['condition']['equals'])) {
+                $data['condition'] = null;
+            }
+        }
+
         $max = (int) ($category->fields()->where('form_type', $data['form_type'])->max('sort_order') ?? 0);
 
         $field = $category->fields()->create([
@@ -118,6 +124,12 @@ class FormBuilderController extends Controller
             'condition'   => ['nullable', 'array:field,equals'],
             'is_active'   => ['sometimes', 'boolean'],
         ]);
+
+        if (array_key_exists('condition', $data)) {
+            if (empty($data['condition']['field']) || empty($data['condition']['equals'])) {
+                $data['condition'] = null;
+            }
+        }
 
         $field->update($data);
 
