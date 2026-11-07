@@ -356,6 +356,34 @@ export const TRANSLATIONS = {
     'admin_clients.btn_create': 'Créer et envoyer les accès par email',
     'admin_clients.creating': 'Création en cours…',
     'admin_clients.success_title': 'Client créé avec succès !',
+
+    // Assistant virtuel
+    'assistant.trigger_bubble': "Besoin d'aide ? 👋",
+    'assistant.name': 'Assistant LD Assurances',
+    'assistant.status_online': 'En ligne',
+    'assistant.welcome': "Bonjour ! 👋 Je suis l'assistant virtuel de LD ASSURANCES. Comment puis-je vous aider aujourd'hui ? Vous pouvez me poser une question sur nos services, nos devis, la déclaration de sinistre, ou tout autre sujet lié à l'assurance.",
+    'assistant.quick_label': 'Questions fréquentes :',
+    'assistant.input_placeholder': 'Posez votre question...',
+    'assistant.footer_note': 'Assistant automatique · Contactez le {phone}',
+    'assistant.whatsapp_btn': 'WhatsApp',
+    'assistant.whatsapp_msg': 'Bonjour, je souhaite des informations sur vos services.',
+    'assistant.suggestions_label': 'Vous cherchez peut-être aussi :',
+
+    // Questions fréquentes
+    'assistant.q_quote': 'Comment obtenir un devis ?',
+    'assistant.q_claim': 'Comment déclarer un sinistre ?',
+    'assistant.q_auto': 'Quels documents pour un devis auto ?',
+    'assistant.q_contact': 'Comment contacter LD ASSURANCES ?',
+    'assistant.q_cima': "Qu'est-ce que le CIMA ?",
+    'assistant.q_reduce_premium': 'Comment réduire ma prime ?',
+
+    // Boutons d'action
+    'assistant.btn_quote': 'Demander un devis',
+    'assistant.btn_claim': 'Déclarer un sinistre',
+    'assistant.btn_calc_auto': 'Calculer ma prime auto',
+    'assistant.btn_contact_page': 'Page contact',
+    'assistant.btn_cima_lexique': 'Voir le lexique complet',
+    'assistant.btn_contact_advisor': 'Contacter un conseiller',
   },
 
   en: {
@@ -713,6 +741,34 @@ export const TRANSLATIONS = {
     'admin_clients.btn_create': 'Create and send credentials by email',
     'admin_clients.creating': 'Creating…',
     'admin_clients.success_title': 'Client created successfully!',
+
+    // Virtual assistant
+    'assistant.trigger_bubble': 'Need help? 👋',
+    'assistant.name': 'LD Assurances Assistant',
+    'assistant.status_online': 'Online',
+    'assistant.welcome': 'Hello! 👋 I am the virtual assistant of LD ASSURANCES. How can I help you today? You can ask me any question about our services, our quotes, claim declarations, or any other insurance topic.',
+    'assistant.quick_label': 'Frequently Asked Questions:',
+    'assistant.input_placeholder': 'Ask your question...',
+    'assistant.footer_note': 'Automated assistant · Call {phone}',
+    'assistant.whatsapp_btn': 'WhatsApp',
+    'assistant.whatsapp_msg': 'Hello, I would like information about your services.',
+    'assistant.suggestions_label': 'You might also be looking for:',
+
+    // Frequently asked questions
+    'assistant.q_quote': 'How to get a quote?',
+    'assistant.q_claim': 'How to report a claim?',
+    'assistant.q_auto': 'What documents for a car quote?',
+    'assistant.q_contact': 'How to contact LD ASSURANCES?',
+    'assistant.q_cima': 'What is CIMA?',
+    'assistant.q_reduce_premium': 'How to reduce my premium?',
+
+    // Action buttons
+    'assistant.btn_quote': 'Request a quote',
+    'assistant.btn_claim': 'Report a claim',
+    'assistant.btn_calc_auto': 'Calculate my car premium',
+    'assistant.btn_contact_page': 'Contact page',
+    'assistant.btn_cima_lexique': 'View full glossary',
+    'assistant.btn_contact_advisor': 'Contact an advisor',
   },
 } as const;
 

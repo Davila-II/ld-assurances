@@ -3,24 +3,21 @@ import { X, Send } from 'lucide-react';
 import assitImg from '../images/assit.png';
 import whatsappImg from '../images/whatsapp.png';
 import { SITE } from '../siteConfig';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { Lang, TranslationKey } from '../i18n/translations';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
 type ReplyButton = {
   label: string;
-  /** URL absolue (externe) ou chemin relatif (interne). */
   href: string;
   external?: boolean;
 };
 
 type ReplyContent = {
-  /** Paragraphe principal. */
   text: string;
-  /** Lignes d'info formatées (ex. contact). */
   infoLines?: string[];
-  /** "Vous cherchez peut-être aussi :" bullets. */
   suggestions?: string[];
-  /** Boutons d'action. */
   buttons?: ReplyButton[];
 };
 
@@ -30,122 +27,163 @@ type Message = {
   content?: ReplyContent;
 };
 
-// ── Questions rapides ──────────────────────────────────────────────────────
+// ── Base de réponses bilingue (FR / EN) ────────────────────────────────────
 
-const QUICK_QUESTIONS = [
-  'Comment obtenir un devis ?',
-  'Comment déclarer un sinistre ?',
-  'Quels documents pour un devis auto ?',
-  'Comment contacter LD ASSURANCES ?',
-  "Qu'est-ce que le CIMA ?",
-  'Comment réduire ma prime ?',
-];
-
-// ── Base de réponses ───────────────────────────────────────────────────────
-
-function getBotReply(question: string): { text: string; content: ReplyContent } {
+function getBotReply(
+  question: string,
+  lang: Lang,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): { text: string; content: ReplyContent } {
   const q = question.toLowerCase().trim();
+  const isEn = lang === 'en';
 
-  /* ── Obtenir un devis ── */
-  if (q.includes('devis') && !q.includes('auto') && !q.includes('réduire')) {
+  /* ── 1. Obtenir un devis / Get a quote ── */
+  if (
+    (q.includes('devis') && !q.includes('auto') && !q.includes('réduire')) ||
+    (q.includes('quote') && !q.includes('auto') && !q.includes('car') && !q.includes('reduce'))
+  ) {
     return {
-      text: 'Voici comment obtenir un devis.',
+      text: isEn ? 'Here is how to get a quote.' : 'Voici comment obtenir un devis.',
       content: {
-        text: "Le devis en ligne est gratuit et sans engagement. Il vous donne une estimation des primes selon les garanties choisies. Le contrat ne prend effet qu'après votre acceptation, le paiement de la première prime et la délivrance de la police. Vous pouvez obtenir un devis pour l'auto, le voyage et l'assurance professionnelle directement en ligne.",
-        suggestions: ["Le devis en ligne est-il engageant ?", 'Devis assurance auto'],
-        buttons: [
-          { label: 'Demander un devis', href: '/?service=devis' },
-        ],
+        text: isEn
+          ? 'The online quote is free and without obligation. It gives you an estimate of premiums based on chosen guarantees. The contract only takes effect after your acceptance, payment of the first premium, and policy issuance. You can obtain a quote for motor, travel, and business insurance directly online.'
+          : "Le devis en ligne est gratuit et sans engagement. Il vous donne une estimation des primes selon les garanties choisies. Le contrat ne prend effet qu'après votre acceptation, le paiement de la première prime et la délivrance de la police. Vous pouvez obtenir un devis pour l'auto, le voyage et l'assurance professionnelle directement en ligne.",
+        suggestions: isEn
+          ? ['Is the online quote binding?', 'Motor insurance quote']
+          : ['Le devis en ligne est-il engageant ?', 'Devis assurance auto'],
+        buttons: [{ label: t('assistant.btn_quote'), href: '/?service=devis' }],
       },
     };
   }
 
-  /* ── Déclarer un sinistre ── */
-  if (q.includes('sinistre') || q.includes('déclarer')) {
+  /* ── 2. Déclarer un sinistre / Report a claim ── */
+  if (q.includes('sinistre') || q.includes('claim') || q.includes('déclarer') || q.includes('report')) {
     return {
-      text: 'Voici comment déclarer un sinistre.',
+      text: isEn ? 'Here is how to report a claim.' : 'Voici comment déclarer un sinistre.',
       content: {
-        text: `Vous pouvez déclarer un sinistre via le formulaire en ligne (rubrique « Déclaration Sinistre »), par e-mail à ${SITE.email}, ou directement en agence. La déclaration doit intervenir dans les délais prévus au contrat (généralement 5 jours ouvrés). Un numéro de dossier vous sera attribué au format LD-DS-XXXX-JJMMAAAA.`,
-        buttons: [
-          { label: 'Déclarer un sinistre', href: '/?service=sinistre' },
-        ],
+        text: isEn
+          ? `You can report a claim via the online form (under "File a Claim"), by email at ${SITE.email}, or directly at one of our branches. The declaration must be made within the contractual deadline (generally 5 working days). A file reference number will be assigned to you in the format LD-DS-XXXX-DDMMYYYY.`
+          : `Vous pouvez déclarer un sinistre via le formulaire en ligne (rubrique « Déclaration Sinistre »), par e-mail à ${SITE.email}, ou directement en agence. La déclaration doit intervenir dans les délais prévus au contrat (généralement 5 jours ouvrés). Un numéro de dossier vous sera attribué au format LD-DS-XXXX-JJMMAAAA.`,
+        buttons: [{ label: t('assistant.btn_claim'), href: '/?service=sinistre' }],
       },
     };
   }
 
-  /* ── Documents / devis auto ── */
-  if ((q.includes('document') && q.includes('auto')) || (q.includes('auto') && q.includes('devis')) || q.includes('prime auto')) {
+  /* ── 3. Documents / devis auto / Car quote ── */
+  if (
+    (q.includes('auto') || q.includes('car') || q.includes('véhicule') || q.includes('vehicle')) &&
+    (q.includes('document') || q.includes('devis') || q.includes('quote') || q.includes('prime') || q.includes('premium'))
+  ) {
     return {
-      text: "Voici ce qu'il faut savoir pour un devis auto.",
+      text: isEn ? 'Here is what you need for a car insurance quote.' : "Voici ce qu'il faut savoir pour un devis auto.",
       content: {
-        text: "Notre calculateur de prime auto est conforme aux tarifs ministériels CIMA. Il prend en compte la catégorie du véhicule, la zone de circulation, la puissance fiscale, le carburant, et les garanties choisies. Le calcul se fait en temps réel avec le détail complet : prime RC, garanties, TVA, DTA, accessoires.",
-        suggestions: ['Assurance Auto', 'Quels documents fournir pour un devis auto ?'],
-        buttons: [
-          { label: 'Calculer ma prime auto', href: '/?service=devis' },
-        ],
+        text: isEn
+          ? 'Our car insurance premium calculator complies with CIMA ministerial tariffs. It takes into account vehicle category, circulation zone, fiscal horsepower, fuel type, and selected covers. The calculation is done in real time with the full breakdown: third-party liability, covers, VAT, DTA, accessories.'
+          : 'Notre calculateur de prime auto est conforme aux tarifs ministériels CIMA. Il prend en compte la catégorie du véhicule, la zone de circulation, la puissance fiscale, le carburant, et les garanties choisies. Le calcul se fait en temps réel avec le détail complet : prime RC, garanties, TVA, DTA, accessoires.',
+        suggestions: isEn
+          ? ['Motor Vehicle Insurance', 'What documents to provide for a car quote?']
+          : ['Assurance Auto', 'Quels documents fournir pour un devis auto ?'],
+        buttons: [{ label: t('assistant.btn_calc_auto'), href: '/?service=devis' }],
       },
     };
   }
 
-  /* ── Contacter LD ASSURANCES ── */
-  if (q.includes('contacter') || q.includes('contact') || q.includes('adresse') || q.includes('téléphone') || q.includes('email')) {
+  /* ── 4. Contacter LD ASSURANCES / Contact ── */
+  if (
+    q.includes('contacter') ||
+    q.includes('contact') ||
+    q.includes('adresse') ||
+    q.includes('address') ||
+    q.includes('téléphone') ||
+    q.includes('phone') ||
+    q.includes('email') ||
+    q.includes('agence') ||
+    q.includes('branch')
+  ) {
     return {
-      text: 'Voici nos coordonnées.',
+      text: isEn ? 'Here are our contact details.' : 'Voici nos coordonnées.',
       content: {
         text: '',
-        infoLines: [
-          `📍 Adresse : ${SITE.address}, Cameroun`,
-          `📞 Téléphones : ${SITE.phones.join(' / ')}`,
-          `📧 Email : ${SITE.email}`,
-          '🕐 Horaires : Lun-Ven 08h00-17h30, Sam 09h00-13h00, Dim fermé',
-        ],
-        buttons: [
-          { label: 'Page contact', href: 'https://www.ldassurances.cm/contact/', external: true },
-        ],
+        infoLines: isEn
+          ? [
+              `📍 Address: ${SITE.address}, Cameroon`,
+              `📞 Phones: ${SITE.phones.join(' / ')}`,
+              `📧 Email: ${SITE.email}`,
+              '🕐 Working hours: Mon-Fri 08:00-17:30, Sat 09:00-13:00, Sun closed',
+            ]
+          : [
+              `📍 Adresse : ${SITE.address}, Cameroun`,
+              `📞 Téléphones : ${SITE.phones.join(' / ')}`,
+              `📧 Email : ${SITE.email}`,
+              '🕐 Horaires : Lun-Ven 08h00-17h30, Sam 09h00-13h00, Dim fermé',
+            ],
+        buttons: [{ label: t('assistant.btn_contact_page'), href: 'https://www.ldassurances.cm/contact/', external: true }],
       },
     };
   }
 
-  /* ── CIMA ── */
+  /* ── 5. CIMA ── */
   if (q.includes('cima')) {
     return {
-      text: "Voici ce qu'est le CIMA.",
+      text: isEn ? 'What is CIMA.' : "Voici ce qu'est le CIMA.",
       content: {
-        text: "Le CIMA (Conférence Interafricaine des Marchés d'Assurance) est une organisation régionale regroupant 14 États membres (dont le Cameroun) qui partage un code unique régissant l'activité d'assurance dans la zone CFA.",
+        text: isEn
+          ? 'CIMA (Inter-African Conference on Insurance Markets) is a regional organization bringing together 14 member States (including Cameroon) sharing a unified code governing insurance activities in the CFA zone.'
+          : "Le CIMA (Conférence Interafricaine des Marchés d'Assurance) est une organisation régionale regroupant 14 États membres (dont le Cameroun) qui partage un code unique régissant l'activité d'assurance dans la zone CFA.",
         buttons: [
-          { label: 'Voir le lexique complet', href: 'https://www.ldassurances.cm/lexique/', external: true },
+          { label: t('assistant.btn_cima_lexique'), href: 'https://www.ldassurances.cm/lexique/', external: true },
         ],
       },
     };
   }
 
-  /* ── Réduire ma prime ── */
-  if (q.includes('réduire') || q.includes('prime') || q.includes('cotisation')) {
+  /* ── 6. Réduire ma prime / Reduce my premium ── */
+  if (
+    q.includes('réduire') ||
+    q.includes('reduce') ||
+    q.includes('lower') ||
+    q.includes('prime') ||
+    q.includes('premium') ||
+    q.includes('cotisation')
+  ) {
     return {
-      text: 'Voici comment optimiser votre prime.',
+      text: isEn ? 'Here is how to optimize your premium.' : 'Voici comment optimiser votre prime.',
       content: {
-        text: "Le devis en ligne est gratuit et sans engagement. Il vous donne une estimation des primes selon les garanties choisies. Le contrat ne prend effet qu'après votre acceptation, le paiement de la première prime et la délivrance de la police. Vous pouvez obtenir un devis pour l'auto, le voyage et l'assurance professionnelle directement en ligne.",
-        suggestions: ['Comment réduire ma prime ?', "Comment est calculée la prime d'habitation ?"],
-        buttons: [
-          { label: 'Demander un devis', href: '/?service=devis' },
-        ],
+        text: isEn
+          ? 'The online quote is free and without obligation. It gives you an estimate of premiums based on chosen guarantees. The contract only takes effect after your acceptance, payment of the first premium, and policy issuance. You can obtain a quote for motor, travel, and business insurance directly online.'
+          : "Le devis en ligne est gratuit et sans engagement. Il vous donne une estimation des primes selon les garanties choisies. Le contrat ne prend effet qu'après votre acceptation, le paiement de la première prime et la délivrance de la police. Vous pouvez obtenir un devis pour l'auto, le voyage et l'assurance professionnelle directement en ligne.",
+        suggestions: isEn
+          ? ['How to reduce my premium?', 'How is home insurance premium calculated?']
+          : ['Comment réduire ma prime ?', "Comment est calculée la prime d'habitation ?"],
+        buttons: [{ label: t('assistant.btn_quote'), href: '/?service=devis' }],
       },
     };
   }
 
-  /* ── Réponse par défaut ── */
+  /* ── 7. Réponse par défaut / Fallback ── */
   return {
-    text: "Je n'ai pas trouvé de réponse précise à votre question.",
+    text: isEn
+      ? 'I could not find a specific answer to your question.'
+      : "Je n'ai pas trouvé de réponse précise à votre question.",
     content: {
-      text: "Je n'ai pas trouvé de réponse précise à votre question. Vous pouvez :",
-      infoLines: [
-        '• Parcourir notre FAQ complète',
-        `• Nous contacter au ${SITE.phones[0]}`,
-        `• Envoyer un email à ${SITE.email}`,
-        '• Ou utiliser un des liens ci-dessous.',
-      ],
+      text: isEn
+        ? 'I could not find a specific answer to your question. You can:'
+        : "Je n'ai pas trouvé de réponse précise à votre question. Vous pouvez :",
+      infoLines: isEn
+        ? [
+            '• Browse our complete FAQ',
+            `• Call us at ${SITE.phones[0]}`,
+            `• Send an email to ${SITE.email}`,
+            '• Or use one of the links below.',
+          ]
+        : [
+            '• Parcourir notre FAQ complète',
+            `• Nous contacter au ${SITE.phones[0]}`,
+            `• Envoyer un email à ${SITE.email}`,
+            '• Ou utiliser un des liens ci-dessous.',
+          ],
       buttons: [
-        { label: 'Contacter un conseiller', href: 'https://www.ldassurances.cm/contact/', external: true },
+        { label: t('assistant.btn_contact_advisor'), href: 'https://www.ldassurances.cm/contact/', external: true },
       ],
     },
   };
@@ -153,14 +191,12 @@ function getBotReply(question: string): { text: string; content: ReplyContent } 
 
 // ── Composant de rendu d'une réponse riche ─────────────────────────────────
 
-function BotBubble({ msg }: { msg: Message }) {
+function BotBubble({ msg, suggestionsLabel }: { msg: Message; suggestionsLabel: string }) {
   const c = msg.content;
   return (
     <div className="assistant-msg-bubble">
-      {/* Texte principal */}
       {c?.text && <p style={{ margin: 0 }}>{c.text}</p>}
 
-      {/* Lignes d'info (contact, fallback) */}
       {c?.infoLines && c.infoLines.length > 0 && (
         <ul className="assistant-info-lines">
           {c.infoLines.map((line, i) => (
@@ -169,10 +205,9 @@ function BotBubble({ msg }: { msg: Message }) {
         </ul>
       )}
 
-      {/* Suggestions */}
       {c?.suggestions && c.suggestions.length > 0 && (
         <div className="assistant-suggestions">
-          <span className="assistant-suggestions-label">Vous cherchez peut-être aussi :</span>
+          <span className="assistant-suggestions-label">{suggestionsLabel}</span>
           <ul>
             {c.suggestions.map((s, i) => (
               <li key={i}>• {s}</li>
@@ -181,7 +216,6 @@ function BotBubble({ msg }: { msg: Message }) {
         </div>
       )}
 
-      {/* Boutons */}
       {c?.buttons && c.buttons.length > 0 && (
         <div className="assistant-reply-btns">
           {c.buttons.map((btn, i) => (
@@ -203,23 +237,39 @@ function BotBubble({ msg }: { msg: Message }) {
 // ── Composant principal ────────────────────────────────────────────────────
 
 export default function AssistantWidget() {
+  const { lang, t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      from: 'bot',
-      text: "Bonjour ! 👋 Je suis l'assistant virtuel de LD ASSURANCES. Comment puis-je vous aider aujourd'hui ? Vous pouvez me poser une question sur nos services, nos devis, la déclaration de sinistre, ou tout autre sujet lié à l'assurance.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [showQuick, setShowQuick] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialisation et adaptation automatique du message de bienvenue selon la langue
+  useEffect(() => {
+    setMessages((prev) => {
+      // Si aucune interaction utilisateur n'a eu lieu, on adapte la bulle de bienvenue
+      if (prev.length <= 1) {
+        return [{ from: 'bot', text: t('assistant.welcome') }];
+      }
+      return prev;
+    });
+  }, [lang, t]);
 
   useEffect(() => {
     if (open && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, open, typing]);
+
+  const quickQuestions = [
+    t('assistant.q_quote'),
+    t('assistant.q_claim'),
+    t('assistant.q_auto'),
+    t('assistant.q_contact'),
+    t('assistant.q_cima'),
+    t('assistant.q_reduce_premium'),
+  ];
 
   function sendMessage(text: string) {
     if (!text.trim()) return;
@@ -229,7 +279,7 @@ export default function AssistantWidget() {
     setTyping(true);
     setTimeout(() => {
       setTyping(false);
-      const { text: botText, content } = getBotReply(text);
+      const { text: botText, content } = getBotReply(text, lang, t);
       setMessages((prev) => [...prev, { from: 'bot', text: botText, content }]);
     }, 800 + Math.random() * 400);
   }
@@ -240,7 +290,7 @@ export default function AssistantWidget() {
   }
 
   const whatsappNumber = SITE.emergencyPhone.replace(/\D/g, '');
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=Bonjour%2C%20je%20souhaite%20des%20informations%20sur%20vos%20services.`;
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(t('assistant.whatsapp_msg'))}`;
 
   return (
     <>
@@ -249,19 +299,18 @@ export default function AssistantWidget() {
         <button
           className="assistant-trigger"
           onClick={() => setOpen(true)}
-          aria-label="Ouvrir l'assistant LD ASSURANCES"
+          aria-label={t('assistant.trigger_bubble')}
           type="button"
         >
-          <span className="assistant-trigger-bubble">Besoin d'aide ? 👋</span>
-          <img src={assitImg} alt="Assistant LD ASSURANCES" className="assistant-trigger-avatar" />
+          <span className="assistant-trigger-bubble">{t('assistant.trigger_bubble')}</span>
+          <img src={assitImg} alt={t('assistant.name')} className="assistant-trigger-avatar" />
           <span className="assistant-online-dot" aria-hidden="true" />
         </button>
       )}
 
       {/* ── Fenêtre de chat ────────────────────────────────────────────────── */}
       {open && (
-        <div className="assistant-panel" role="dialog" aria-label="Assistant LD Assurances" aria-modal="true">
-
+        <div className="assistant-panel" role="dialog" aria-label={t('assistant.name')} aria-modal="true">
           {/* En-tête */}
           <div className="assistant-header">
             <div className="assistant-header-info">
@@ -270,17 +319,17 @@ export default function AssistantWidget() {
                 <span className="assistant-online-dot" aria-hidden="true" />
               </div>
               <div>
-                <div className="assistant-header-name">Assistant LD Assurances</div>
+                <div className="assistant-header-name">{t('assistant.name')}</div>
                 <div className="assistant-header-status">
                   <span className="assistant-status-dot" aria-hidden="true" />
-                  En ligne
+                  {t('assistant.status_online')}
                 </div>
               </div>
             </div>
             <button
               className="assistant-close"
               onClick={() => setOpen(false)}
-              aria-label="Fermer l'assistant"
+              aria-label="Fermer"
               type="button"
             >
               <X size={18} />
@@ -295,7 +344,7 @@ export default function AssistantWidget() {
                   <img src={assitImg} alt="" className="assistant-msg-avatar" aria-hidden="true" />
                 )}
                 {msg.from === 'bot' && msg.content ? (
-                  <BotBubble msg={msg} />
+                  <BotBubble msg={msg} suggestionsLabel={t('assistant.suggestions_label')} />
                 ) : (
                   <div className="assistant-msg-bubble">{msg.text}</div>
                 )}
@@ -317,9 +366,9 @@ export default function AssistantWidget() {
           {/* Questions rapides — visibles uniquement au début */}
           {showQuick && (
             <div className="assistant-quick">
-              <p className="assistant-quick-label">Questions fréquentes :</p>
+              <p className="assistant-quick-label">{t('assistant.quick_label')}</p>
               <div className="assistant-quick-list">
-                {QUICK_QUESTIONS.map((q) => (
+                {quickQuestions.map((q) => (
                   <button
                     key={q}
                     type="button"
@@ -338,10 +387,10 @@ export default function AssistantWidget() {
             <input
               type="text"
               className="assistant-input"
-              placeholder="Posez votre question..."
+              placeholder={t('assistant.input_placeholder')}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              aria-label="Votre message"
+              aria-label={t('assistant.input_placeholder')}
               autoComplete="off"
               maxLength={300}
             />
@@ -357,16 +406,16 @@ export default function AssistantWidget() {
 
           {/* Pied */}
           <div className="assistant-footer">
-            <span>Assistant automatique · Contactez le {SITE.phones[0]}</span>
+            <span>{t('assistant.footer_note', { phone: SITE.phones[0] })}</span>
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="assistant-whatsapp"
-              aria-label="Contacter sur WhatsApp"
+              aria-label={t('assistant.whatsapp_btn')}
             >
               <img src={whatsappImg} alt="WhatsApp" width={20} height={20} />
-              WhatsApp
+              {t('assistant.whatsapp_btn')}
             </a>
           </div>
         </div>
