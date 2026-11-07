@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, ExternalLink, Plus, ShieldAlert } from 'lucide-react';
+import { Download, Edit2, ExternalLink, Plus, ShieldAlert } from 'lucide-react';
 import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import EmptyState from './EmptyState';
@@ -79,6 +79,7 @@ export default function ClaimsPage() {
                 <th>{t('client.col_reference')}</th>
                 <th>{t('client.col_category')}</th>
                 <th>{t('client.col_date')}</th>
+                <th>{t('client.col_processed_at')}</th>
                 <th>{t('client.col_status')}</th>
                 <th style={{ textAlign: 'right' }}>{t('client.col_action')}</th>
               </tr>
@@ -93,6 +94,16 @@ export default function ClaimsPage() {
                     })
                   : '-';
 
+                const processedStr = sub.processed_at
+                  ? new Date(sub.processed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : (sub.status === 'received' ? t('client.not_processed') : '—');
+
                 return (
                   <tr key={sub.reference}>
                     <td>
@@ -102,6 +113,9 @@ export default function ClaimsPage() {
                       <strong>{lang === 'en' && sub.category_en ? sub.category_en : (sub.category || '-')}</strong>
                     </td>
                     <td>{dateStr}</td>
+                    <td style={{ color: sub.processed_at ? '#1aaca8' : '#64748b', fontWeight: sub.processed_at ? 600 : 400 }}>
+                      {processedStr}
+                    </td>
                     <td>
                       <StatusBadge status={sub.status as SubmissionStatus} />
                       {sub.status === 'rejected' && sub.rejection_reason && (
@@ -112,6 +126,17 @@ export default function ClaimsPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        {sub.status === 'received' && (
+                          <Link
+                            to={`/suivi?ref=${encodeURIComponent(sub.reference)}&edit=1`}
+                            className="client-table-action-btn"
+                            title={t('client.edit_btn')}
+                            style={{ color: '#144983', borderColor: '#144983' }}
+                          >
+                            <Edit2 size={13} />
+                            <span>{t('client.edit_btn')}</span>
+                          </Link>
+                        )}
                         <button
                           type="button"
                           className="client-table-action-btn"

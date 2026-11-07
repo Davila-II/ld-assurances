@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Download, Edit2, X, Check } from 'lucide-react';
 import { trackSubmission, downloadTrackPdf, updateTrackSubmission, ApiError } from '../api';
+import { clientMe } from '../clientApi';
+import { getClientToken } from '../clientAuth';
 import { formatDate } from '../admin/labels';
 import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 export default function TrackPage() {
   const { t } = useLanguage();
-  const [reference, setReference] = useState('');
+  const [searchParams] = useSearchParams();
+  const urlRef = searchParams.get('ref') ?? '';
+  const shouldEdit = searchParams.get('edit') === '1';
+
+  const [reference, setReference] = useState(urlRef);
   const [email, setEmail] = useState('');
   const [result, setResult] = useState<TrackResult | null>(null);
   const [error, setError] = useState('');
@@ -22,6 +29,56 @@ export default function TrackPage() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
+  const fetchTrack = useCallback(async (refVal: string, emailVal: string, startEditing = false) => {
+    setError('');
+    setResult(null);
+    setEditSuccess('');
+    setLoading(true);
+
+    try {
+      const data = await trackSubmission(refVal.trim().toUpperCase(), emailVal.trim());
+      setResult(data);
+
+      if (data.answers && typeof data.answers === 'object') {
+        const pre: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data.answers)) {
+          pre[k] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
+        }
+        setEditAnswers(pre);
+      } else {
+        setEditAnswers({});
+      }
+
+      if (startEditing && data.status === 'received') {
+        setEditing(true);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setError(t('track.not_found'));
+      } else {
+        setError(err instanceof Error ? err.message : 'Erreur inattendue.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  // Si l'utilisateur arrive depuis l'espace client avec un token et un paramètre ref
+  useEffect(() => {
+    if (!urlRef) return;
+
+    if (getClientToken()) {
+      clientMe()
+        .then((user) => {
+          setEmail(user.email);
+          return fetchTrack(urlRef, user.email, shouldEdit);
+        })
+        .catch(() => {
+          // Si pas connecté ou échec, l'utilisateur tapera son email manuellement
+        });
+    }
+  }, [urlRef, shouldEdit, fetchTrack]);
+
   const handleDownloadPdf = async () => {
     if (!result) return;
     setDownloadingPdf(true);
@@ -34,37 +91,10 @@ export default function TrackPage() {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError('');
-    setResult(null);
     setEditing(false);
-    setEditSuccess('');
-    setLoading(true);
-
-    try {
-      const data = await trackSubmission(reference.trim().toUpperCase(), email.trim());
-      setResult(data);
-
-      // Pré-remplir le formulaire d'édition avec les réponses existantes
-      if (data.answers && typeof data.answers === 'object') {
-        const pre: Record<string, string> = {};
-        for (const [k, v] of Object.entries(data.answers)) {
-          pre[k] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
-        }
-        setEditAnswers(pre);
-      } else {
-        setEditAnswers({});
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setError(t('track.not_found'));
-      } else {
-        setError(err instanceof Error ? err.message : 'Erreur inattendue.');
-      }
-    } finally {
-      setLoading(false);
-    }
+    void fetchTrack(reference, email, false);
   };
 
   const handleEditSave = async () => {
@@ -182,12 +212,12 @@ export default function TrackPage() {
               )}
               <dt>{t('track.date_label')}</dt>
               <dd>{formatDate(result.created_at)}</dd>
-              {result.processed_at && (
-                <>
-                  <dt style={{ color: '#1aaca8', fontWeight: 600 }}>Date de prise en charge</dt>
-                  <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(result.processed_at)}</dd>
-                </>
-              )}
+              <dt style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : undefined}>
+                Date de traitement
+              </dt>
+              <dd style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : { color: '#64748b' }}>
+                {result.processed_at ? formatDate(result.processed_at) : 'En attente de traitement'}
+              </dd>
             </dl>
 
             {/* Formulaire d'édition — uniquement quand status === 'received' */}

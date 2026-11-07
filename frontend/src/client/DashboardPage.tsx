@@ -101,6 +101,7 @@ export default function DashboardPage() {
                   <th>Type</th>
                   <th>{t('client.col_category')}</th>
                   <th>{t('client.col_date')}</th>
+                  <th>{t('client.col_processed_at')}</th>
                   <th>{t('client.col_status')}</th>
                   <th style={{ textAlign: 'right' }}>{t('client.col_action')}</th>
                 </tr>
@@ -113,6 +114,16 @@ export default function DashboardPage() {
                         { year: 'numeric', month: 'short', day: 'numeric' }
                       )
                     : '-';
+
+                  const processedStr = sub.processed_at
+                    ? new Date(sub.processed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : (sub.status === 'received' ? t('client.not_processed') : '—');
 
                   return (
                     <tr key={sub.reference}>
@@ -128,6 +139,9 @@ export default function DashboardPage() {
                         <strong>{lang === 'en' && sub.category_en ? sub.category_en : (sub.category || '-')}</strong>
                       </td>
                       <td>{dateStr}</td>
+                      <td style={{ color: sub.processed_at ? '#1aaca8' : '#64748b', fontWeight: sub.processed_at ? 600 : 400 }}>
+                        {processedStr}
+                      </td>
                       <td>
                         <StatusBadge status={sub.status as SubmissionStatus} />
                       </td>
