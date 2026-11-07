@@ -116,3 +116,30 @@ export const clientChangePassword = (payload: {
 
 export const getMySubmissions = (type?: 'claim' | 'quote') =>
   call<ClientPage<ClientSubmission>>(`/submissions${type ? `?type=${type}` : ''}`);
+
+/**
+ * Télécharge le PDF d'une soumission du client et l'ouvre dans un nouvel onglet.
+ * Utilise directement fetch pour récupérer le binaire sans JSON parsing.
+ */
+export const downloadSubmissionPdf = async (reference: string): Promise<void> => {
+  const token = getClientToken();
+  if (!token) throw new ApiError('Session expirée. Veuillez vous reconnecter.', 401);
+
+  const API_URL = import.meta.env.VITE_API_URL as string;
+  const res = await fetch(`${API_URL}/client/submissions/${encodeURIComponent(reference)}/pdf`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/pdf',
+    },
+  });
+
+  if (!res.ok) throw new ApiError('Le téléchargement du PDF a échoué.', res.status);
+
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href     = url;
+  link.download = `${reference}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+};

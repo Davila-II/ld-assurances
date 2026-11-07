@@ -44,6 +44,7 @@ Route::prefix('client')->group(function () {
     // Connecté ET email vérifié : accès aux données du client
     Route::middleware(['auth:sanctum', EnsureUserIsClient::class . ':verified'])->group(function () {
         Route::get('/submissions', [ClientSubmissionController::class, 'index']);
+        Route::get('/submissions/{reference}/pdf', [ClientSubmissionController::class, 'downloadPdf']);
     });
 });
 
@@ -65,6 +66,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
 
         Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
+        Route::get('/submissions/{submission}/pdf', [AdminSubmissionController::class, 'downloadPdf']);
 
         // Gestion des clients
         Route::get('/clients', [AdminClientController::class, 'index']);

@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
+use App\Services\SubmissionPdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SubmissionController extends Controller
 {
@@ -43,5 +46,28 @@ class SubmissionController extends Controller
         ]);
 
         return response()->json($page);
+    }
+
+    // Téléchargement du PDF d'une soumission appartenant au client connecté
+    public function downloadPdf(Request $request, string $reference): Response
+    {
+        $submission = Submission::with('category')
+            ->where('user_id', $request->user()->id)
+            ->where('reference', $reference)
+            ->firstOrFail();
+
+        try {
+            $pdfContent = app(SubmissionPdfService::class)->generate($submission);
+        } catch (Throwable $e) {
+            abort(500, 'La génération du PDF a échoué.');
+        }
+
+        $filename = $submission->reference . '.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length'      => strlen($pdfContent),
+        ]);
     }
 }

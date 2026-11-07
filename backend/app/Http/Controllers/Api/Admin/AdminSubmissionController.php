@@ -7,8 +7,10 @@ use App\Mail\SubmissionReply;
 use App\Mail\SubmissionStatusChanged;
 use App\Models\Attachment;
 use App\Models\Submission;
+use App\Services\SubmissionPdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -215,5 +217,26 @@ class AdminSubmissionController extends Controller
         }
 
         return Storage::download($attachment->path, $attachment->original_name);
+    }
+
+    // Téléchargement du PDF de confirmation de la soumission (admin)
+    public function downloadPdf(Submission $submission): Response
+    {
+        $submission->loadMissing('category');
+
+        try {
+            $pdfContent = app(SubmissionPdfService::class)->generate($submission);
+        } catch (Throwable $e) {
+            Log::error('Échec génération PDF', ['message' => $e->getMessage()]);
+            abort(500, 'La génération du PDF a échoué.');
+        }
+
+        $filename = $submission->reference . '.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length'      => strlen($pdfContent),
+        ]);
     }
 }
