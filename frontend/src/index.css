@@ -149,6 +149,8 @@ input[type='checkbox'] {
   gap: 10px;
   min-height: 44px;
   font-weight: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .form button[type='submit'] {
@@ -1612,13 +1614,219 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 900px) {
+  /* Grille principale : sidebar puis contenu en colonne */
   .builder-grid {
     grid-template-columns: 1fr;
   }
 
+  /* En-tête du builder : empiler titre et contrôles */
+  .builder-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .builder-header-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* Pills et toggles : pleine largeur sur mobile */
+  .builder-type-pill,
+  .builder-view-toggle {
+    width: 100%;
+  }
+
+  .builder-type-pill button,
+  .builder-view-toggle button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Bandeau catégorie active */
+  .builder-active-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .builder-active-title {
+    flex-wrap: wrap;
+    font-size: 1.05rem;
+    gap: 8px;
+  }
+
+  .builder-active-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .builder-active-actions .btn,
+  .builder-active-actions .btn-secondary {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  /* Catégories dans la sidebar sur mobile */
+  .builder-cat-item {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .builder-cat-name {
+    font-size: 0.88rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .builder-cat-actions {
+    flex-shrink: 0;
+  }
+
+  /* Cartes de sections : empiler en-tête et actions d'étape */
+  .builder-section-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .builder-section-title-wrap {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .builder-section-title-wrap h3 {
+    font-size: 0.95rem;
+  }
+
+  .builder-section-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  /* Lignes de questions : adaptées aux titres longs des déclarations de sinistres */
+  .builder-field-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .field-reorder-col {
+    order: 1;
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .field-info-col {
+    order: 2;
+    width: calc(100% - 56px);
+    min-width: 0;
+  }
+
+  .field-label-text {
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .field-actions-col {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px dashed #f1f5f9;
+  }
+
+  /* Sur mobile, masquer le texte dans les boutons Modifier/Supprimer */
+  .btn-action span {
+    display: none;
+  }
+
+  .btn-action {
+    padding: 6px 8px;
+  }
+
+  /* Sur mobile, masquer le texte du bouton "Ajouter dans cette étape" */
+  .builder-section-header-actions .btn span {
+    display: none;
+  }
+
+  /* Mode Aperçu en direct : vue mobile fluide et sans double bordure encombrante */
+  .builder-preview-container {
+    padding: 8px 0;
+    background: transparent;
+    border: none;
+  }
+
+  .builder-preview-container.mobile .preview-content-wrapper,
+  .builder-preview-container.desktop .preview-content-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 14px 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    min-height: auto;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Formulaires à deux colonnes → une colonne */
   .grid-2-col,
   .condition-builder-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Modales : presque plein écran */
+  .builder-modal,
+  .builder-modal-lg,
+  .builder-modal-xl {
+    padding: 18px 14px;
+    border-radius: 12px;
+    max-height: 95vh;
+    max-width: 100% !important;
+  }
+
+  /* Onglets de tarification dans la modale */
+  .pricing-tabs-header {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+
+  .pricing-tab-btn {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .pricing-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Statut dans SubmissionDetail */
+  .status-row select {
+    width: 100%;
+  }
+
+  /* Preview controls : compacts */
+  .preview-controls {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .btn-device span {
+    display: none;
+  }
+
+  .btn-device {
+    padding: 6px 10px;
   }
 }
 
@@ -1653,6 +1861,14 @@ input:checked + .slider:before {
 .count {
   margin: 0 0 8px;
   color: #44556a;
+}
+
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 20px;
 }
 
 .table {
@@ -1865,7 +2081,8 @@ input:checked + .slider:before {
   }
 
   .filters {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    align-items: end;
   }
 
   .admin-main {
@@ -1875,7 +2092,7 @@ input:checked + .slider:before {
 
 @media (min-width: 960px) {
   .filters {
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     align-items: end;
   }
 }

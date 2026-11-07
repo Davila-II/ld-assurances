@@ -46,7 +46,7 @@ export default function RequestsPage() {
 
   return (
     <div className="client-content-inner">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
         <h1 className="client-page-title" style={{ margin: 0 }}>{t('client.my_requests')}</h1>
         <Link className="btn btn-sm" to="/?service=devis">
           <Plus size={14} /> {t('client.action_quote_title')}

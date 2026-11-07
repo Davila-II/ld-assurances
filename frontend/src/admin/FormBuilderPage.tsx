@@ -953,41 +953,20 @@ export default function FormBuilderPage() {
               })}
             </ul>
 
-            {/* Bouton ou Formulaire ajout de catégorie */}
-            {formType === 'quote' ? (
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                style={{ width: '100%', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                onClick={() => {
-                  setNewCategoryName('');
-                  setNewCategoryNameEn('');
-                  setPricingChoice('existing');
-                  setShowAddCategoryModal(true);
-                }}
-              >
-                <Plus size={14} /> Nouvelle catégorie de devis
-              </button>
-            ) : (
-              <form onSubmit={handleAddCategory} className="builder-cat-add-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input
-                  type="text"
-                  required
-                  placeholder={t('builder.new_category_placeholder')}
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder={t('builder.new_category_en_placeholder')}
-                  value={newCategoryNameEn}
-                  onChange={(e) => setNewCategoryNameEn(e.target.value)}
-                />
-                <button type="submit" className="btn btn-sm">
-                  <Plus size={14} /> {t('builder.add')}
-                </button>
-              </form>
-            )}
+            {/* Bouton d'ajout de catégorie (ouvre la modale responsive) */}
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              style={{ width: '100%', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={() => {
+                setNewCategoryName('');
+                setNewCategoryNameEn('');
+                setPricingChoice(formType === 'quote' ? 'existing' : 'none');
+                setShowAddCategoryModal(true);
+              }}
+            >
+              <Plus size={14} /> {formType === 'quote' ? 'Nouvelle catégorie de devis' : 'Nouvelle catégorie de sinistre'}
+            </button>
           </aside>
 
           {/* Zone principale : Éditeur ou Aperçu en direct */}
@@ -1056,7 +1035,7 @@ export default function FormBuilderPage() {
                           onClick={() => setPreviewDevice('desktop')}
                           title={t('builder.device_desktop')}
                         >
-                          <Monitor size={16} /> {t('builder.device_desktop')}
+                          <Monitor size={16} /> <span>{t('builder.device_desktop')}</span>
                         </button>
                         <button
                           type="button"
@@ -1064,7 +1043,7 @@ export default function FormBuilderPage() {
                           onClick={() => setPreviewDevice('mobile')}
                           title={t('builder.device_mobile')}
                         >
-                          <Smartphone size={16} /> {t('builder.device_mobile')}
+                          <Smartphone size={16} /> <span>{t('builder.device_mobile')}</span>
                         </button>
                         <button
                           type="button"
@@ -1150,7 +1129,7 @@ export default function FormBuilderPage() {
                                 className="btn btn-sm btn-outline"
                                 onClick={() => openAdd(group.name)}
                               >
-                                <Plus size={14} /> {t('builder.add_in_this_step')}
+                                <Plus size={14} /> <span>{t('builder.add_in_this_step')}</span>
                               </button>
                             </div>
                           </div>
@@ -1229,7 +1208,7 @@ export default function FormBuilderPage() {
                                         onClick={() => openEdit(field)}
                                         title={t('builder.edit_btn')}
                                       >
-                                        <Edit3 size={15} /> {t('builder.edit_btn')}
+                                        <Edit3 size={15} /> <span>{t('builder.edit_btn')}</span>
                                       </button>
 
                                       <button

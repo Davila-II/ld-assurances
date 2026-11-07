@@ -216,36 +216,38 @@ export default function SubmissionsPage() {
             {result.total} résultat{result.total > 1 ? 's' : ''}
           </p>
 
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">Dossier</th>
-                <th scope="col">Nature</th>
-                <th scope="col">Type</th>
-                <th scope="col">Email</th>
-                <th scope="col">Statut</th>
-                <th scope="col">Pièces</th>
-                <th scope="col">Reçu le</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.data.map((submission) => (
-                <tr key={submission.id}>
-                  <td data-label="Dossier">
-                    <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
-                  </td>
-                  <td data-label="Nature">{FORM_TYPE_LABELS[submission.form_type]}</td>
-                  <td data-label="Type">{submission.type ?? '—'}</td>
-                  <td data-label="Email">{submission.email}</td>
-                  <td data-label="Statut">
-                    <StatusBadge status={submission.status} />
-                  </td>
-                  <td data-label="Pièces">{submission.attachments_count}</td>
-                  <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Dossier</th>
+                  <th scope="col">Nature</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Pièces</th>
+                  <th scope="col">Reçu le</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.data.map((submission) => (
+                  <tr key={submission.id}>
+                    <td data-label="Dossier">
+                      <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
+                    </td>
+                    <td data-label="Nature">{FORM_TYPE_LABELS[submission.form_type]}</td>
+                    <td data-label="Type">{submission.type ?? '—'}</td>
+                    <td data-label="Email">{submission.email}</td>
+                    <td data-label="Statut">
+                      <StatusBadge status={submission.status} />
+                    </td>
+                    <td data-label="Pièces">{submission.attachments_count}</td>
+                    <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <nav className="pagination" aria-label="Pagination des déclarations">
             <button

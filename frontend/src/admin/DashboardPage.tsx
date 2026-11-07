@@ -44,30 +44,32 @@ export default function DashboardPage() {
             {stats.recent.length === 0 ? (
               <p>{t('admin.no_recent_submissions')}</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t('admin.th_reference')}</th>
-                    <th scope="col">{t('admin.th_type')}</th>
-                    <th scope="col">{t('admin.th_status')}</th>
-                    <th scope="col">{t('admin.th_date')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recent.map((submission) => (
-                    <tr key={submission.id}>
-                      <td data-label="Dossier">
-                        <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
-                      </td>
-                      <td data-label="Type">{submission.form_type === 'quote' ? t('status.quote') : t('status.claim')}</td>
-                      <td data-label="Statut">
-                        <StatusBadge status={submission.status} />
-                      </td>
-                      <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+              <div className="table-responsive">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('admin.th_reference')}</th>
+                      <th scope="col">{t('admin.th_type')}</th>
+                      <th scope="col">{t('admin.th_status')}</th>
+                      <th scope="col">{t('admin.th_date')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {stats.recent.map((submission) => (
+                      <tr key={submission.id}>
+                        <td data-label="Dossier">
+                          <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
+                        </td>
+                        <td data-label="Type">{submission.form_type === 'quote' ? t('status.quote') : t('status.claim')}</td>
+                        <td data-label="Statut">
+                          <StatusBadge status={submission.status} />
+                        </td>
+                        <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </>

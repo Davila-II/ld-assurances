@@ -46,7 +46,7 @@ export default function ClaimsPage() {
 
   return (
     <div className="client-content-inner">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
         <h1 className="client-page-title" style={{ margin: 0 }}>{t('client.my_claims')}</h1>
         <Link className="btn btn-danger btn-sm" to="/?service=sinistre">
           <Plus size={14} /> {t('client.action_claim_title')}

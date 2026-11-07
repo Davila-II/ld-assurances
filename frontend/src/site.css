@@ -1740,6 +1740,32 @@ h3 {
     gap: 12px;
   }
 
+  .client-recent-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .client-recent-header div {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .client-recent-header div a {
+    flex: 1;
+    min-width: 130px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .client-table-wrap {
+    border-radius: 8px;
+    margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .profile-section {
     padding: 18px 16px;
   }

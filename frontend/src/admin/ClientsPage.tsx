@@ -167,38 +167,40 @@ export default function ClientsPage() {
               <p style={{ margin: 0, color: '#44556a' }}>{t('admin_clients.no_clients')}</p>
             </div>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('admin_clients.th_name')}</th>
-                  <th>{t('admin_clients.th_email')}</th>
-                  <th>{t('admin_clients.th_phone')}</th>
-                  <th>{t('admin_clients.th_submissions')}</th>
-                  <th>{t('admin_clients.th_registered')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.data.map((client) => (
-                  <tr key={client.id}>
-                    <td data-label="Nom">
-                      <strong>{client.name}</strong>
-                    </td>
-                    <td data-label="Email">
-                      <a href={`mailto:${client.email}`} style={{ color: '#1e4d8f' }}>
-                        {client.email}
-                      </a>
-                    </td>
-                    <td data-label="Téléphone">{client.phone || '—'}</td>
-                    <td data-label="Dossiers">
-                      <span className="badge badge-received">
-                        {client.submissions_count} dossier{client.submissions_count > 1 ? 's' : ''}
-                      </span>
-                    </td>
-                    <td data-label="Inscrit le">{formatDate(client.created_at)}</td>
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('admin_clients.th_name')}</th>
+                    <th>{t('admin_clients.th_email')}</th>
+                    <th>{t('admin_clients.th_phone')}</th>
+                    <th>{t('admin_clients.th_submissions')}</th>
+                    <th>{t('admin_clients.th_registered')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {clients.data.map((client) => (
+                    <tr key={client.id}>
+                      <td data-label="Nom">
+                        <strong>{client.name}</strong>
+                      </td>
+                      <td data-label="Email">
+                        <a href={`mailto:${client.email}`} style={{ color: '#1e4d8f' }}>
+                          {client.email}
+                        </a>
+                      </td>
+                      <td data-label="Téléphone">{client.phone || '—'}</td>
+                      <td data-label="Dossiers">
+                        <span className="badge badge-received">
+                          {client.submissions_count} dossier{client.submissions_count > 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td data-label="Inscrit le">{formatDate(client.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {/* Pagination */}
