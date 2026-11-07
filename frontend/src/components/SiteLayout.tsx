@@ -108,7 +108,6 @@ export default function SiteLayout() {
           <Brand />
 
           <div className="header-actions">
-            <LanguageToggle />
             {isClientLoggedIn ? (
               <Link className="btn btn-secondary btn-sm" to="/espace-client">
                 <UserIcon size={16} /> {t('nav.client_space')}

@@ -26,11 +26,12 @@ class SubmissionController extends Controller
     {
         // Piège anti-robots : ce champ est invisible, seul un robot le remplit
         if ($request->filled('website')) {
-            $prefix = $request->input('form_type') === 'quote' ? 'DEV' : 'SIN';
+            $prefix = $request->input('form_type') === 'quote' ? 'LD-DV' : 'LD-DS';
+            $date = now()->format('dmY');
 
             return response()->json([
                 'message'   => 'Votre demande a bien été enregistrée.',
-                'reference' => $prefix . '-' . now()->format('Y') . '-' . strtoupper(Str::random(6)),
+                'reference' => sprintf('%s-%04d-%s', $prefix, 9999, $date),
             ], 201);
         }
 

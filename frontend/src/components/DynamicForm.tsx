@@ -139,6 +139,14 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
     return answers[field.condition.field] === field.condition.equals;
   };
 
+  // Masque le champ "Type de sinistre" si celui-ci a déjà été choisi sur la page précédente
+  const isFieldDisplayed = (field: FormField): boolean => {
+    if (field.name === 'sinistre_type' && (presetAnswers?.sinistre_type || answers.sinistre_type)) {
+      return false;
+    }
+    return true;
+  };
+
   // Un multiselect obligatoire sans aucun choix
   const isEmptyRequiredChoice = (field: FormField): boolean => {
     const value = answers[field.name];
@@ -157,7 +165,9 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
   const lastStep = steps.length - 1;
   const currentStep = Math.min(step, Math.max(lastStep, 0));
   const isLast = !stepped || currentStep === lastStep;
-  const shownFields = (stepped ? steps[currentStep].fields : fields).filter(isVisible);
+  const shownFields = (stepped ? steps[currentStep].fields : fields)
+    .filter(isVisible)
+    .filter(isFieldDisplayed);
   const showEmail = !stepped || isLast;
 
   const scrollToForm = () =>
@@ -166,7 +176,9 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
   // Revient à l'étape qui contient la première erreur
   const jumpToError = (errs: Record<string, string[]>) => {
     if (!stepped) return;
-    const index = steps.findIndex((s) => s.fields.some((f) => findError(errs, f.name)));
+    const index = steps.findIndex((s) =>
+      s.fields.filter(isFieldDisplayed).some((f) => findError(errs, f.name))
+    );
     if (index >= 0) setStep(index);
   };
 

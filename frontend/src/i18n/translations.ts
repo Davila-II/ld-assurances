@@ -109,7 +109,7 @@ export const TRANSLATIONS = {
     'track.subtitle':
       "Saisissez le numéro de dossier reçu lors de votre demande de devis ou de votre déclaration de sinistre, ainsi que l'adresse email utilisée.",
     'track.ref_label': 'Numéro de dossier',
-    'track.ref_placeholder': 'Ex : SIN-2026-AB12CD ou DEV-2026-EF34GH',
+    'track.ref_placeholder': 'Ex : LD-DS-0001-07112026 ou LD-DV-0001-07112026',
     'track.email_label': 'Adresse email',
     'track.submit': 'Rechercher mon dossier',
     'track.searching': 'Recherche…',
@@ -317,7 +317,7 @@ export const TRANSLATIONS = {
     'track.subtitle':
       'Enter the reference number received with your quote request or claim declaration, along with your email address.',
     'track.ref_label': 'File / Reference number',
-    'track.ref_placeholder': 'e.g.: SIN-2026-AB12CD or DEV-2026-EF34GH',
+    'track.ref_placeholder': 'e.g.: LD-DS-0001-07112026 or LD-DV-0001-07112026',
     'track.email_label': 'Email address',
     'track.submit': 'Search my file',
     'track.searching': 'Searching…',

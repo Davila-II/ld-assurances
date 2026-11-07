@@ -48,13 +48,22 @@ class SubmissionTest extends TestCase
         ]);
     }
 
-    public function test_reference_is_generated_with_prefix(): void
+    public function test_reference_is_generated_with_uniform_sequential_format(): void
     {
         $this->postJson('/api/submissions', $this->validQuotePayload())->assertCreated();
 
-        $submission = Submission::latest('id')->first();
-        $this->assertNotNull($submission);
-        $this->assertMatchesRegularExpression('/^DEV-\d{4}-[A-Z0-9]{6}$/', $submission->reference);
+        $first = Submission::latest('id')->first();
+        $this->assertNotNull($first);
+        $this->assertMatchesRegularExpression('/^LD-DV-\d{4}-\d{8}$/', $first->reference);
+
+        $this->postJson('/api/submissions', $this->validQuotePayload())->assertCreated();
+        $second = Submission::latest('id')->first();
+        $this->assertNotNull($second);
+        $this->assertMatchesRegularExpression('/^LD-DV-\d{4}-\d{8}$/', $second->reference);
+
+        $firstSeq = (int) explode('-', $first->reference)[2];
+        $secondSeq = (int) explode('-', $second->reference)[2];
+        $this->assertSame($firstSeq + 1, $secondSeq);
     }
 
     public function test_missing_required_field_fails(): void

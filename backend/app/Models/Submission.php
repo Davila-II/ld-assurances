@@ -23,10 +23,37 @@ class Submission extends Model
     {
         static::creating(function (Submission $submission) {
             if (! $submission->reference) {
-                $prefix = $submission->form_type === 'claim' ? 'SIN' : 'DEV';
-                $submission->reference = $prefix . '-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+                $submission->reference = static::generateReference($submission->form_type ?? 'claim');
             }
         });
+    }
+
+    // Génère une référence uniforme et séquentielle : LD-DS-0001-DDMMYYYY ou LD-DV-0001-DDMMYYYY
+    public static function generateReference(string $formType): string
+    {
+        $prefix = $formType === 'claim' ? 'LD-DS' : 'LD-DV';
+        $date = now()->format('dmY');
+
+        $pattern = "{$prefix}-%-{$date}";
+
+        $latestRef = static::where('reference', 'LIKE', $pattern)
+            ->orderBy('id', 'desc')
+            ->value('reference');
+
+        $nextSeq = 1;
+        if ($latestRef && preg_match('/^' . preg_quote($prefix, '/') . '-(\d+)-' . $date . '$/', $latestRef, $matches)) {
+            $nextSeq = (int) $matches[1] + 1;
+        }
+
+        do {
+            $candidate = sprintf('%s-%04d-%s', $prefix, $nextSeq, $date);
+            $exists = static::where('reference', $candidate)->exists();
+            if ($exists) {
+                $nextSeq++;
+            }
+        } while ($exists);
+
+        return $candidate;
     }
 
     public function category(): BelongsTo
