@@ -58,18 +58,18 @@ export function getFieldTypeLabel(type: string, lang: 'fr' | 'en' = 'fr'): strin
   return FIELD_TYPE_LABELS[type] || type;
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('fr-FR', {
+export function formatDate(iso: string, lang: 'fr' | 'en' = 'fr'): string {
+  return new Date(iso).toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Africa/Douala',
   });
 }
 
-export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+export function formatSize(bytes: number, lang: 'fr' | 'en' = 'fr'): string {
+  if (bytes < 1024) return `${bytes} ${lang === 'en' ? 'B' : 'o'}`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${lang === 'en' ? 'KB' : 'Ko'}`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ${lang === 'en' ? 'MB' : 'Mo'}`;
 }
 
 export function formatAnswer(value: SubmissionAnswer['value']): string {

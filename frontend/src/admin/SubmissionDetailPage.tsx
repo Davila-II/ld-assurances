@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import { downloadAttachment, downloadSubmissionPdfAdmin, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
 import StatusBadge from './StatusBadge';
 import {
-  FORM_TYPE_LABELS,
   STATUSES,
   STATUS_LABELS,
   errorMessage,
@@ -22,6 +22,7 @@ function formatFcfa(val: number | string | undefined | null): string {
 }
 
 export default function SubmissionDetailPage() {
+  const { lang, t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const [loadedSubmission, setLoadedSubmission] = useState<{
     id: string;
@@ -172,10 +173,10 @@ export default function SubmissionDetailPage() {
   return (
     <>
       <Link to="/admin/submissions" className="back-link">
-        ← Retour à la liste
+        {lang === 'en' ? '← Back to list' : '← Retour à la liste'}
       </Link>
 
-      {loading && <p role="status">Chargement…</p>}
+      {loading && <p role="status">{t('admin.loading')}</p>}
       {error && <p className="alert" role="alert">{error}</p>}
 
       {submission && (
@@ -193,53 +194,53 @@ export default function SubmissionDetailPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Download size={14} />
-              {downloadingPdf ? 'Génération…' : 'Télécharger PDF'}
+              {downloadingPdf ? (lang === 'en' ? 'Generating…' : 'Génération…') : (lang === 'en' ? 'Download PDF' : 'Télécharger PDF')}
             </button>
           </div>
 
           <section className="card">
             <dl className="answers">
               <div className="answer">
-                <dt>Nature</dt>
-                <dd>{FORM_TYPE_LABELS[submission.form_type]}</dd>
+                <dt>{t('admin.th_nature')}</dt>
+                <dd>{submission.form_type === 'quote' ? t('status.quote') : t('status.claim')}</dd>
               </div>
               <div className="answer">
-                <dt>Type</dt>
+                <dt>{t('admin.th_type')}</dt>
                 <dd>{submission.type ?? '—'}</dd>
               </div>
               <div className="answer">
-                <dt>Catégorie</dt>
+                <dt>{t('admin.filter_category')}</dt>
                 <dd>{submission.category ?? '—'}</dd>
               </div>
               <div className="answer">
-                <dt>Email</dt>
+                <dt>{t('admin_clients.th_email')}</dt>
                 <dd>{submission.email}</dd>
               </div>
               <div className="answer">
-                <dt>Reçu le</dt>
-                <dd>{formatDate(submission.created_at)}</dd>
+                <dt>{t('admin.th_received_at')}</dt>
+                <dd>{formatDate(submission.created_at, lang)}</dd>
               </div>
               {submission.processed_at && (
                 <div className="answer">
-                  <dt>Date de traitement</dt>
-                  <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(submission.processed_at)}</dd>
+                  <dt>{t('admin.th_processed_at')}</dt>
+                  <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(submission.processed_at, lang)}</dd>
                 </div>
               )}
             </dl>
           </section>
 
           <section className="card">
-            <h2>Traitement du dossier</h2>
+            <h2>{t('admin.detail_title')}</h2>
 
             {submission.status === 'rejected' && submission.rejection_reason && (
               <div className="alert" style={{ background: '#fdf2f2', borderColor: '#f98080', color: '#9b1c1c', marginBottom: '16px' }}>
-                <strong>Dossier rejeté</strong>
+                <strong>{t('admin.detail_rejected_badge')}</strong>
                 <p style={{ margin: '4px 0 0' }}>Motif : {submission.rejection_reason}</p>
               </div>
             )}
 
             <div className="status-row">
-              <label htmlFor="new-status">Statut</label>
+              <label htmlFor="new-status">{t('admin.detail_status_label')}</label>
               <select
                 id="new-status"
                 value={newStatus}
@@ -247,7 +248,7 @@ export default function SubmissionDetailPage() {
               >
                 {STATUSES.map((status) => (
                   <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
+                    {t(`status.${status}` as const) || STATUS_LABELS[status]}
                   </option>
                 ))}
               </select>
@@ -262,23 +263,23 @@ export default function SubmissionDetailPage() {
                 onClick={saveStatus}
               >
                 {saving
-                  ? 'Enregistrement…'
+                  ? t('admin.loading')
                   : newStatus === 'rejected'
-                    ? 'Confirmer le rejet'
-                    : 'Mettre à jour'}
+                    ? (lang === 'en' ? 'Confirm rejection' : 'Confirmer le rejet')
+                    : (lang === 'en' ? 'Update' : 'Mettre à jour')}
               </button>
             </div>
 
             {newStatus === 'rejected' && (
               <div className="field" style={{ marginTop: '14px' }}>
                 <label htmlFor="rejection-reason" style={{ color: '#9b1c1c', fontWeight: 600 }}>
-                  Motif du rejet (obligatoire — sera envoyé par email au client) :
+                  {t('admin.detail_rejection_reason_label')} :
                 </label>
                 <textarea
                   id="rejection-reason"
                   rows={3}
                   required
-                  placeholder="Ex : Délai légal dépassé, pièces justificatives non conformes, garantie non souscrite..."
+                  placeholder={t('admin.detail_rejection_placeholder')}
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                 />
@@ -291,32 +292,32 @@ export default function SubmissionDetailPage() {
           {submission.quote_calculation && (
             <section className="card" style={{ borderLeft: '4px solid #144983' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <h2 style={{ margin: 0, color: '#144983' }}>📊 Tarification calculée (Code CIMA)</h2>
+                <h2 style={{ margin: 0, color: '#144983' }}>📊 {lang === 'en' ? 'Calculated Pricing (CIMA Code)' : 'Tarification calculée (Code CIMA)'}</h2>
                 <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px', background: '#1aaca8' }}>
                   {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
                 </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
                 <div>
-                  <small style={{ color: '#64748b' }}>Prime Nette</small>
+                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
                     {formatFcfa(submission.quote_calculation.prime_nette_formatted || submission.quote_calculation.prime_nette)}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: '#64748b' }}>Accessoires / Vignette</small>
+                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}</small>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
                     {formatFcfa(submission.quote_calculation.accessoires_formatted || submission.quote_calculation.accessoires)}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: '#64748b' }}>Taxe Unique (15%)</small>
+                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}</small>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
                     {formatFcfa(submission.quote_calculation.taxe_unique_formatted || submission.quote_calculation.taxe_unique)}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: '#144983', fontWeight: 600 }}>Prime Totale TTC</small>
+                  <small style={{ color: '#144983', fontWeight: 600 }}>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
                   <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#144983' }}>
                     {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
                   </div>
@@ -327,15 +328,15 @@ export default function SubmissionDetailPage() {
                   <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
-                        <th style={{ padding: '8px 4px' }}>Garantie / Éléments</th>
-                        <th style={{ padding: '8px 4px', textAlign: 'right' }}>Montant</th>
+                        <th style={{ padding: '8px 4px' }}>{lang === 'en' ? 'Coverage / Items' : 'Garantie / Éléments'}</th>
+                        <th style={{ padding: '8px 4px', textAlign: 'right' }}>{lang === 'en' ? 'Amount' : 'Montant'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {submission.quote_calculation.breakdown.map((item, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '8px 4px' }}>
-                            {item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                            {lang === 'en' && item.label_en ? item.label_en : item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
                           </td>
                           <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
                             {formatFcfa(item.formatted || item.amount)}
@@ -350,7 +351,7 @@ export default function SubmissionDetailPage() {
           )}
 
           <section className="card">
-            <h2>Réponses du client</h2>
+            <h2>{t('admin.detail_answers_title')}</h2>
             <dl className="answers">
               {submission.answers.map((answer, index) => (
                 <div className="answer" key={`${answer.label}-${index}`}>
@@ -362,9 +363,9 @@ export default function SubmissionDetailPage() {
           </section>
 
           <section className="card">
-            <h2>Observations internes</h2>
+            <h2>{t('admin.detail_notes_title')}</h2>
             <div className="field">
-              <label htmlFor="notes">Notes (non visibles par le client)</label>
+              <label htmlFor="notes">{t('admin.detail_notes_help')}</label>
               <textarea
                 id="notes"
                 rows={4}
@@ -373,21 +374,21 @@ export default function SubmissionDetailPage() {
               />
             </div>
             <button type="button" className="btn" disabled={savingNotes} onClick={saveNotes}>
-              {savingNotes ? 'Enregistrement…' : 'Enregistrer les observations'}
+              {savingNotes ? t('admin.loading') : t('admin.detail_save_notes')}
             </button>
             {notesNotice && <p className="notice" role="status">{notesNotice}</p>}
           </section>
 
           <section className="card">
-            <h2>Répondre au client</h2>
+            <h2>{t('admin.detail_reply_title')}</h2>
             <div className="field">
-              <label htmlFor="reply">Message</label>
+              <label htmlFor="reply">{lang === 'en' ? 'Message' : 'Message'}</label>
               <textarea
                 id="reply"
                 rows={4}
                 value={replyMessage}
                 onChange={(event) => setReplyMessage(event.target.value)}
-                placeholder="Votre message sera envoyé par email au client."
+                placeholder={t('admin.detail_reply_placeholder')}
               />
             </div>
             <button
@@ -396,21 +397,21 @@ export default function SubmissionDetailPage() {
               disabled={sendingReply || !replyMessage.trim()}
               onClick={sendReply}
             >
-              {sendingReply ? 'Envoi…' : 'Envoyer la réponse'}
+              {sendingReply ? (lang === 'en' ? 'Sending…' : 'Envoi…') : t('admin.detail_send_reply')}
             </button>
             {replyNotice && <p className="notice" role="status">{replyNotice}</p>}
           </section>
 
           <section className="card">
-            <h2>Pièces jointes ({submission.attachments.length})</h2>
+            <h2>{t('admin.detail_attachments_title', { count: submission.attachments.length })}</h2>
             {submission.attachments.length === 0 ? (
-              <p>Aucune pièce jointe.</p>
+              <p>{t('admin.detail_no_attachments')}</p>
             ) : (
               <ul className="attachments">
                 {submission.attachments.map((attachment) => (
                   <li key={attachment.id}>
                     <span>
-                      {attachment.original_name} <small>({formatSize(attachment.size)})</small>
+                      {attachment.original_name} <small>({formatSize(attachment.size, lang)})</small>
                     </span>
                     <button
                       type="button"
@@ -418,7 +419,7 @@ export default function SubmissionDetailPage() {
                       disabled={downloadingId === attachment.id}
                       onClick={() => handleDownload(attachment)}
                     >
-                      {downloadingId === attachment.id ? 'Téléchargement…' : 'Télécharger'}
+                      {downloadingId === attachment.id ? (lang === 'en' ? 'Downloading…' : 'Téléchargement…') : t('admin.detail_download')}
                     </button>
                   </li>
                 ))}

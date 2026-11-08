@@ -142,7 +142,7 @@ export default function ProfilePage() {
       {/* Section 2 : Informations personnelles avec PhoneInput enrichi */}
       <section className="profile-section" style={{ marginBottom: '28px' }}>
         <h2 className="profile-section-title">{t('profile.personal_info')}</h2>
-        <p className="profile-section-desc">Mettez à jour vos coordonnées de contact pour vos contrats et devis.</p>
+        <p className="profile-section-desc">{t('profile.contact_desc')}</p>
 
         <form onSubmit={handleProfileSubmit} className="form">
           {profileError && <p className="alert">{profileError}</p>}
@@ -176,7 +176,7 @@ export default function ProfilePage() {
               className="input-disabled"
             />
             <small style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>
-              L'adresse email sert d'identifiant de connexion et ne peut être modifiée directement.
+              {t('profile.email_notice')}
             </small>
           </div>
 

@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\FormField;
 use App\Models\Submission;
 use App\Services\PricingService;
+use App\Traits\ValidatesSubmissionDates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -23,6 +24,7 @@ use Throwable;
 
 class SubmissionController extends Controller
 {
+    use ValidatesSubmissionDates;
     public function store(Request $request): JsonResponse
     {
         // Piège anti-robots : ce champ est invisible, seul un robot le remplit
@@ -78,6 +80,9 @@ class SubmissionController extends Controller
         foreach ($visible->where('field_type', '!=', 'file') as $field) {
             $answers[$field->name] = $request->input("answers.{$field->name}");
         }
+
+        // 5.b Vérification stricte de la cohérence temporelle des dates
+        $this->validateDateAnswers($answers, $category->slug);
 
         // Calcul automatique de la tarification du devis si applicable
         $quoteCalculation = null;

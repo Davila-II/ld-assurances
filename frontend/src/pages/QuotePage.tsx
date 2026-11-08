@@ -33,10 +33,10 @@ export default function QuotePage() {
         const targetSlug = product ? product.slug : slug;
         const found = categories.find((c) => c.slug === targetSlug || c.slug === slug) ?? null;
         setCategory(found);
-        if (!found) setError("Ce devis n'est pas encore disponible.");
+        if (!found) setError(t('form.not_available'));
       })
       .catch(() => {
-        if (!cancelled) setError('Impossible de charger le formulaire.');
+        if (!cancelled) setError(t('form.error_loading'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -45,12 +45,12 @@ export default function QuotePage() {
     return () => {
       cancelled = true;
     };
-  }, [product, slug]);
+  }, [product, slug, t]);
 
   if (product?.mainQuoteUrl) {
     return (
       <main className="page">
-        <p className="center">Redirection…</p>
+        <p className="center">{t('form.redirecting')}</p>
       </main>
     );
   }
@@ -70,7 +70,7 @@ export default function QuotePage() {
       </h1>
       <p className="page-subtitle">{t('quotes.subtitle')}</p>
 
-      {loading && <p className="center">Chargement du formulaire…</p>}
+      {loading && <p className="center">{t('form.loading_form')}</p>}
       {error && !loading && <p className="alert">{error}</p>}
 
       {category && (

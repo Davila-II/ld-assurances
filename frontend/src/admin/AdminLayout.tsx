@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Sliders,
+  Settings,
   Users,
   X,
 } from 'lucide-react';
@@ -96,9 +96,9 @@ export default function AdminLayout() {
               <Users size={16} />
               <span>{t('admin.nav_clients')}</span>
             </NavLink>
-            <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <Sliders size={16} />
-              <span>{t('admin.nav_forms')}</span>
+            <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <Settings size={16} />
+              <span>{t('admin.nav_settings')}</span>
             </NavLink>
           </nav>
 
@@ -166,9 +166,9 @@ export default function AdminLayout() {
             <Users size={18} />
             <span>{t('admin.nav_clients')}</span>
           </NavLink>
-          <NavLink to="/admin/formulaires" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-            <Sliders size={18} />
-            <span>{t('admin.nav_forms')}</span>
+          <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+            <Settings size={18} />
+            <span>{t('admin.nav_settings_long')}</span>
           </NavLink>
         </nav>
 

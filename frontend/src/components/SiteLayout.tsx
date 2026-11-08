@@ -221,19 +221,30 @@ export default function SiteLayout() {
           </div>
 
           <div className="footer-hours-col">
-            <h4 className="footer-heading">Horaires d'Ouverture</h4>
+            <h4 className="footer-heading">{t('site.opening_hours')}</h4>
             <div className="hours">
-              {SITE.hours.map((row) => (
-                <div key={row.day}>
-                  <span>{row.day}</span>
-                  <span>{row.time}</span>
-                </div>
-              ))}
+              {SITE.hours.map((row) => {
+                const dayLabel =
+                  row.day === 'Lundi - Vendredi'
+                    ? t('site.days_mon_fri')
+                    : row.day === 'Samedi'
+                      ? t('site.days_sat')
+                      : row.day === 'Dimanche'
+                        ? t('site.days_sun')
+                        : row.day;
+                const timeLabel = row.time === 'Fermé' ? t('site.closed') : row.time;
+                return (
+                  <div key={row.day}>
+                    <span>{dayLabel}</span>
+                    <span>{timeLabel}</span>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="emergency">
               <h3>
-                <PhoneCall size={18} /> Urgence Sinistre 24/7
+                <PhoneCall size={18} /> {t('site.emergency_247')}
               </h3>
               <p>{t('site.emergency')}</p>
               <a className="phone" href={telHref(SITE.emergencyPhone)}>
@@ -242,7 +253,7 @@ export default function SiteLayout() {
             </div>
 
             <div className="socials-wrap">
-              <h4 className="footer-heading">Suivez-nous</h4>
+              <h4 className="footer-heading">{t('site.follow_us')}</h4>
               <div className="socials">
                 {SOCIALS.map((social) => (
                   <a

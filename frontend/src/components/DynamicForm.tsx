@@ -7,6 +7,7 @@ import { getClientToken } from '../clientAuth';
 import type { Answers, Category, FormField, FormType, QuoteCalculation } from '../types';
 import type { ClientUser } from '../clientTypes';
 import { useLanguage } from '../i18n/LanguageContext';
+import { getDateFieldLimits, validateDateField } from '../dateRules';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 5;
@@ -253,9 +254,27 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
     if (missing.length > 0) {
       setErrors(
         Object.fromEntries(
-          missing.map((f) => [`answers.${f.name}`, ['Sélectionnez au moins une option.']])
+          missing.map((f) => [`answers.${f.name}`, [t('validation.select_one_option')]])
         )
       );
+      return;
+    }
+
+    // Validation de la cohérence des dates de l'étape affichée
+    const dateErrors: Record<string, string[]> = {};
+    shownFields.filter((f) => f.field_type === 'date').forEach((f) => {
+      const val = answers[f.name];
+      if (typeof val === 'string' && val) {
+        const errKey = validateDateField(f, val, category.slug, answers);
+        if (errKey) {
+          dateErrors[`answers.${f.name}`] = [t(errKey)];
+        }
+      }
+    });
+
+    if (Object.keys(dateErrors).length > 0) {
+      setErrors(dateErrors);
+      setMessage(t('validation.check_fields'));
       return;
     }
 
@@ -284,11 +303,22 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
 
     const visibleFields = fields.filter(isVisible);
 
-    // Vérifications avant l'envoi : fichiers et choix obligatoires
+    // Vérifications avant l'envoi : fichiers, choix obligatoires et cohérence des dates
     const localErrors: Record<string, string[]> = {};
     visibleFields.forEach((field) => {
       if (isEmptyRequiredChoice(field)) {
-        localErrors[`answers.${field.name}`] = ['Sélectionnez au moins une option.'];
+        localErrors[`answers.${field.name}`] = [t('validation.select_one_option')];
+        return;
+      }
+
+      if (field.field_type === 'date') {
+        const val = answers[field.name];
+        if (typeof val === 'string' && val) {
+          const errKey = validateDateField(field, val, category.slug, answers);
+          if (errKey) {
+            localErrors[`answers.${field.name}`] = [t(errKey)];
+          }
+        }
         return;
       }
 
@@ -305,7 +335,7 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
 
     if (Object.keys(localErrors).length > 0) {
       setErrors(localErrors);
-      setMessage('Vérifiez les champs signalés.');
+      setMessage(t('validation.check_fields'));
       jumpToError(localErrors);
       return;
     }
@@ -393,15 +423,32 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
           />
         );
 
-      case 'date':
+      case 'date': {
+        const limits = getDateFieldLimits(field, category.slug, answers);
         return (
           <input
             {...common}
             type="date"
+            min={limits.min}
+            max={limits.max}
             value={text}
-            onChange={(e) => setAnswer(field.name, e.target.value)}
+            onChange={(e) => {
+              setAnswer(field.name, e.target.value);
+              const errKey = validateDateField(field, e.target.value, category.slug, answers);
+              if (errKey) {
+                setErrors((prev) => ({ ...prev, [`answers.${field.name}`]: [t(errKey)] }));
+              } else {
+                setErrors((prev) => {
+                  const copy = { ...prev };
+                  delete copy[`answers.${field.name}`];
+                  delete copy[field.name];
+                  return copy;
+                });
+              }
+            }}
           />
         );
+      }
 
       case 'select':
         return (
@@ -665,7 +712,7 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             <div className="client-auto-badge">
               <CheckCircle2 size={18} />
               <div>
-                <strong>Compte client connecté : {clientUser.name}</strong> ({clientUser.email})
+                <strong>{t('form.connected_account_title')} {clientUser.name}</strong> ({clientUser.email})
                 <p>{t('form.account_linked')}</p>
               </div>
             </div>
@@ -677,7 +724,7 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
         <div className="client-auto-badge">
           <CheckCircle2 size={18} />
           <div>
-            <strong>Compte client connecté : {clientUser.name}</strong> ({clientUser.email})
+            <strong>{t('form.connected_account_title')} {clientUser.name}</strong> ({clientUser.email})
             <p>{t('form.account_linked')}</p>
           </div>
         </div>

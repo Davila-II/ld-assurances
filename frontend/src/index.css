@@ -2191,3 +2191,363 @@ input:checked + .slider:before {
     animation: none !important;
   }
 }
+
+/* ==========================================================================
+   PAGE PARAMÈTRES (SETTINGS)
+   ========================================================================== */
+
+.settings-root {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 8px 0 32px;
+}
+
+.settings-header {
+  margin-bottom: 28px;
+}
+
+.settings-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.settings-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.settings-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.settings-card:hover {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.settings-card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px 20px;
+}
+
+.settings-card-icon {
+  opacity: 0.9;
+}
+
+.settings-card-body {
+  padding: 0 24px 16px;
+  flex: 1;
+}
+
+.settings-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.settings-card-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.settings-card-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.settings-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px 20px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.settings-card-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   PAGE RÔLES & PRIVILÈGES
+   ========================================================================== */
+
+.roles-root {
+  width: 100%;
+}
+
+.roles-header {
+  margin-bottom: 24px;
+}
+
+.roles-header-top {
+  margin-bottom: 14px;
+}
+
+.roles-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.roles-back-link:hover {
+  color: #1e4d8f;
+}
+
+.roles-header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.roles-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #e6f7f5;
+  color: #0e7a6e;
+  flex-shrink: 0;
+}
+
+.roles-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.roles-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.roles-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 9px 18px;
+  background: #0e7a6e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.roles-add-btn:hover {
+  background: #0b6460;
+}
+
+.roles-empty {
+  color: #64748b;
+  font-size: 0.95rem;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.roles-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.roles-desc-cell {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.roles-perms-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.roles-perm-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #eaf1fc;
+  color: #1e4d8f;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.roles-perm-badge.roles-perm-all {
+  background: #e6f7f5;
+  color: #0e7a6e;
+}
+
+.roles-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roles-btn-edit,
+.roles-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.roles-btn-edit {
+  color: #1e4d8f;
+}
+
+.roles-btn-edit:hover {
+  background: #eaf1fc;
+  border-color: #1e4d8f;
+}
+
+.roles-btn-delete {
+  color: #c0392b;
+}
+
+.roles-btn-delete:hover {
+  background: #fef2f2;
+  border-color: #c0392b;
+}
+
+/* Modal rôles */
+.roles-modal {
+  max-width: 520px;
+}
+
+.roles-form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.roles-perms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.roles-perm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.roles-perm-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0e7a6e;
+  cursor: pointer;
+}
+
+.roles-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.roles-btn-cancel {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.roles-btn-cancel:hover {
+  background: #f1f5f9;
+}
+
+.roles-btn-save {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #0e7a6e;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.roles-btn-save:hover:not(:disabled) {
+  background: #0b6460;
+}
+
+.roles-btn-save:disabled,
+.roles-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .roles-header-main {
+    flex-wrap: wrap;
+  }
+
+  .roles-add-btn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .roles-perms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}

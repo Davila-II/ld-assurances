@@ -10,7 +10,7 @@ import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 export default function TrackPage() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [searchParams] = useSearchParams();
   const urlRef = searchParams.get('ref') ?? '';
   const shouldEdit = searchParams.get('edit') === '1';
@@ -198,7 +198,7 @@ export default function TrackPage() {
               <dd>{result.reference}</dd>
               <dt>{t('track.category_label')}</dt>
               <dd>{formTypeLabel(result.form_type)}</dd>
-              <dt>Branche</dt>
+              <dt>{t('track.branch_label')}</dt>
               <dd>{result.category ?? '—'}</dd>
               <dt>{t('track.status_label')}</dt>
               <dd>
@@ -206,17 +206,17 @@ export default function TrackPage() {
               </dd>
               {result.status === 'rejected' && result.rejection_reason && (
                 <>
-                  <dt style={{ color: '#b91c1c' }}>Motif du rejet</dt>
+                  <dt style={{ color: '#b91c1c' }}>{t('track.rejection_reason_label')}</dt>
                   <dd style={{ color: '#b91c1c', fontWeight: 600 }}>{result.rejection_reason}</dd>
                 </>
               )}
               <dt>{t('track.date_label')}</dt>
-              <dd>{formatDate(result.created_at)}</dd>
+              <dd>{formatDate(result.created_at, lang)}</dd>
               <dt style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : undefined}>
-                Date de traitement
+                {t('track.processed_date_label')}
               </dt>
               <dd style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : { color: '#64748b' }}>
-                {result.processed_at ? formatDate(result.processed_at) : 'En attente de traitement'}
+                {result.processed_at ? formatDate(result.processed_at, lang) : t('track.pending_processing')}
               </dd>
             </dl>
 
@@ -226,7 +226,7 @@ export default function TrackPage() {
                 {!editing ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: '#44556a' }}>
-                      Votre demande est encore en attente de traitement. Vous pouvez la modifier.
+                      {t('track.pending_edit_hint')}
                     </p>
                     <button
                       type="button"
@@ -235,16 +235,16 @@ export default function TrackPage() {
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Edit2 size={13} />
-                      Modifier ma demande
+                      {t('track.edit_btn')}
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#144983' }}>Modifier ma demande</h3>
+                    <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#144983' }}>{t('track.edit_title')}</h3>
 
                     {Object.keys(editAnswers).length === 0 && (
                       <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                        Aucune réponse à modifier.
+                        {t('track.no_answers_to_edit')}
                       </p>
                     )}
 
@@ -275,7 +275,7 @@ export default function TrackPage() {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
                         <Check size={13} />
-                        {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+                        {saving ? t('track.saving') : t('track.save_changes')}
                       </button>
                       <button
                         type="button"
@@ -285,7 +285,7 @@ export default function TrackPage() {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
                         <X size={13} />
-                        Annuler
+                        {t('track.cancel')}
                       </button>
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function TrackPage() {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <Download size={14} />
-                {downloadingPdf ? '…' : 'Télécharger le PDF'}
+                {downloadingPdf ? '…' : t('track.download_pdf')}
               </button>
             </div>
           </div>

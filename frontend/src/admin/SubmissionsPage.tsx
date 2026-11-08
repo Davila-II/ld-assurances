@@ -6,7 +6,6 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { Category, Paginated, SubmissionSummary } from '../types';
 import StatusBadge from './StatusBadge';
 import {
-  FORM_TYPE_LABELS,
   SINISTRE_TYPES,
   STATUSES,
   STATUS_LABELS,
@@ -15,7 +14,7 @@ import {
 } from './labels';
 
 export default function SubmissionsPage() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const formType = params.get('form_type') ?? '';
@@ -109,10 +108,10 @@ export default function SubmissionsPage() {
         </h1>
         <p style={{ margin: 0, color: '#44556a' }}>
           {formType === 'claim'
-            ? 'Consultez, traitez, répondez ou rejetez les déclarations de sinistres reçues.'
+            ? t('admin.submissions_desc_claims')
             : formType === 'quote'
-              ? 'Traitez et répondez aux demandes de devis d’assurance des prospects et clients.'
-              : 'Vue globale de l’ensemble des dossiers reçus sur la plateforme.'}
+              ? t('admin.submissions_desc_quotes')
+              : t('admin.submissions_desc_all')}
         </p>
       </div>
 
@@ -139,49 +138,49 @@ export default function SubmissionsPage() {
             <option value="">{t('admin.filter_all_statuses')}</option>
             {STATUSES.map((item) => (
               <option key={item} value={item}>
-                {STATUS_LABELS[item]}
+                {t(`status.${item}` as const) || STATUS_LABELS[item]}
               </option>
             ))}
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="form_type">Type</label>
+          <label htmlFor="form_type">{t('admin.filter_type')}</label>
           <select
             id="form_type"
             value={formType}
             onChange={(event) => update({ form_type: event.target.value })}
           >
-            <option value="">Tous</option>
-            <option value="claim">{FORM_TYPE_LABELS.claim}</option>
-            <option value="quote">{FORM_TYPE_LABELS.quote}</option>
+            <option value="">{t('admin.all')}</option>
+            <option value="claim">{t('status.claim')}</option>
+            <option value="quote">{t('status.quote')}</option>
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="category">Catégorie</label>
+          <label htmlFor="category">{t('admin.filter_category')}</label>
           <select
             id="category"
             value={category}
             onChange={(event) => update({ category: event.target.value })}
           >
-            <option value="">Toutes</option>
+            <option value="">{t('admin.all_f')}</option>
             {categories.map((item) => (
               <option key={item.id} value={item.slug}>
-                {item.name}
+                {lang === 'en' && item.name_en ? item.name_en : item.name}
               </option>
             ))}
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="type">Type de sinistre</label>
+          <label htmlFor="type">{t('admin.filter_sinistre_type')}</label>
           <select
             id="type"
             value={type}
             onChange={(event) => update({ type: event.target.value })}
           >
-            <option value="">Tous</option>
+            <option value="">{t('admin.all')}</option>
             {SINISTRE_TYPES.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -192,11 +191,11 @@ export default function SubmissionsPage() {
 
         <div className="filter-actions">
           <button type="submit" className="btn">
-            Rechercher
+            {t('admin.btn_search')}
           </button>
           {filtersActive && (
             <button type="button" className="btn btn-secondary" onClick={reset}>
-              Réinitialiser
+              {t('admin.btn_reset')}
             </button>
           )}
         </div>
@@ -204,30 +203,30 @@ export default function SubmissionsPage() {
 
       {categoriesError && <p className="alert" role="alert">{categoriesError}</p>}
       {error && <p className="alert" role="alert">{error}</p>}
-      {loading && <p role="status">Chargement…</p>}
+      {loading && <p role="status">{t('admin.loading')}</p>}
 
       {!loading && result && result.data.length === 0 && !error && (
-        <p>Aucune déclaration trouvée.</p>
+        <p>{t('admin.no_claims_found')}</p>
       )}
 
       {!loading && result && result.data.length > 0 && (
         <>
           <p className="count">
-            {result.total} résultat{result.total > 1 ? 's' : ''}
+            {t('admin.results_count', { count: result.total })}
           </p>
 
           <div className="table-responsive">
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Dossier</th>
-                  <th scope="col">Nature</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Email</th>
-                  <th scope="col">Statut</th>
-                  <th scope="col">Pièces</th>
-                  <th scope="col">Reçu le</th>
-                  <th scope="col">Date de traitement</th>
+                  <th scope="col">{t('admin.th_file')}</th>
+                  <th scope="col">{t('admin.th_nature')}</th>
+                  <th scope="col">{t('admin.th_type')}</th>
+                  <th scope="col">{t('admin_clients.th_email')}</th>
+                  <th scope="col">{t('admin.th_status')}</th>
+                  <th scope="col">{t('admin.th_attachments')}</th>
+                  <th scope="col">{t('admin.th_received_at')}</th>
+                  <th scope="col">{t('admin.th_processed_at')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,16 +235,18 @@ export default function SubmissionsPage() {
                     <td data-label="Dossier">
                       <Link to={`/admin/submissions/${submission.id}`}>{submission.reference}</Link>
                     </td>
-                    <td data-label="Nature">{FORM_TYPE_LABELS[submission.form_type]}</td>
+                    <td data-label="Nature">
+                      {submission.form_type === 'quote' ? t('status.quote') : t('status.claim')}
+                    </td>
                     <td data-label="Type">{submission.type ?? '—'}</td>
                     <td data-label="Email">{submission.email}</td>
                     <td data-label="Statut">
                       <StatusBadge status={submission.status} />
                     </td>
                     <td data-label="Pièces">{submission.attachments_count}</td>
-                    <td data-label="Reçu le">{formatDate(submission.created_at)}</td>
+                    <td data-label="Reçu le">{formatDate(submission.created_at, lang)}</td>
                     <td data-label="Date de traitement">
-                      {submission.processed_at ? formatDate(submission.processed_at) : '—'}
+                      {submission.processed_at ? formatDate(submission.processed_at, lang) : '—'}
                     </td>
                   </tr>
                 ))}
@@ -260,10 +261,10 @@ export default function SubmissionsPage() {
               disabled={result.current_page <= 1}
               onClick={() => update({ page: String(result.current_page - 1) })}
             >
-              Précédent
+              {t('admin.prev')}
             </button>
             <span>
-              Page {result.current_page} sur {result.last_page}
+              {t('admin.page_of', { current: result.current_page, total: result.last_page })}
             </span>
             <button
               type="button"
@@ -271,7 +272,7 @@ export default function SubmissionsPage() {
               disabled={result.current_page >= result.last_page}
               onClick={() => update({ page: String(result.current_page + 1) })}
             >
-              Suivant
+              {t('admin.next')}
             </button>
           </nav>
         </>

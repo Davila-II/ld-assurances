@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, Download, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Download, Edit2, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
 import { getMySubmissions, downloadSubmissionPdf } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import StatusBadge from '../admin/StatusBadge';
@@ -98,7 +98,7 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>{t('client.col_reference')}</th>
-                  <th>Type</th>
+                  <th>{t('admin.th_type')}</th>
                   <th>{t('client.col_category')}</th>
                   <th>{t('client.col_date')}</th>
                   <th>{t('client.col_processed_at')}</th>
@@ -147,6 +147,17 @@ export default function DashboardPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          {sub.status === 'received' && (
+                            <Link
+                              to={`/suivi?ref=${encodeURIComponent(sub.reference)}&edit=1`}
+                              className="client-table-action-btn"
+                              title={t('client.edit_btn')}
+                              style={{ color: '#144983', borderColor: '#144983' }}
+                            >
+                              <Edit2 size={13} />
+                              <span>{t('client.edit_btn')}</span>
+                            </Link>
+                          )}
                           <button
                             type="button"
                             className="client-table-action-btn"

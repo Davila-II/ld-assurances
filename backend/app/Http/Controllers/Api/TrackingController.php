@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
 use App\Services\SubmissionPdfService;
+use App\Traits\ValidatesSubmissionDates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,6 +13,7 @@ use Throwable;
 
 class TrackingController extends Controller
 {
+    use ValidatesSubmissionDates;
     // Suivi public : il faut la référence ET l'email utilisé lors de la demande.
     // Les informations renvoyées restent non sensibles (statut, dates, catégorie).
     public function show(Request $request): JsonResponse
@@ -72,6 +74,8 @@ class TrackingController extends Controller
                 'message' => 'Cette demande ne peut plus être modifiée car elle a déjà été prise en charge.',
             ], 403);
         }
+
+        $this->validateDateAnswers($data['answers'], $submission->category?->slug);
 
         $submission->update([
             'answers' => array_merge($submission->answers ?? [], $data['answers']),

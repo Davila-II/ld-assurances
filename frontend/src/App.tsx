@@ -10,6 +10,8 @@ import SubmissionsPage from './admin/SubmissionsPage';
 import SubmissionDetailPage from './admin/SubmissionDetailPage';
 import FormBuilderPage from './admin/FormBuilderPage';
 import ClientsPage from './admin/ClientsPage';
+import SettingsPage from './admin/SettingsPage';
+import RolesPage from './admin/RolesPage';
 import ClientLayout from './client/ClientLayout';
 import ClientLoginPage from './client/LoginPage';
 import ClientRegisterPage from './client/RegisterPage';
@@ -54,6 +56,8 @@ export default function App() {
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="formulaires" element={<FormBuilderPage />} />
+        <Route path="parametres" element={<SettingsPage />} />
+        <Route path="roles" element={<RolesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

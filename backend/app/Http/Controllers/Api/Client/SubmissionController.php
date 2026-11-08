@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
 use App\Services\SubmissionPdfService;
+use App\Traits\ValidatesSubmissionDates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,6 +14,7 @@ use Throwable;
 
 class SubmissionController extends Controller
 {
+    use ValidatesSubmissionDates;
     // Les devis et sinistres du client connecté (jamais ceux des autres)
     public function index(Request $request): JsonResponse
     {
@@ -81,6 +83,8 @@ class SubmissionController extends Controller
         $data = $request->validate([
             'answers' => ['required', 'array'],
         ]);
+
+        $this->validateDateAnswers($data['answers'], $submission->category?->slug);
 
         $submission->update([
             'answers' => array_merge($submission->answers ?? [], $data['answers']),
