@@ -29,6 +29,8 @@ Route::put('/track', [TrackingController::class, 'update'])
     ->middleware('throttle:tracking');
 Route::post('/track/pdf', [TrackingController::class, 'downloadPdf'])
     ->middleware('throttle:tracking');
+Route::post('/track/attachment', [TrackingController::class, 'downloadAttachment'])
+    ->middleware('throttle:tracking');
 
 // --- Espace client ---
 Route::prefix('client')->group(function () {
@@ -52,6 +54,8 @@ Route::prefix('client')->group(function () {
         Route::get('/submissions', [ClientSubmissionController::class, 'index']);
         Route::put('/submissions/{reference}', [ClientSubmissionController::class, 'update']);
         Route::get('/submissions/{reference}/pdf', [ClientSubmissionController::class, 'downloadPdf'])
+            ->middleware('throttle:30,1');
+        Route::get('/submissions/{reference}/attachments/{attachment}', [ClientSubmissionController::class, 'downloadAttachment'])
             ->middleware('throttle:30,1');
     });
 });

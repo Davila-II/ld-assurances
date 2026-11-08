@@ -121,6 +121,7 @@ class AdminSubmissionController extends Controller
                 'original_name' => $a->original_name,
                 'mime_type'     => $a->mime_type,
                 'size'          => $a->size,
+                'source'        => $a->source,
             ]),
         ]);
     }
@@ -222,17 +223,17 @@ class AdminSubmissionController extends Controller
             'attachments.*' => ['file', 'max:20480'], // 20 Mo max par fichier
         ]);
 
-        // Stocker les pièces jointes de la réponse admin dans storage/app/admin-replies/
-        $replyFiles = [];
+        // Stocker les pièces jointes de la réponse admin dans la table attachments avec source = 'admin'
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $path = $file->store("admin-replies/{$submission->id}", 'local');
-                $replyFiles[] = [
-                    'path'          => $path,
+                $submission->attachments()->create([
                     'original_name' => $file->getClientOriginalName(),
+                    'path'          => $path,
                     'mime_type'     => $file->getMimeType(),
                     'size'          => $file->getSize(),
-                ];
+                    'source'        => 'admin',
+                ]);
             }
         }
 

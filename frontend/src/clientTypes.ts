@@ -11,6 +11,13 @@ export interface ClientAuthResult {
   user: ClientUser;
 }
 
+export interface AdminAttachment {
+  id: number;
+  original_name: string;
+  mime_type: string;
+  size: number;
+}
+
 export interface ClientSubmission {
   reference: string;
   form_type: 'claim' | 'quote';
@@ -24,6 +31,7 @@ export interface ClientSubmission {
   processed_at?: string | null;
   taken_at?: string | null;
   closed_at?: string | null;
+  admin_attachments?: AdminAttachment[];
 }
 
 export interface ClientPage<T> {

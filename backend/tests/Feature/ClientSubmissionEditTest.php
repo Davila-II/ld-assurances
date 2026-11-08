@@ -54,8 +54,12 @@ class ClientSubmissionEditTest extends TestCase
         $client = $this->makeClient();
         $submission = $this->makeSubmission($client);
 
+        // Date de prise en charge lors du passage à in_progress
         $submission->update(['status' => 'in_progress']);
+        $this->assertNotNull($submission->fresh()->taken_at);
 
+        // Date de traitement lors du passage à closed
+        $submission->update(['status' => 'closed']);
         $this->assertNotNull($submission->fresh()->processed_at);
     }
 
@@ -74,11 +78,11 @@ class ClientSubmissionEditTest extends TestCase
         $client = $this->makeClient();
         $submission = $this->makeSubmission($client);
 
-        $submission->update(['status' => 'in_progress']);
+        $submission->update(['status' => 'closed']);
         $firstDate = $submission->fresh()->processed_at;
 
         // Changer à nouveau le statut ne doit pas modifier processed_at
-        $submission->fresh()->update(['status' => 'answered']);
+        $submission->fresh()->update(['status' => 'rejected']);
 
         $this->assertEquals($firstDate->toIso8601String(), $submission->fresh()->processed_at->toIso8601String());
     }

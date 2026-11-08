@@ -23,7 +23,7 @@ class TrackingController extends Controller
             'email'     => ['required', 'email', 'max:255'],
         ]);
 
-        $submission = Submission::with('category')
+        $submission = Submission::with(['category', 'attachments'])
             ->where('reference', strtoupper(trim($data['reference'])))
             ->first();
 
@@ -45,9 +45,16 @@ class TrackingController extends Controller
             'rejection_reason' => $submission->rejection_reason,
             'created_at'       => $submission->created_at?->toIso8601String(),
             'updated_at'       => $submission->updated_at?->toIso8601String(),
+            'taken_at'         => $submission->taken_at?->toIso8601String(),
             'processed_at'     => $submission->processed_at?->toIso8601String(),
             'answers'          => $submission->answers,
             'form_snapshot'    => $submission->form_snapshot,
+            'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
+                'id'            => $a->id,
+                'original_name' => $a->original_name,
+                'mime_type'     => $a->mime_type,
+                'size'          => $a->size,
+            ])->values(),
         ])->header('Cache-Control', 'no-store');
     }
 
@@ -122,5 +129,32 @@ class TrackingController extends Controller
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control'          => 'no-store, private',
         ]);
+    }
+
+    // Téléchargement public sécurisé d'une pièce jointe avec le couple (référence + email)
+    public function downloadAttachment(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'reference'     => ['required', 'string', 'max:40'],
+            'email'         => ['required', 'email', 'max:255'],
+            'attachment_id' => ['required', 'integer'],
+        ]);
+
+        $submission = Submission::where('reference', strtoupper(trim($data['reference'])))->first();
+
+        if (
+            ! $submission
+            || ! hash_equals(strtolower($submission->email), strtolower(trim($data['email'])))
+        ) {
+            return response()->json(['message' => 'Aucun dossier ne correspond à ces informations.'], 404);
+        }
+
+        $attachment = $submission->attachments()->find($data['attachment_id']);
+
+        if (! $attachment || ! \Illuminate\Support\Facades\Storage::exists($attachment->path)) {
+            return response()->json(['message' => 'Fichier introuvable.'], 404);
+        }
+
+        return \Illuminate\Support\Facades\Storage::download($attachment->path, $attachment->original_name);
     }
 }

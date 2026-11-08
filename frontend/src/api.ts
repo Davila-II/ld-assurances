@@ -164,6 +164,35 @@ export const downloadTrackPdf = async (reference: string, email: string): Promis
   URL.revokeObjectURL(url);
 };
 
+export const downloadTrackAttachment = async (
+  reference: string,
+  email: string,
+  attachmentId: number,
+  filename: string
+): Promise<void> => {
+  const res = await rawFetch('/track/attachment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reference, email, attachment_id: attachmentId }),
+  });
+
+  if (!res.ok) {
+    throw new ApiError('Impossible de télécharger la pièce jointe.', res.status);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
 // --- Administration ---
 
 export const adminLogin = (email: string, password: string) =>

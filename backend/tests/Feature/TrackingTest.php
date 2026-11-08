@@ -152,8 +152,12 @@ class TrackingTest extends TestCase
 
         $this->assertNull($submission->processed_at);
 
+        // Date de prise en charge lors du passage à in_progress
         $submission->update(['status' => 'in_progress']);
+        $this->assertNotNull($submission->fresh()->taken_at);
 
+        // Date de traitement lors du passage à closed ou rejected
+        $submission->update(['status' => 'closed']);
         $this->assertNotNull($submission->fresh()->processed_at);
     }
 
@@ -171,11 +175,11 @@ class TrackingTest extends TestCase
     {
         $submission = $this->makeSubmission();
 
-        $submission->update(['status' => 'in_progress']);
+        $submission->update(['status' => 'closed']);
         $firstDate = $submission->fresh()->processed_at;
 
-        // Un deuxième changement ne doit pas écraser la première date
-        $submission->fresh()->update(['status' => 'answered']);
+        // Un deuxième changement vers rejected ne doit pas écraser la première date de traitement
+        $submission->fresh()->update(['status' => 'rejected']);
         $this->assertEquals($firstDate, $submission->fresh()->processed_at);
     }
 }

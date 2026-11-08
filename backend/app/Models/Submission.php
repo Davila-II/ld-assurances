@@ -41,26 +41,28 @@ class Submission extends Model
             }
         });
 
-        // Enregistrement automatique des dates de changement de statut
+        // Enregistrement automatique des dates de changement de statut :
+        // 1. Date reçue : created_at (automatique par Laravel)
+        // 2. Date de prise en charge : taken_at (dès passage à "in_progress")
+        // 3. Date de traitement : processed_at (dès passage à "closed" ou "rejected")
         static::updating(function (Submission $submission) {
             if (! $submission->isDirty('status')) {
                 return;
             }
 
-            $old = $submission->getOriginal('status');
             $new = $submission->status;
 
-            // processed_at : première sortie du statut "received"
-            if ($old === 'received' && $new !== 'received' && $submission->processed_at === null) {
-                $submission->processed_at = now();
-            }
-
-            // taken_at : passage à "in_progress"
+            // taken_at : passage à "in_progress" (date de prise en charge)
             if ($new === 'in_progress' && $submission->taken_at === null) {
                 $submission->taken_at = now();
             }
 
-            // closed_at : passage à "closed" ou "rejected"
+            // processed_at : passage à "closed" ou "rejected" (date de traitement final)
+            if (in_array($new, ['closed', 'rejected']) && $submission->processed_at === null) {
+                $submission->processed_at = now();
+            }
+
+            // closed_at reste synchronisé si nécessaire
             if (in_array($new, ['closed', 'rejected']) && $submission->closed_at === null) {
                 $submission->closed_at = now();
             }

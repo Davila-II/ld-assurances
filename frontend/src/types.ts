@@ -117,9 +117,16 @@ export interface TrackResult {
   rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
+  taken_at?: string | null;
   processed_at?: string | null;
   answers?: Record<string, unknown> | null;
   form_snapshot?: Array<{ name: string; label: string; field_type: string }> | null;
+  admin_attachments?: Array<{
+    id: number;
+    original_name: string;
+    mime_type: string;
+    size: number;
+  }>;
 }
 
 // --- Administration ---
@@ -227,6 +234,7 @@ export interface AttachmentInfo {
   original_name: string;
   mime_type: string;
   size: number;
+  source?: 'client' | 'admin';
 }
 
 export interface SubmissionDetail {

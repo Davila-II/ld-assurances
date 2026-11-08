@@ -149,3 +149,28 @@ export const downloadSubmissionPdf = async (reference: string): Promise<void> =>
   link.click();
   URL.revokeObjectURL(url);
 };
+
+/**
+ * Télécharge une pièce jointe transmise par l'administration dans le dossier du client.
+ */
+export const downloadClientAttachment = async (reference: string, attachmentId: number, filename: string): Promise<void> => {
+  const token = getClientToken();
+  if (!token) throw new ApiError('Session expirée. Veuillez vous reconnecter.', 401);
+
+  const API_URL = import.meta.env.VITE_API_URL as string;
+  const res = await fetch(`${API_URL}/client/submissions/${encodeURIComponent(reference)}/attachments/${attachmentId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new ApiError('Le téléchargement du fichier a échoué.', res.status);
+
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href     = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};

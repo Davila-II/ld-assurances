@@ -238,26 +238,20 @@ export default function SubmissionDetailPage() {
                 <dd>{submission.email}</dd>
               </div>
               <div className="answer">
-                <dt>{t('admin.th_received_at')}</dt>
+                <dt>{t('client.col_date')}</dt>
                 <dd>{formatDate(submission.created_at, lang)}</dd>
               </div>
-              {submission.processed_at && (
-                <div className="answer">
-                  <dt>{t('admin.th_processed_at')}</dt>
-                  <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(submission.processed_at, lang)}</dd>
-                </div>
-              )}
               {submission.taken_at && (
                 <div className="answer">
-                  <dt>{t('admin.detail_taken_at')}</dt>
+                  <dt>{t('client.col_taken_at')}</dt>
                   <dd style={{ color: '#2563eb', fontWeight: 600 }}>{formatDate(submission.taken_at, lang)}</dd>
                 </div>
               )}
-              {submission.closed_at && (
+              {submission.processed_at && (
                 <div className="answer">
-                  <dt>{t('admin.detail_closed_at')}</dt>
+                  <dt>{t('client.col_processed_at')}</dt>
                   <dd style={{ color: submission.status === 'rejected' ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                    {formatDate(submission.closed_at, lang)}
+                    {formatDate(submission.processed_at, lang)}
                   </dd>
                 </div>
               )}
@@ -391,6 +385,7 @@ export default function SubmissionDetailPage() {
             </section>
           )}
 
+          {/* 2. Demande du client / Demande de devis */}
           <section className="card">
             <h2>{submission.form_type === 'claim' ? t('admin.detail_answers_title_claim') : t('admin.detail_answers_title_quote')}</h2>
             <dl className="answers">
@@ -403,6 +398,33 @@ export default function SubmissionDetailPage() {
             </dl>
           </section>
 
+          {/* 3. Pièces jointes (ajoutées par le client lors du formulaire) */}
+          <section className="card">
+            <h2>{t('admin.detail_attachments_title', { count: submission.attachments.filter(a => a.source !== 'admin').length })}</h2>
+            {submission.attachments.filter(a => a.source !== 'admin').length === 0 ? (
+              <p>{t('admin.detail_no_attachments')}</p>
+            ) : (
+              <ul className="attachments">
+                {submission.attachments.filter(a => a.source !== 'admin').map((attachment) => (
+                  <li key={attachment.id}>
+                    <span>
+                      {attachment.original_name} <small>({formatSize(attachment.size, lang)})</small>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={downloadingId === attachment.id}
+                      onClick={() => handleDownload(attachment)}
+                    >
+                      {downloadingId === attachment.id ? (lang === 'en' ? 'Downloading…' : 'Téléchargement…') : t('admin.detail_download')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* 4. Observations internes */}
           <section className="card">
             <h2>{t('admin.detail_notes_title')}</h2>
             <div className="field">
@@ -420,6 +442,7 @@ export default function SubmissionDetailPage() {
             {notesNotice && <p className="notice" role="status">{notesNotice}</p>}
           </section>
 
+          {/* 5. Répondre au client */}
           <section className="card">
             <h2>{t('admin.detail_reply_title')}</h2>
             <div className="field">
@@ -507,30 +530,31 @@ export default function SubmissionDetailPage() {
               )}
             </div>
             {replyNotice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{replyNotice}</p>}
-          </section>
 
-          <section className="card">
-            <h2>{t('admin.detail_attachments_title', { count: submission.attachments.length })}</h2>
-            {submission.attachments.length === 0 ? (
-              <p>{t('admin.detail_no_attachments')}</p>
-            ) : (
-              <ul className="attachments">
-                {submission.attachments.map((attachment) => (
-                  <li key={attachment.id}>
-                    <span>
-                      {attachment.original_name} <small>({formatSize(attachment.size, lang)})</small>
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      disabled={downloadingId === attachment.id}
-                      onClick={() => handleDownload(attachment)}
-                    >
-                      {downloadingId === attachment.id ? (lang === 'en' ? 'Downloading…' : 'Téléchargement…') : t('admin.detail_download')}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {/* Liste des pièces envoyées par l'administration */}
+            {submission.attachments.filter(a => a.source === 'admin').length > 0 && (
+              <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <h3 style={{ fontSize: '1rem', color: '#144983', margin: '0 0 10px' }}>
+                  📎 {lang === 'en' ? 'Attachments sent with replies:' : 'Pièces jointes transmises au client :'}
+                </h3>
+                <ul className="attachments">
+                  {submission.attachments.filter(a => a.source === 'admin').map((att) => (
+                    <li key={att.id}>
+                      <span>
+                        {att.original_name} <small>({formatSize(att.size, lang)})</small>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={downloadingId === att.id}
+                        onClick={() => handleDownload(att)}
+                      >
+                        {downloadingId === att.id ? (lang === 'en' ? 'Downloading…' : 'Téléchargement…') : t('admin.detail_download')}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
         </>

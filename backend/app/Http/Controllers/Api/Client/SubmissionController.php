@@ -27,7 +27,7 @@ class SubmissionController extends Controller
         ->whereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($request->user()->email))])
         ->update(['user_id' => $request->user()->id]);
 
-        $query = Submission::with('category:id,name,name_en')
+        $query = Submission::with(['category:id,name,name_en', 'attachments'])
             ->where('user_id', $request->user()->id)
             ->latest();
 
@@ -48,6 +48,12 @@ class SubmissionController extends Controller
             'processed_at'     => $submission->processed_at?->toIso8601String(),
             'taken_at'         => $submission->taken_at?->toIso8601String(),
             'closed_at'        => $submission->closed_at?->toIso8601String(),
+            'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
+                'id'            => $a->id,
+                'original_name' => $a->original_name,
+                'mime_type'     => $a->mime_type,
+                'size'          => $a->size,
+            ])->values(),
         ]);
 
         return response()->json($page);
@@ -142,5 +148,27 @@ class SubmissionController extends Controller
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control'          => 'private, no-cache, no-store, must-revalidate',
         ]);
+    }
+
+    // Téléchargement sécurisé d'une pièce jointe appartenant au dossier du client
+    public function downloadAttachment(Request $request, string $reference, int $attachmentId)
+    {
+        $submission = Submission::where('reference', strtoupper(trim($reference)))->firstOrFail();
+
+        $user = $request->user();
+        $userEmail = Str::lower(trim($user->email));
+        $subEmail  = Str::lower(trim($submission->email));
+
+        if ((int) $submission->user_id !== (int) $user->id && (empty($submission->user_id) && $subEmail !== $userEmail)) {
+            abort(403, 'Accès refusé.');
+        }
+
+        $attachment = $submission->attachments()->findOrFail($attachmentId);
+
+        if (! \Illuminate\Support\Facades\Storage::exists($attachment->path)) {
+            abort(404, 'Fichier introuvable.');
+        }
+
+        return \Illuminate\Support\Facades\Storage::download($attachment->path, $attachment->original_name);
     }
 }
