@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Edit2, ExternalLink, Paperclip, Plus, ShieldAlert } from 'lucide-react';
+import { Download, Edit2, ExternalLink, MessageSquare, Paperclip, Plus, ShieldAlert } from 'lucide-react';
 import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf, downloadClientAttachment } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import EmptyState from './EmptyState';
 import StatusBadge from '../admin/StatusBadge';
 import type { SubmissionStatus } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
-import { formatSize } from '../admin/labels';
+import { formatDate, formatSize } from '../admin/labels';
+import RepliesModal from '../components/RepliesModal';
 
 export default function ClaimsPage() {
   const { lang, t } = useLanguage();
@@ -16,6 +17,7 @@ export default function ClaimsPage() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloadingAttId, setDownloadingAttId] = useState<number | null>(null);
+  const [activeModalSub, setActiveModalSub] = useState<ClientSubmission | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,38 +102,18 @@ export default function ClaimsPage() {
             </thead>
             <tbody>
               {submissions.map((sub) => {
-                const dateStr = sub.created_at
-                  ? new Date(sub.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })
-                  : '-';
-
-                const takenStr = sub.taken_at
-                  ? new Date(sub.taken_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : t('client.taken_pending');
-
-                const processedStr = sub.processed_at
-                  ? new Date(sub.processed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : t('client.not_processed');
+                const dateStr = sub.created_at ? formatDate(sub.created_at, lang) : '-';
+                const takenStr = sub.taken_at ? formatDate(sub.taken_at, lang) : t('client.taken_pending');
+                const processedStr = sub.processed_at ? formatDate(sub.processed_at, lang) : t('client.taken_pending');
+                const replyCount = (sub.replies_count && sub.replies_count > 0)
+                  ? sub.replies_count
+                  : (sub.replies && sub.replies.length > 0 ? sub.replies.length : 0);
 
                 return (
                   <tr key={sub.reference}>
                     <td>
                       <span className="client-ref-code">{sub.reference}</span>
+
                       {sub.admin_attachments && sub.admin_attachments.length > 0 && (
                         <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {sub.admin_attachments.map((att) => (
@@ -181,7 +163,19 @@ export default function ClaimsPage() {
                       )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {replyCount > 0 && (
+                          <button
+                            type="button"
+                            className="client-table-action-btn client-replies-btn"
+                            title={t('client.replies_btn')}
+                            onClick={() => setActiveModalSub(sub)}
+                          >
+                            <MessageSquare size={13} />
+                            <span>{t('client.replies_btn')}</span>
+                            <span className="client-replies-badge">{replyCount}</span>
+                          </button>
+                        )}
                         {sub.status === 'received' && (
                           <Link
                             to={`/suivi?ref=${encodeURIComponent(sub.reference)}&edit=1`}
@@ -221,6 +215,18 @@ export default function ClaimsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeModalSub && (
+        <RepliesModal
+          isOpen={true}
+          onClose={() => setActiveModalSub(null)}
+          reference={activeModalSub.reference}
+          replies={activeModalSub.replies || []}
+          onDownloadAttachment={(attId, filename) =>
+            handleDownloadAttachment(activeModalSub.reference, attId, filename)
+          }
+        />
       )}
     </div>
   );

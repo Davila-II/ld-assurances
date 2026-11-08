@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attachment extends Model
 {
-    protected $fillable = ['submission_id', 'original_name', 'path', 'mime_type', 'size', 'source'];
+    protected $fillable = ['submission_id', 'original_name', 'path', 'mime_type', 'size', 'source', 'reply_id'];
 
     public function submission(): BelongsTo
     {
         return $this->belongsTo(Submission::class);
+    }
+
+    public function reply(): BelongsTo
+    {
+        return $this->belongsTo(SubmissionReply::class, 'reply_id');
     }
 }

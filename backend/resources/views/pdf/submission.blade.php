@@ -518,40 +518,102 @@
   </table>
 @endif
 
-{{-- ── 7. TARIFICATION CERTIFIÉE CIMA (SI CALCULÉE POUR UN DEVIS) ── --}}
+{{-- ── 7. TARIFICATION OU INDEMNISATION VALIDÉE PAR L'ADMINISTRATION ── --}}
 @if(!empty($quoteCalculation) && !empty($quoteCalculation['has_calculation']))
-  <div class="section-title">ESTIMATION TARIFAIRE CERTIFIÉE (CODE CIMA)</div>
-  <table class="pricing-table">
-    @if(!empty($quoteCalculation['breakdown']))
-      @foreach($quoteCalculation['breakdown'] as $item)
-        @if(!str_contains(strtolower($item['label']), 'total prime'))
+  @if(!empty($quoteCalculation['indemnisation_estimee']) || ($submission->form_type ?? '') === 'claim')
+    <div class="section-title">ESTIMATION D'INDEMNISATION DU SINISTRE (CODE CIMA / CONVENTION IDA)</div>
+    <table class="pricing-table">
+      @if(!empty($quoteCalculation['breakdown']))
+        @foreach($quoteCalculation['breakdown'] as $item)
           <tr>
-            <td class="label-cell">{{ $item['label'] }}</td>
-            <td class="val-cell" style="font-weight: {{ str_contains(strtolower($item['label']), 'prime nette') ? 'bold' : 'normal' }};">
-              {{ number_format($item['amount'], 0, ',', ' ') }} FCFA
+            <td class="label-cell">{{ $item['label'] ?? '' }}</td>
+            <td class="val-cell" style="font-weight: 600;">
+              {{ number_format($item['amount'] ?? 0, 0, ',', ' ') }} FCFA
             </td>
           </tr>
+        @endforeach
+      @else
+        @if(isset($quoteCalculation['montant_brut']))
+          <tr>
+            <td class="label-cell">Dommages bruts évalués</td>
+            <td class="val-cell">{{ number_format($quoteCalculation['montant_brut'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
         @endif
-      @endforeach
-    @else
+        @if(isset($quoteCalculation['franchise']))
+          <tr>
+            <td class="label-cell">Franchise contractuelle déduite</td>
+            <td class="val-cell" style="color: #991b1b;">- {{ number_format($quoteCalculation['franchise'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+        @endif
+      @endif
+      @if(!empty($quoteCalculation['reduction_applied_percent']) || !empty($quoteCalculation['reduction_applied_fixed']))
+        <tr>
+          <td class="label-cell">Ajustement / Réduction accordée</td>
+          <td class="val-cell" style="color: #059669;">
+            @if(!empty($quoteCalculation['reduction_applied_percent'])) -{{ $quoteCalculation['reduction_applied_percent'] }}% @endif
+            @if(!empty($quoteCalculation['reduction_applied_fixed'])) -{{ number_format($quoteCalculation['reduction_applied_fixed'], 0, ',', ' ') }} FCFA @endif
+          </td>
+        </tr>
+      @endif
       <tr>
-        <td class="label-cell">Prime Nette HT</td>
-        <td class="val-cell">{{ number_format($quoteCalculation['prime_nette'] ?? 0, 0, ',', ' ') }} FCFA</td>
+        <td class="total-label">TOTAL INDEMNITÉ NETTE ESTIMÉE</td>
+        <td class="total-val">{{ number_format($quoteCalculation['indemnisation_estimee'] ?? 0, 0, ',', ' ') }} FCFA</td>
       </tr>
+    </table>
+  @else
+    <div class="section-title">ESTIMATION TARIFAIRE CERTIFIÉE (CODE CIMA)</div>
+    <table class="pricing-table">
+      @if(!empty($quoteCalculation['breakdown']))
+        @foreach($quoteCalculation['breakdown'] as $item)
+          @if(!str_contains(strtolower($item['label'] ?? ''), 'total prime'))
+            <tr>
+              <td class="label-cell">{{ $item['label'] }}</td>
+              <td class="val-cell" style="font-weight: {{ str_contains(strtolower($item['label'] ?? ''), 'prime nette') ? 'bold' : 'normal' }};">
+                {{ number_format($item['amount'] ?? 0, 0, ',', ' ') }} FCFA
+              </td>
+            </tr>
+          @endif
+        @endforeach
+      @else
+        @if(isset($quoteCalculation['prime_nette']))
+          <tr>
+            <td class="label-cell">Prime Nette HT</td>
+            <td class="val-cell">{{ number_format($quoteCalculation['prime_nette'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+        @endif
+        @if(isset($quoteCalculation['accessoires']))
+          <tr>
+            <td class="label-cell">Accessoires &amp; Frais de gestion</td>
+            <td class="val-cell">{{ number_format($quoteCalculation['accessoires'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+        @endif
+        @if(isset($quoteCalculation['taxe_unique']))
+          <tr>
+            <td class="label-cell">Taxe unique sur les assurances (15%)</td>
+            <td class="val-cell">{{ number_format($quoteCalculation['taxe_unique'] ?? 0, 0, ',', ' ') }} FCFA</td>
+          </tr>
+        @endif
+      @endif
+      @if(!empty($quoteCalculation['reduction_applied_percent']) || !empty($quoteCalculation['reduction_applied_fixed']))
+        <tr>
+          <td class="label-cell">Remise commerciale / Réduction</td>
+          <td class="val-cell" style="color: #059669;">
+            @if(!empty($quoteCalculation['reduction_applied_percent'])) -{{ $quoteCalculation['reduction_applied_percent'] }}% @endif
+            @if(!empty($quoteCalculation['reduction_applied_fixed'])) -{{ number_format($quoteCalculation['reduction_applied_fixed'], 0, ',', ' ') }} FCFA @endif
+          </td>
+        </tr>
+      @endif
       <tr>
-        <td class="label-cell">Accessoires & Frais de gestion</td>
-        <td class="val-cell">{{ number_format($quoteCalculation['accessoires'] ?? 0, 0, ',', ' ') }} FCFA</td>
+        <td class="total-label">TOTAL PRIME TTC</td>
+        <td class="total-val">{{ number_format($quoteCalculation['prime_ttc'] ?? 0, 0, ',', ' ') }} FCFA</td>
       </tr>
-      <tr>
-        <td class="label-cell">Taxe unique sur les assurances (15%)</td>
-        <td class="val-cell">{{ number_format($quoteCalculation['taxe_unique'] ?? 0, 0, ',', ' ') }} FCFA</td>
-      </tr>
-    @endif
-    <tr>
-      <td class="total-label">TOTAL PRIME AUTOMOBILE TTC</td>
-      <td class="total-val">{{ number_format($quoteCalculation['prime_ttc'] ?? 0, 0, ',', ' ') }} FCFA</td>
-    </tr>
-  </table>
+    </table>
+  @endif
+  @if(!empty($quoteCalculation['notes_explicatives']))
+    <div style="font-size: 7.5pt; color: #475569; margin-top: 4px; font-style: italic;">
+      ℹ️ {{ $quoteCalculation['notes_explicatives'] }}
+    </div>
+  @endif
 @endif
 
 {{-- ── 8. PROCHAINE ÉTAPE ── --}}

@@ -564,4 +564,86 @@ class SubmissionPdfTest extends TestCase
             $this->assertStringStartsWith('data:image/', $data['logoBase64']);
         }
     }
+
+    /**
+     * Test complet du flux manuel : Le PDF n'a aucun montant à la soumission,
+     * puis l'admin valide le calcul avec réduction, et le montant apparaît dans le PDF.
+     */
+    public function test_manual_calculation_flow_and_pdf_visibility(): void
+    {
+        // 1. Soumission d'une demande de devis
+        $category = Category::create([
+            'name'       => 'Automobile',
+            'slug'       => 'auto-' . uniqid(),
+            'form_type'  => 'quote',
+            'is_active'  => true,
+            'sort_order' => 1,
+        ]);
+
+        $submission = Submission::create([
+            'category_id' => $category->id,
+            'form_type'   => 'quote',
+            'email'       => 'client.test@example.com',
+            'status'      => 'received',
+            'answers'     => [
+                'full_name'         => 'Alain Foka',
+                'puissance_fiscale' => 7,
+                'valeur_vehicule'   => 4000000,
+            ],
+            'form_snapshot' => [
+                ['name' => 'full_name', 'label' => 'Nom', 'field_type' => 'text'],
+            ],
+        ]);
+
+        $pdfService = app(SubmissionPdfService::class);
+
+        // 2. À la création : pas de calcul dans le PDF
+        $viewDataInitial = $pdfService->prepareViewData($submission);
+        $this->assertNull($viewDataInitial['quoteCalculation'], 'Le PDF ne doit contenir aucun montant à la soumission');
+
+        // Suivi public : quote_calculation est null
+        $trackRes = $this->postJson('/api/track', [
+            'reference' => $submission->reference,
+            'email'     => 'client.test@example.com',
+        ]);
+        $trackRes->assertOk();
+        $this->assertNull($trackRes->json('quote_calculation'));
+
+        // 3. L'administrateur valide un calcul avec remise de 10%
+        $admin = User::factory()->create(['role' => 'admin']);
+        $calcResponse = $this->actingAs($admin, 'sanctum')->postJson("/api/admin/submissions/{$submission->id}/calculate", [
+            'manual_montant_brut' => 100000,
+            'reduction_percent'   => 10,
+            'admin_note'          => 'Remise commerciale de 10% accordée',
+        ]);
+        $calcResponse->assertOk();
+        $submission->refresh();
+
+        $this->assertNotNull($submission->quote_calculation);
+        $this->assertTrue($submission->quote_calculation['admin_validated']);
+        $this->assertEquals(90000, $submission->quote_calculation['prime_ttc']);
+
+        // 4. Le PDF contient maintenant le montant validé
+        $viewDataValidated = $pdfService->prepareViewData($submission);
+        $this->assertNotNull($viewDataValidated['quoteCalculation'], 'Le PDF doit contenir le montant validé par l\'admin');
+        $this->assertEquals(90000, $viewDataValidated['quoteCalculation']['prime_ttc']);
+
+        // Le suivi public renvoie maintenant le calcul validé
+        $trackResValidated = $this->postJson('/api/track', [
+            'reference' => $submission->reference,
+            'email'     => 'client.test@example.com',
+        ]);
+        $trackResValidated->assertOk();
+        $this->assertNotNull($trackResValidated->json('quote_calculation'));
+        $this->assertEquals(90000, $trackResValidated->json('quote_calculation.prime_ttc'));
+
+        // 5. Réinitialisation par l'admin
+        $resetRes = $this->actingAs($admin, 'sanctum')->deleteJson("/api/admin/submissions/{$submission->id}/calculate");
+        $resetRes->assertOk();
+        $submission->refresh();
+        $this->assertNull($submission->quote_calculation);
+
+        $viewDataReset = $pdfService->prepareViewData($submission);
+        $this->assertNull($viewDataReset['quoteCalculation'], 'Le PDF ne doit plus contenir de montant après réinitialisation');
+    }
 }

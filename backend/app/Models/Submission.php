@@ -43,7 +43,7 @@ class Submission extends Model
 
         // Enregistrement automatique des dates de changement de statut :
         // 1. Date reçue : created_at (automatique par Laravel)
-        // 2. Date de prise en charge : taken_at (dès passage à "in_progress")
+        // 2. Date de prise en charge : taken_at (dès que le statut quitte "received")
         // 3. Date de traitement : processed_at (dès passage à "closed" ou "rejected")
         static::updating(function (Submission $submission) {
             if (! $submission->isDirty('status')) {
@@ -52,8 +52,9 @@ class Submission extends Model
 
             $new = $submission->status;
 
-            // taken_at : passage à "in_progress" (date de prise en charge)
-            if ($new === 'in_progress' && $submission->taken_at === null) {
+            // taken_at : dès que le statut passe de "received" à n'importe quel autre statut,
+            // on fige définitivement la date de prise en charge.
+            if ($new !== 'received' && $submission->taken_at === null) {
                 $submission->taken_at = now();
             }
 
@@ -123,5 +124,15 @@ class Submission extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class);
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(SubmissionReply::class);
+    }
+
+    public function unreadReplies(): HasMany
+    {
+        return $this->hasMany(SubmissionReply::class)->whereNull('read_at');
     }
 }

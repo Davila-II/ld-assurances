@@ -2551,3 +2551,169 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================================
+   ADMIN RESPONSIVE — Corrections mobile / petites tablettes
+   Ciblage : <= 640px (mobile) + correctifs spécifiques <= 480px
+   ========================================================================== */
+
+@media (max-width: 640px) {
+
+  /* ── Admin main padding ── */
+  .admin-main {
+    padding: 14px 10px 48px;
+  }
+
+  /* ── En-tête de dossier (SubmissionDetailPage) ── */
+  .detail-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .detail-head h1 {
+    font-size: 1.3rem;
+    word-break: break-word;
+  }
+
+  /* ── Boutons d'action côte-à-côte (Envoyer + Annuler) ── */
+  div[style*="display: flex"][style*="gap: '10px'"],
+  .reply-actions {
+    flex-wrap: wrap;
+  }
+
+  /* ── Pagination : empilée sur mobile ── */
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pagination button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Cartes admin-stat : min 2 par ligne sur mobile ── */
+  .admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* ── Filtres de recherche : une colonne ── */
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+  }
+
+  .filter-actions .btn,
+  .filter-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Status-row : empilé ── */
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status-row select {
+    width: 100%;
+  }
+
+  /* ── Attachments : étiquette + bouton en colonne ── */
+  .attachments li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attachments li .btn,
+  .attachments li .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Réponses (answers dl) : une colonne ── */
+  .answers {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Modales admin : pleine largeur ── */
+  .admin-modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px;
+    padding: 16px 14px;
+    max-height: 95dvh;
+    overflow-y: auto;
+  }
+
+  /* ── Table mobile améliorée : actions en pleine largeur ── */
+  .table td .btn,
+  .table td .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Pricing params sur mobile ── */
+  .pricing-params-group h4 {
+    font-size: 0.95rem;
+    word-break: break-word;
+  }
+
+  /* ── Formulaire constructeur : headers d'onglets ── */
+  .pricing-tabs-header {
+    gap: 4px;
+  }
+
+  .pricing-tab-btn {
+    font-size: 0.78rem;
+    padding: 7px 8px;
+    gap: 4px;
+  }
+
+  /* ── Boutons Sauvegarder / Fermer dans modales ── */
+  .builder-modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .builder-modal-actions .btn,
+  .builder-modal-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Badge de tarification / indemnisation ── */
+  .quote-pricing-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* ── Clients : header detail-head + bouton Ajouter ── */
+  .detail-head .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+
+  /* ── Stat cards : une par ligne sur très petits écrans ── */
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Pricing pricing-grid-3 déjà 1 col à 900px; ici on renforce ── */
+  .pricing-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Résumé de tarification en 1 colonne ── */
+  .quote-pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}

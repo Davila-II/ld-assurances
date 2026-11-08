@@ -1124,6 +1124,40 @@ h3 {
   color: #fff;
 }
 
+.client-replies-btn {
+  position: relative !important;
+  background: #0d9488 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  overflow: visible !important;
+}
+
+.client-replies-btn:hover {
+  background: #0f766e !important;
+}
+
+.client-replies-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  border: 2px solid #ffffff;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .client-recent-header {
   display: flex;
   align-items: center;

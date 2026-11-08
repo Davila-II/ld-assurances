@@ -47,7 +47,7 @@ class TrackingController extends Controller
             'updated_at'       => $submission->updated_at?->toIso8601String(),
             'taken_at'         => $submission->taken_at?->toIso8601String(),
             'processed_at'     => $submission->processed_at?->toIso8601String(),
-            'quote_calculation' => $submission->quote_calculation,
+            'quote_calculation' => ($submission->quote_calculation && ($submission->quote_calculation['admin_validated'] ?? false)) ? $submission->quote_calculation : null,
             'answers'          => $submission->answers,
             'form_snapshot'    => $submission->form_snapshot,
             'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
@@ -55,6 +55,20 @@ class TrackingController extends Controller
                 'original_name' => $a->original_name,
                 'mime_type'     => $a->mime_type,
                 'size'          => $a->size,
+            ])->values(),
+            'replies_count'     => $submission->replies()->count(),
+            'replies'           => $submission->replies()->with('attachments')->latest()->get()->map(fn ($r) => [
+                'id'          => $r->id,
+                'message'     => $r->message,
+                'created_at'  => $r->created_at?->toIso8601String(),
+                'is_read'     => $r->read_at !== null,
+                'read_at'     => $r->read_at?->toIso8601String(),
+                'attachments' => $r->attachments->map(fn ($a) => [
+                    'id'            => $a->id,
+                    'original_name' => $a->original_name,
+                    'mime_type'     => $a->mime_type,
+                    'size'          => $a->size,
+                ])->values(),
             ])->values(),
         ])->header('Cache-Control', 'no-store');
     }
@@ -88,18 +102,7 @@ class TrackingController extends Controller
         $newAnswers = array_merge($submission->answers ?? [], $data['answers']);
         $updatePayload = ['answers' => $newAnswers];
 
-        if ($submission->form_type === 'claim') {
-            $calc = app(\App\Services\ClaimCompensationService::class)->calculate($submission->category, $newAnswers);
-            if ($calc) {
-                $updatePayload['quote_calculation'] = $calc;
-            }
-        } else {
-            $calc = app(\App\Services\PricingService::class)->calculate($submission->category, $newAnswers);
-            if ($calc) {
-                $updatePayload['quote_calculation'] = $calc;
-            }
-        }
-
+        // Le calcul n'est pas automatique : il sera réalisé ou validé par l'administrateur.
         $submission->update($updatePayload);
 
         return response()->json([

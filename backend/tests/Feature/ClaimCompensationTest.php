@@ -195,7 +195,22 @@ class ClaimCompensationTest extends TestCase
         $submission = Submission::where('reference', $ref)->first();
         $this->assertNotNull($submission);
         $this->assertEquals('claim', $submission->form_type);
+        // Le calcul n'est plus automatique à la soumission : quote_calculation reste null
+        $this->assertNull($submission->quote_calculation);
+
+        // L'administrateur déclenche et valide le calcul depuis l'espace admin
+        $admin = \App\Models\User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $calcResponse = $this->actingAs($admin, 'sanctum')->postJson("/api/admin/submissions/{$submission->id}/calculate", [
+            'admin_note' => 'Validé par l\'expert sinistre',
+        ]);
+
+        $calcResponse->assertStatus(200);
+        $submission->refresh();
         $this->assertNotNull($submission->quote_calculation);
+        $this->assertTrue($submission->quote_calculation['admin_validated']);
         $this->assertEquals(500000, $submission->quote_calculation['indemnisation_estimee']);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
+use App\Models\SubmissionReply;
 use App\Services\SubmissionPdfService;
 use App\Traits\ValidatesSubmissionDates;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +28,7 @@ class SubmissionController extends Controller
         ->whereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($request->user()->email))])
         ->update(['user_id' => $request->user()->id]);
 
-        $query = Submission::with(['category:id,name,name_en', 'attachments'])
+        $query = Submission::with(['category:id,name,name_en', 'attachments', 'replies.attachments'])
             ->where('user_id', $request->user()->id)
             ->latest();
 
@@ -48,12 +49,27 @@ class SubmissionController extends Controller
             'processed_at'     => $submission->processed_at?->toIso8601String(),
             'taken_at'         => $submission->taken_at?->toIso8601String(),
             'closed_at'        => $submission->closed_at?->toIso8601String(),
-            'quote_calculation' => $submission->quote_calculation,
+            'quote_calculation' => ($submission->quote_calculation && ($submission->quote_calculation['admin_validated'] ?? false)) ? $submission->quote_calculation : null,
             'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
                 'id'            => $a->id,
                 'original_name' => $a->original_name,
                 'mime_type'     => $a->mime_type,
                 'size'          => $a->size,
+            ])->values(),
+            'replies_count'     => $submission->replies->count(),
+            'unread_replies_count' => $submission->replies->whereNull('read_at')->count(),
+            'replies'           => $submission->replies->map(fn ($r) => [
+                'id'          => $r->id,
+                'message'     => $r->message,
+                'created_at'  => $r->created_at?->toIso8601String(),
+                'is_read'     => $r->read_at !== null,
+                'read_at'     => $r->read_at?->toIso8601String(),
+                'attachments' => $r->attachments->map(fn ($a) => [
+                    'id'            => $a->id,
+                    'original_name' => $a->original_name,
+                    'mime_type'     => $a->mime_type,
+                    'size'          => $a->size,
+                ])->values(),
             ])->values(),
         ]);
 
@@ -98,18 +114,7 @@ class SubmissionController extends Controller
         $newAnswers = array_merge($submission->answers ?? [], $data['answers']);
         $updatePayload = ['answers' => $newAnswers];
 
-        if ($submission->form_type === 'claim') {
-            $calc = app(\App\Services\ClaimCompensationService::class)->calculate($submission->category, $newAnswers);
-            if ($calc) {
-                $updatePayload['quote_calculation'] = $calc;
-            }
-        } else {
-            $calc = app(\App\Services\PricingService::class)->calculate($submission->category, $newAnswers);
-            if ($calc) {
-                $updatePayload['quote_calculation'] = $calc;
-            }
-        }
-
+        // Le calcul n'est pas automatique : il sera validé ou ajusté par l'administrateur.
         $submission->update($updatePayload);
 
         return response()->json([
@@ -184,5 +189,103 @@ class SubmissionController extends Controller
         }
 
         return \Illuminate\Support\Facades\Storage::download($attachment->path, $attachment->original_name);
+    }
+
+    // Nombre de réponses non lues par le client connecté (pour le badge de la cloche)
+    public function unreadCount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $subIds = Submission::where('user_id', $user->id)
+            ->orWhereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))])
+            ->pluck('id');
+
+        $unreadCount = SubmissionReply::whereIn('submission_id', $subIds)
+            ->whereNull('read_at')
+            ->count();
+
+        return response()->json(['unread_count' => $unreadCount]);
+    }
+
+    // Liste de toutes les notifications / réponses reçues pour l'ensemble des dossiers du client
+    public function notifications(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Rattachement automatique si nécessaire
+        Submission::where(function ($q) {
+            $q->whereNull('user_id')->orWhere('user_id', 0);
+        })
+        ->whereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))])
+        ->update(['user_id' => $user->id]);
+
+        $replies = SubmissionReply::with([
+            'submission:id,reference,form_type,category_id',
+            'submission.category:id,name,name_en',
+            'attachments',
+        ])
+        ->whereHas('submission', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })
+        ->latest()
+        ->get()
+        ->map(fn ($r) => [
+            'id'                   => $r->id,
+            'submission_reference' => $r->submission?->reference,
+            'form_type'            => $r->submission?->form_type,
+            'category'             => $r->submission?->category?->name,
+            'category_en'          => $r->submission?->category?->name_en,
+            'message'              => $r->message,
+            'is_read'              => $r->read_at !== null,
+            'read_at'              => $r->read_at?->toIso8601String(),
+            'created_at'           => $r->created_at?->toIso8601String(),
+            'attachments'          => $r->attachments->map(fn ($a) => [
+                'id'            => $a->id,
+                'original_name' => $a->original_name,
+                'mime_type'     => $a->mime_type,
+                'size'          => $a->size,
+            ])->values(),
+        ]);
+
+        return response()->json([
+            'unread_count'  => $replies->where('is_read', false)->count(),
+            'notifications' => $replies->values(),
+        ]);
+    }
+
+    // Marquer une réponse individuelle comme lue
+    public function markReplyRead(Request $request, int $replyId): JsonResponse
+    {
+        $user = $request->user();
+        $reply = SubmissionReply::whereHas('submission', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))]);
+        })->findOrFail($replyId);
+
+        $reply->markAsRead();
+
+        return response()->json([
+            'id'      => $reply->id,
+            'is_read' => true,
+            'read_at' => $reply->read_at?->toIso8601String(),
+        ]);
+    }
+
+    // Marquer toutes les réponses d'un dossier comme lues
+    public function markSubmissionRepliesRead(Request $request, string $reference): JsonResponse
+    {
+        $user = $request->user();
+        $submission = Submission::where('reference', strtoupper(trim($reference)))
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhereRaw('LOWER(TRIM(email)) = ?', [Str::lower(trim($user->email))]);
+            })
+            ->firstOrFail();
+
+        $submission->replies()->whereNull('read_at')->update(['read_at' => now()]);
+
+        return response()->json([
+            'reference' => $submission->reference,
+            'marked'    => true,
+        ]);
     }
 }

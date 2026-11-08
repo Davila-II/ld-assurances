@@ -1,6 +1,6 @@
 import { ApiError } from './api';
 import { clearClientToken, getClientToken } from './clientAuth';
-import type { ClientAuthResult, ClientPage, ClientSubmission, ClientUser } from './clientTypes';
+import type { ClientAuthResult, ClientNotificationsResponse, ClientPage, ClientSubmission, ClientUser } from './clientTypes';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
 const TIMEOUT_MS = 30000;
@@ -174,3 +174,19 @@ export const downloadClientAttachment = async (reference: string, attachmentId: 
   link.click();
   URL.revokeObjectURL(url);
 };
+
+export const getClientUnreadCount = async (): Promise<{ unread_count: number }> =>
+  call<{ unread_count: number }>('/notifications/unread-count');
+
+export const getClientNotifications = async (): Promise<ClientNotificationsResponse> =>
+  call<ClientNotificationsResponse>('/notifications');
+
+export const markReplyAsRead = async (replyId: number): Promise<{ id: number; is_read: boolean }> =>
+  call<{ id: number; is_read: boolean }>(`/replies/${replyId}/mark-read`, {
+    method: 'POST',
+  });
+
+export const markSubmissionRepliesAsRead = async (reference: string): Promise<{ reference: string; marked: boolean }> =>
+  call<{ reference: string; marked: boolean }>(`/submissions/${encodeURIComponent(reference)}/replies/mark-read`, {
+    method: 'POST',
+  });

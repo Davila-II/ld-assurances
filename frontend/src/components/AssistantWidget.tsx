@@ -106,16 +106,16 @@ function getBotReply(
         text: '',
         infoLines: isEn
           ? [
-              `📍 Address: ${SITE.address}, Cameroon`,
-              `📞 Phones: ${SITE.phones.join(' / ')}`,
-              `📧 Email: ${SITE.email}`,
-              '🕐 Working hours: Mon-Fri 08:00-17:30, Sat 09:00-13:00, Sun closed',
+              `Address: ${SITE.address}, Cameroon`,
+              `Phones: ${SITE.phones.join(' / ')}`,
+              `Email: ${SITE.email}`,
+              'Working hours: Mon-Fri 08:00-17:30, Sat 09:00-13:00, Sun closed',
             ]
           : [
-              `📍 Adresse : ${SITE.address}, Cameroun`,
-              `📞 Téléphones : ${SITE.phones.join(' / ')}`,
-              `📧 Email : ${SITE.email}`,
-              '🕐 Horaires : Lun-Ven 08h00-17h30, Sam 09h00-13h00, Dim fermé',
+              `Adresse : ${SITE.address}, Cameroun`,
+              `Téléphones : ${SITE.phones.join(' / ')}`,
+              `Email : ${SITE.email}`,
+              'Horaires : Lun-Ven 08h00-17h30, Sam 09h00-13h00, Dim fermé',
             ],
         buttons: [{ label: t('assistant.btn_contact_page'), href: 'https://www.ldassurances.cm/contact/', external: true }],
       },

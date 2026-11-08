@@ -58,6 +58,10 @@ Route::prefix('client')->group(function () {
             ->middleware('throttle:30,1');
         Route::get('/submissions/{reference}/attachments/{attachment}', [ClientSubmissionController::class, 'downloadAttachment'])
             ->middleware('throttle:30,1');
+        Route::get('/notifications', [ClientSubmissionController::class, 'notifications']);
+        Route::get('/notifications/unread-count', [ClientSubmissionController::class, 'unreadCount']);
+        Route::post('/replies/{reply}/mark-read', [ClientSubmissionController::class, 'markReplyRead']);
+        Route::post('/submissions/{reference}/replies/mark-read', [ClientSubmissionController::class, 'markSubmissionRepliesRead']);
     });
 });
 
@@ -77,6 +81,8 @@ Route::prefix('admin')->group(function () {
         Route::patch('/submissions/{submission}/status', [AdminSubmissionController::class, 'updateStatus']);
         Route::patch('/submissions/{submission}/notes', [AdminSubmissionController::class, 'updateNotes']);
         Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
+        Route::post('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'calculateForSubmission']);
+        Route::delete('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'resetCalculation']);
 
         Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
         Route::get('/submissions/{submission}/pdf', [AdminSubmissionController::class, 'downloadPdf']);

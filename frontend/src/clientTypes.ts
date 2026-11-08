@@ -18,6 +18,33 @@ export interface AdminAttachment {
   size: number;
 }
 
+export interface SubmissionReplyItem {
+  id: number;
+  message: string;
+  created_at: string;
+  is_read?: boolean;
+  read_at?: string | null;
+  attachments?: AdminAttachment[];
+}
+
+export interface ClientNotificationItem {
+  id: number;
+  submission_reference: string;
+  form_type: 'claim' | 'quote';
+  category?: string | null;
+  category_en?: string | null;
+  message: string;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+  attachments?: AdminAttachment[];
+}
+
+export interface ClientNotificationsResponse {
+  unread_count: number;
+  notifications: ClientNotificationItem[];
+}
+
 export interface ClientSubmission {
   reference: string;
   form_type: 'claim' | 'quote';
@@ -33,6 +60,9 @@ export interface ClientSubmission {
   closed_at?: string | null;
   quote_calculation?: import('./types').QuoteCalculation | null;
   admin_attachments?: AdminAttachment[];
+  replies_count?: number;
+  unread_replies_count?: number;
+  replies?: SubmissionReplyItem[];
 }
 
 export interface ClientPage<T> {

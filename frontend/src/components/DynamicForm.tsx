@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Calculator, Check, CheckCircle2, ChevronDown, ChevronUp, Download, Sparkles, X } from 'lucide-react';
-import { calculateQuote, calculateClaim, downloadTrackPdf, getForm, submitForm, ApiError } from '../api';
+import { Check, CheckCircle2, Download, Sparkles, X } from 'lucide-react';
+import { downloadTrackPdf, getForm, submitForm, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
-import type { Answers, Category, FormField, FormType, QuoteCalculation } from '../types';
+import type { Answers, Category, FormField, FormType } from '../types';
 import type { ClientUser } from '../clientTypes';
 import { useLanguage } from '../i18n/LanguageContext';
 import { getDateFieldLimits, validateDateField } from '../dateRules';
@@ -64,13 +64,6 @@ function findError(errors: Record<string, string[]>, name: string): string | nul
   return key ? errors[key][0] : null;
 }
 
-function formatFcfa(val: number | string | undefined | null): string {
-  if (val === undefined || val === null || val === '') return '0 FCFA';
-  if (typeof val === 'string' && val.includes('FCFA')) return val;
-  const num = Number(val);
-  return isNaN(num) ? String(val) : num.toLocaleString('fr-FR') + ' FCFA';
-}
-
 export default function DynamicForm({ category, formType = 'claim', presetAnswers, isPreview }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const { t, lang } = useLanguage();
@@ -94,11 +87,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-
-  // Tarification en temps réel (pour les devis)
-  const [quoteCalculation, setQuoteCalculation] = useState<QuoteCalculation | null>(null);
-  const [calculatingQuote, setCalculatingQuote] = useState(false);
-  const [showCalculationBreakdown, setShowCalculationBreakdown] = useState(false);
 
   const isClaim = formType === 'claim';
   const isLoggedIn = Boolean(getClientToken());
@@ -158,43 +146,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
       cancelled = true;
     };
   }, [category.slug, formType]);
-
-  // Calcul du devis ou de l'indemnisation de sinistre en temps réel lorsque l'utilisateur répond aux questions
-  useEffect(() => {
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      // Filtrer les fichiers ou objets non sérialisables dans les réponses pour l'API
-      const cleanAnswers: Record<string, unknown> = {};
-      Object.entries(answers).forEach(([k, v]) => {
-        if (v instanceof FileList) return;
-        cleanAnswers[k] = v;
-      });
-
-      try {
-        setCalculatingQuote(true);
-        if (formType === 'quote') {
-          const res = await calculateQuote(category.slug, cleanAnswers);
-          if (!cancelled && res.calculated && res.calculation) {
-            setQuoteCalculation(res.calculation);
-          }
-        } else if (formType === 'claim') {
-          const res = await calculateClaim(category.slug, cleanAnswers);
-          if (!cancelled && (res.has_calculation || res.indemnisation_estimee !== undefined)) {
-            setQuoteCalculation(res as unknown as QuoteCalculation);
-          }
-        }
-      } catch {
-        // En cas d'erreur de calcul réseau silencieuse, on conserve l'ancien résultat
-      } finally {
-        if (!cancelled) setCalculatingQuote(false);
-      }
-    }, 350);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [category.slug, formType, answers]);
 
   const setAnswer = (name: string, value: Answers[string]) =>
     setAnswers((prev) => ({ ...prev, [name]: value }));
@@ -603,44 +554,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
             {t('form.success_ref')} <strong>{reference}</strong>
           </p>
 
-          {quoteCalculation && (
-            <div
-              style={{
-                margin: '18px auto',
-                padding: '16px 20px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 100%)',
-                border: '1.5px solid #1aaca8',
-                maxWidth: '520px',
-                textAlign: 'left',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <strong style={{ color: '#144983', fontSize: '0.95rem' }}>
-                  {lang === 'en' ? 'Estimated Total Premium (TTC)' : 'Estimation de votre prime TTC'}
-                </strong>
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '1.25rem',
-                    color: '#144983',
-                  }}
-                >
-                  {formatFcfa(quoteCalculation.prime_ttc_formatted || quoteCalculation.prime_ttc)}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#0f3868', lineHeight: '1.5' }}>
-                {lang === 'en'
-                  ? `Breakdown: Net Premium ${formatFcfa(quoteCalculation.prime_nette_formatted || quoteCalculation.prime_nette)} + Accessories ${formatFcfa(quoteCalculation.accessoires_formatted || quoteCalculation.accessoires)} + Tax 15% ${formatFcfa(quoteCalculation.taxe_unique_formatted || quoteCalculation.taxe_unique)}.`
-                  : `Décomposition : Prime nette ${formatFcfa(quoteCalculation.prime_nette_formatted || quoteCalculation.prime_nette)} + Accessoires ${formatFcfa(quoteCalculation.accessoires_formatted || quoteCalculation.accessoires)} + Taxe unique 15% ${formatFcfa(quoteCalculation.taxe_unique_formatted || quoteCalculation.taxe_unique)}.`}
-                <br />
-                {lang === 'en'
-                  ? 'This calculation is certified in your downloadable summary PDF.'
-                  : 'Ce barème officiel est certifié dans votre récapitulatif PDF téléchargeable ci-dessous.'}
-              </div>
-            </div>
-          )}
-
           <p>{t('form.success_note')}</p>
           <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {isLoggedIn ? (
@@ -793,170 +706,6 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
           </div>
         );
       })}
-
-      {/* Simulation de devis en direct (Code CIMA) */}
-      {formType === 'quote' && quoteCalculation && (
-        <div className={`quote-pricing-card ${quoteCalculation.prime_ttc > 0 ? 'calculated' : ''}`}>
-          <div className="quote-pricing-header">
-            <h3 className="quote-pricing-title">
-              <Calculator size={18} style={{ color: '#0284c7' }} />
-              {lang === 'en' ? 'Real-Time Premium Estimation' : 'Estimation de votre prime en temps réel'}
-            </h3>
-            <span className="quote-pricing-badge">
-              {calculatingQuote
-                ? (lang === 'en' ? 'Updating…' : 'Actualisation…')
-                : (lang === 'en' ? 'CIMA Compliant' : 'Tarification officielle CIMA')}
-            </span>
-          </div>
-
-          <div className="quote-pricing-grid">
-            <div className="quote-pricing-item">
-              <small>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
-              <span>{formatFcfa(quoteCalculation.prime_nette_formatted || quoteCalculation.prime_nette)}</span>
-            </div>
-            <div className="quote-pricing-item">
-              <small>{lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}</small>
-              <span>{formatFcfa(quoteCalculation.accessoires_formatted || quoteCalculation.accessoires)}</span>
-            </div>
-            <div className="quote-pricing-item">
-              <small>{lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}</small>
-              <span>{formatFcfa(quoteCalculation.taxe_unique_formatted || quoteCalculation.taxe_unique)}</span>
-            </div>
-            <div className="quote-pricing-item highlight">
-              <small>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
-              <span>{formatFcfa(quoteCalculation.prime_ttc_formatted || quoteCalculation.prime_ttc)}</span>
-            </div>
-          </div>
-
-          {quoteCalculation.breakdown && quoteCalculation.breakdown.length > 0 && (
-            <>
-              <button
-                type="button"
-                className="quote-pricing-toggle-breakdown"
-                onClick={() => setShowCalculationBreakdown(!showCalculationBreakdown)}
-              >
-                {showCalculationBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                {showCalculationBreakdown
-                  ? (lang === 'en' ? 'Hide details' : 'Masquer le détail du calcul')
-                  : (lang === 'en' ? 'View calculation details' : 'Voir le détail du calcul')}
-              </button>
-
-              {showCalculationBreakdown && (
-                <table className="quote-pricing-breakdown-table">
-                  <thead>
-                    <tr>
-                      <th>{lang === 'en' ? 'Component' : 'Élément / Garantie'}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Amount' : 'Montant'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quoteCalculation.breakdown.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          {lang === 'en' && item.label_en ? item.label_en : item.label}{' '}
-                          {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                          {formatFcfa(item.formatted || item.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </>
-          )}
-
-          <p className="quote-pricing-note">
-            {lang === 'en'
-              ? 'Estimation calculated according to official CIMA standards and current insurance regulations. The official quote PDF will be issued upon form submission.'
-              : 'Estimation calculée selon la réglementation CIMA et les barèmes officiels en vigueur. Le récapitulatif PDF officiel sera généré dès la validation.'}
-          </p>
-        </div>
-      )}
-
-      {/* Estimation de l'indemnisation de sinistre en direct (Convention IDA / Code CIMA Cameroun) */}
-      {formType === 'claim' && quoteCalculation && (
-        <div className={`quote-pricing-card ${quoteCalculation.indemnisation_estimee && quoteCalculation.indemnisation_estimee > 0 ? 'calculated' : ''}`} style={{ borderLeft: '4px solid #1aaca8' }}>
-          <div className="quote-pricing-header">
-            <h3 className="quote-pricing-title">
-              <Calculator size={18} style={{ color: '#1aaca8' }} />
-              {lang === 'en' ? 'Estimated Claim Compensation' : 'Estimation de votre indemnisation'}
-            </h3>
-            <span className="quote-pricing-badge" style={{ background: '#e6f7f5', color: '#0e7a6e' }}>
-              {calculatingQuote
-                ? (lang === 'en' ? 'Calculating…' : 'Calcul en cours…')
-                : (lang === 'en' ? (quoteCalculation.regle_appliquee_en || 'CIMA Standard') : (quoteCalculation.regle_appliquee || 'Barème CIMA / IDA'))}
-            </span>
-          </div>
-
-          <div className="quote-pricing-grid">
-            <div className="quote-pricing-item">
-              <small>{lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}</small>
-              <span>{formatFcfa(quoteCalculation.montant_brut_formatted || quoteCalculation.montant_brut)}</span>
-            </div>
-            <div className="quote-pricing-item">
-              <small>{lang === 'en' ? 'Applicable Deductible' : 'Franchise Applicable'}</small>
-              <span style={{ color: '#dc2626' }}>{formatFcfa(quoteCalculation.franchise_formatted || quoteCalculation.franchise)}</span>
-            </div>
-            <div className="quote-pricing-item highlight" style={{ background: '#f0fdfa', borderColor: '#99f6e4' }}>
-              <small style={{ color: '#0f766e' }}>{lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}</small>
-              <span style={{ color: '#0f766e' }}>{formatFcfa(quoteCalculation.indemnisation_estimee_formatted || quoteCalculation.indemnisation_estimee || quoteCalculation.prime_ttc)}</span>
-            </div>
-          </div>
-
-          {quoteCalculation.notes_explicatives && (
-            <div style={{ marginTop: '10px', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.85rem', color: '#334155' }}>
-              <strong>ℹ️ {lang === 'en' ? 'Principle:' : 'Principe appliqué :'}</strong> {lang === 'en' && quoteCalculation.notes_explicatives_en ? quoteCalculation.notes_explicatives_en : quoteCalculation.notes_explicatives}
-            </div>
-          )}
-
-          {quoteCalculation.breakdown && quoteCalculation.breakdown.length > 0 && (
-            <>
-              <button
-                type="button"
-                className="quote-pricing-toggle-breakdown"
-                onClick={() => setShowCalculationBreakdown(!showCalculationBreakdown)}
-              >
-                {showCalculationBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                {showCalculationBreakdown
-                  ? (lang === 'en' ? 'Hide details' : 'Masquer le détail du calcul')
-                  : (lang === 'en' ? 'View calculation details' : 'Voir le détail du calcul')}
-              </button>
-
-              {showCalculationBreakdown && (
-                <table className="quote-pricing-breakdown-table">
-                  <thead>
-                    <tr>
-                      <th>{lang === 'en' ? 'Item' : 'Poste de préjudice / Franchise'}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Amount' : 'Montant'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quoteCalculation.breakdown.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          {lang === 'en' && item.label_en ? item.label_en : item.label}{' '}
-                          {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, color: item.amount < 0 ? '#dc2626' : undefined }}>
-                          {formatFcfa(item.formatted || item.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </>
-          )}
-
-          <p className="quote-pricing-note">
-            {lang === 'en'
-              ? 'Indemnity estimate calculated in compliance with the CIMA Code (Inter-African Conference of Insurance Markets) and Cameroon direct settlement conventions. The final indemnity remains subject to survey validation.'
-              : 'Estimation établie selon les règles de la Convention IDA et les dispositions du Code CIMA applicables au Cameroun. L\'indemnisation définitive sera confirmée après rapport d\'expertise.'}
-          </p>
-        </div>
-      )}
 
       {stepped ? (
         <div className="step-actions">

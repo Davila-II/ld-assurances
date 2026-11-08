@@ -144,6 +144,69 @@ class AdminSubmissionTest extends TestCase
 
         $this->postJson("/api/admin/submissions/{$submission->id}/reply", ['message' => 'Bonjour'])
             ->assertOk();
+
+        $submission->refresh();
+        $this->assertSame('answered', $submission->status);
+        $this->assertNotNull($submission->taken_at);
+        $this->assertCount(1, $submission->replies);
+        $this->assertSame('Bonjour', $submission->replies->first()->message);
+    }
+
+    public function test_multiple_replies_appear_in_client_and_tracking(): void
+    {
+        $submission = $this->makeSubmission();
+
+        Sanctum::actingAs($this->admin());
+
+        // Premier message
+        $this->postJson("/api/admin/submissions/{$submission->id}/reply", ['message' => 'Premier message'])
+            ->assertOk();
+
+        // Deuxième message
+        $this->postJson("/api/admin/submissions/{$submission->id}/reply", ['message' => 'Deuxième message'])
+            ->assertOk();
+
+        $submission->refresh();
+        $this->assertCount(2, $submission->replies);
+
+        // Suivi public
+        $trackRes = $this->postJson('/api/track', [
+            'reference' => $submission->reference,
+            'email'     => $submission->email,
+        ])->assertOk();
+
+        $trackRes->assertJsonPath('replies_count', 2);
+        $this->assertCount(2, $trackRes->json('replies'));
+
+        // Admin detail
+        $adminShow = $this->getJson("/api/admin/submissions/{$submission->id}")
+            ->assertOk();
+        $this->assertCount(2, $adminShow->json('replies'));
+    }
+
+    public function test_taken_at_locks_on_first_departure_and_processed_at_sets_on_closed(): void
+    {
+        $submission = $this->makeSubmission();
+        $this->assertSame('received', $submission->status);
+        $this->assertNull($submission->taken_at);
+        $this->assertNull($submission->processed_at);
+
+        Sanctum::actingAs($this->admin());
+
+        // Passage à in_progress -> taken_at défini
+        $this->patchJson("/api/admin/submissions/{$submission->id}/status", ['status' => 'in_progress'])
+            ->assertOk();
+        $submission->refresh();
+        $initialTakenAt = $submission->taken_at;
+        $this->assertNotNull($initialTakenAt);
+        $this->assertNull($submission->processed_at);
+
+        // Passage à closed -> taken_at NE CHANGE PAS, processed_at défini
+        $this->patchJson("/api/admin/submissions/{$submission->id}/status", ['status' => 'closed'])
+            ->assertOk();
+        $submission->refresh();
+        $this->assertSame($initialTakenAt->toIso8601String(), $submission->taken_at->toIso8601String());
+        $this->assertNotNull($submission->processed_at);
     }
 
     public function test_attachment_download_requires_auth(): void

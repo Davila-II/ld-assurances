@@ -131,17 +131,14 @@ class SubmissionPdfService
         // Liste des pièces jointes transmises
         $attachments = $this->buildAttachmentsList($submission);
 
-        // Tarification calculée du devis
-        $quoteCalculation = $submission->quote_calculation
-            ?? ($answers['_calculated_quote'] ?? null);
-
-        if (!$quoteCalculation && $isQuote) {
-            try {
-                $quoteCalculation = app(PricingService::class)->calculate($submission->category, $answers);
-            } catch (\Throwable) {
-                // Pas de tarification automatique pour ce dossier
-            }
+        // Tarification calculée du devis — uniquement si validée par l'administrateur
+        // (quote_calculation doit exister ET contenir admin_validated = true)
+        $quoteCalculation = null;
+        $rawCalc = $submission->quote_calculation;
+        if ($rawCalc && isset($rawCalc['admin_validated']) && $rawCalc['admin_validated'] === true) {
+            $quoteCalculation = $rawCalc;
         }
+        // Note : on ne recalcule plus automatiquement ici.
 
         // Textes d'accompagnement conformes aux maquettes officielles de LD ASSURANCES SA
         $greetingText = $isQuote

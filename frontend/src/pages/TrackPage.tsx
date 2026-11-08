@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Edit2, X, Check, Paperclip, Calculator } from 'lucide-react';
+import { Download, Edit2, X, Check, Paperclip, Calculator, Info, MessageSquare } from 'lucide-react';
 import { trackSubmission, downloadTrackPdf, downloadTrackAttachment, updateTrackSubmission, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
 import { formatDate, formatSize } from '../admin/labels';
 import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import RepliesModal from '../components/RepliesModal';
 
 function formatFcfa(val: number | string | undefined | null): string {
   if (val === undefined || val === null || val === '') return '0 FCFA';
@@ -29,6 +30,7 @@ export default function TrackPage() {
   const [loading, setLoading] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingAttId, setDownloadingAttId] = useState<number | null>(null);
+  const [showRepliesModal, setShowRepliesModal] = useState(false);
 
   // Edition state
   const [editing, setEditing] = useState(false);
@@ -319,8 +321,9 @@ export default function TrackPage() {
                   )}
 
                   {result.quote_calculation.notes_explicatives && (
-                    <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#475569' }}>
-                      <strong>ℹ️ {lang === 'en' ? 'Principle:' : 'Principe appliqué :'}</strong> {lang === 'en' && result.quote_calculation.notes_explicatives_en ? result.quote_calculation.notes_explicatives_en : result.quote_calculation.notes_explicatives}
+                    <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Info size={14} style={{ flexShrink: 0, color: '#0284c7' }} />
+                      <span><strong>{lang === 'en' ? 'Principle:' : 'Principe appliqué :'}</strong> {lang === 'en' && result.quote_calculation.notes_explicatives_en ? result.quote_calculation.notes_explicatives_en : result.quote_calculation.notes_explicatives}</span>
                     </div>
                   )}
                 </div>
@@ -450,7 +453,61 @@ export default function TrackPage() {
               </div>
             )}
 
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            {/* Réponses de l'administration */}
+            {result.replies && result.replies.length > 0 && (
+              <div
+                style={{
+                  marginTop: '20px',
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f0fdfa',
+                  border: '1px solid #99f6e4',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: '#0f766e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MessageSquare size={18} />
+                    {t('client.replies_title')}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#134e4a' }}>
+                    {lang === 'en'
+                      ? `You have received ${result.replies.length} response(s) from our team.`
+                      : `Vous avez reçu ${result.replies.length} réponse(s) de notre équipe.`}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="client-table-action-btn client-replies-btn"
+                  onClick={() => setShowRepliesModal(true)}
+                  style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+                >
+                  <MessageSquare size={15} />
+                  <span>{t('client.replies_btn')}</span>
+                  <span className="client-replies-badge">{result.replies.length}</span>
+                </button>
+              </div>
+            )}
+
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {result.replies && result.replies.length > 0 && (
+                <button
+                  type="button"
+                  className="client-table-action-btn client-replies-btn"
+                  onClick={() => setShowRepliesModal(true)}
+                >
+                  <MessageSquare size={13} />
+                  <span>{t('client.replies_btn')}</span>
+                  <span className="client-replies-badge">{result.replies.length}</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -463,6 +520,16 @@ export default function TrackPage() {
               </button>
             </div>
           </div>
+        )}
+
+        {result && result.replies && (
+          <RepliesModal
+            isOpen={showRepliesModal}
+            onClose={() => setShowRepliesModal(false)}
+            reference={result.reference}
+            replies={result.replies}
+            onDownloadAttachment={handleDownloadAttachment}
+          />
         )}
       </div>
     </main>

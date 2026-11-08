@@ -75,6 +75,12 @@ export interface QuoteCalculation {
   regle_appliquee_en?: string;
   notes_explicatives?: string;
   notes_explicatives_en?: string;
+  admin_validated?: boolean;
+  admin_rule_id?: number | null;
+  admin_rule_name?: string | null;
+  reduction_applied_percent?: number;
+  reduction_applied_fixed?: number;
+  admin_note?: string;
 }
 
 export interface PricingRule {
@@ -148,6 +154,8 @@ export interface TrackResult {
     mime_type: string;
     size: number;
   }>;
+  replies_count?: number;
+  replies?: SubmissionReplyDetail[];
 }
 
 // --- Administration ---
@@ -256,6 +264,14 @@ export interface AttachmentInfo {
   mime_type: string;
   size: number;
   source?: 'client' | 'admin';
+  reply_id?: number | null;
+}
+
+export interface SubmissionReplyDetail {
+  id: number;
+  message: string;
+  created_at: string;
+  attachments?: AttachmentInfo[];
 }
 
 export interface SubmissionDetail {
@@ -265,6 +281,9 @@ export interface SubmissionDetail {
   status: SubmissionStatus;
   email: string;
   category: string | null;
+  category_id?: number | null;
+  category_slug?: string | null;
+  pricing_rule_id?: number | null;
   type: string | null;
   notes: string | null;
   rejection_reason?: string | null;
@@ -273,7 +292,9 @@ export interface SubmissionDetail {
   taken_at?: string | null;
   closed_at?: string | null;
   answers: SubmissionAnswer[];
+  raw_answers?: Record<string, unknown>;
   attachments: AttachmentInfo[];
+  replies?: SubmissionReplyDetail[];
   quote_calculation?: QuoteCalculation | null;
 }
 

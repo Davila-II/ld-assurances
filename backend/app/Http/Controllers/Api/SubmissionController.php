@@ -84,29 +84,10 @@ class SubmissionController extends Controller
         // 5.b Vérification stricte de la cohérence temporelle des dates
         $this->validateDateAnswers($answers, $category->slug);
 
-        // Calcul automatique de la tarification du devis ou de l'indemnisation de sinistre
+        // Le calcul de tarification / indemnisation est désormais manuel :
+        // il est effectué par l'administrateur depuis l'espace admin après réception du dossier.
+        // quote_calculation reste null jusqu'à validation explicite par l'admin.
         $quoteCalculation = null;
-        if ($base['form_type'] === 'quote') {
-            try {
-                $pricingService = app(PricingService::class);
-                $quoteCalculation = $pricingService->calculate($category, $answers);
-                if ($quoteCalculation) {
-                    $answers['_calculated_quote'] = $quoteCalculation;
-                }
-            } catch (Throwable $e) {
-                Log::warning('Échec calcul devis automatique', ['message' => $e->getMessage()]);
-            }
-        } elseif ($base['form_type'] === 'claim') {
-            try {
-                $claimService = app(\App\Services\ClaimCompensationService::class);
-                $quoteCalculation = $claimService->calculate($category, $answers);
-                if ($quoteCalculation) {
-                    $answers['_calculated_claim'] = $quoteCalculation;
-                }
-            } catch (Throwable $e) {
-                Log::warning('Échec calcul indemnisation sinistre automatique', ['message' => $e->getMessage()]);
-            }
-        }
 
         // 6. Copie des questions au moment de l'envoi (historique)
         $snapshot = $visible->map(fn (FormField $field) => [

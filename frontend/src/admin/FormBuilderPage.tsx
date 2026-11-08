@@ -136,6 +136,33 @@ interface PricingParameters {
   medical_surcharge?: number;
   child_flat_rate?: number;
   formula_multipliers?: Record<string, number>;
+  // Sinistre Auto
+  franchise_vol_rate?: number;
+  franchise_fixe_tous_risques?: number;
+  franchise_partage_rate?: number;
+  franchise_partage_min?: number;
+  // Sinistre Habitation
+  default_franchise_contractuelle?: number;
+  // Sinistre Santé
+  taux_couverture_default?: number;
+  plafond_annuel_default?: number;
+  capital_base_cima_ipp?: number;
+  // Sinistre RC
+  franchise_rc_assure?: number;
+  // Sinistre Professionnelle
+  taux_marge_brute_default?: number;
+  franchise_jours?: number;
+  jours_par_mois?: number;
+  // Sinistre Voyage
+  dts_par_kg_fcfa?: number;
+  franchise_marchandises_rate?: number;
+  // Sinistre Agricole
+  franchise_indicielle_rate?: number;
+  prix_marche_defaut?: number;
+  rendement_moyen_defaut?: number;
+  // Sinistre Autres
+  plafond_indemnisation_defaut?: number;
+  franchise_defaut?: number;
   [key: string]: unknown;
 }
 
@@ -159,6 +186,40 @@ interface PricingTestInputs {
   formule_couverture?: string;
   antecedents_medicaux?: string;
   nbre_enfants_charge?: number;
+  // Sinistre Auto
+  choc_responsabilite?: string;
+  type_garantie?: string;
+  devis_expert?: number;
+  valeur_venale?: number;
+  // Sinistre Habitation
+  montant_degats_expert?: number;
+  valeur_reelle_biens?: number;
+  valeur_declaree_contrat?: number;
+  franchise_contractuelle?: number;
+  // Sinistre Santé
+  facture_clinique_agreee?: number;
+  taux_couverture?: number;
+  plafond_annuel_restant?: number;
+  taux_ipp?: number;
+  // Sinistre RC
+  devis_reparation_tiers?: number;
+  // Sinistre Professionnelle
+  chiffre_affaires_n_moins_1?: number;
+  chiffre_affaires_sinistre?: number;
+  taux_marge_brute?: number;
+  charges_fixes_permanentes?: number;
+  // Sinistre Voyage
+  type_transport?: string;
+  valeur_facture_marchandise?: number;
+  cout_fret?: number;
+  poids_perdu_kg?: number;
+  // Sinistre Agricole
+  superficie_hectares?: number;
+  rendement_moyen_historique?: number;
+  prix_marquet_cameroun?: number;
+  taux_perte_expert?: number;
+  // Sinistre Autres
+  estimated_value?: number;
   [key: string]: string | number | undefined;
 }
 
@@ -1809,6 +1870,16 @@ export default function FormBuilderPage() {
                                   <option value="responsabilite_civile">Responsabilité Civile (Famille / Pro)</option>
                                   <option value="autres">Autres assurances (Forfaits / Taux)</option>
                                   <option value="custom">Calcul personnalisé (Formule sur mesure)</option>
+                                  <optgroup label="── Sinistres & Indemnisation ──">
+                                    <option value="sinistre_auto">Sinistre Auto (Convention IDA &amp; CIMA)</option>
+                                    <option value="sinistre_habitation">Sinistre Habitation (Art. 32 CIMA)</option>
+                                    <option value="sinistre_sante">Sinistre Santé &amp; Corporel (Barème CIMA)</option>
+                                    <option value="sinistre_rc">Sinistre Responsabilité Civile (CIMA)</option>
+                                    <option value="sinistre_professionnelle">Sinistre Entreprise (OHADA)</option>
+                                    <option value="sinistre_voyage">Sinistre Transport &amp; Voyage (DTS)</option>
+                                    <option value="sinistre_agricole">Sinistre Agricole (Indicielle)</option>
+                                    <option value="sinistre_autres">Sinistre Autres Risques</option>
+                                  </optgroup>
                                 </select>
                               </div>
                             </div>
@@ -1878,11 +1949,13 @@ export default function FormBuilderPage() {
             <div className="builder-modal-header">
               <div>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calculator size={20} style={{ color: '#0284c7' }} />
-                  Tarification & Calcul — {pricingModalCategory.name}
+                  <Calculator size={20} style={{ color: pricingModalCategory.form_type === 'claim' ? '#0f766e' : '#0284c7' }} />
+                  {pricingModalCategory.form_type === 'claim' ? 'Indemnisation & Calcul' : 'Tarification & Calcul'} — {pricingModalCategory.name}
                 </h3>
                 <small style={{ color: '#64748b' }}>
-                  Configuration des algorithmes CIMA et simulation en temps réel pour cette catégorie.
+                  {pricingModalCategory.form_type === 'claim'
+                    ? "Configuration des algorithmes d'indemnisation CIMA et simulation en temps réel pour ce type de sinistre."
+                    : 'Configuration des algorithmes CIMA et simulation en temps réel pour cette catégorie.'}
                 </small>
               </div>
               <button type="button" className="close-btn" onClick={() => setPricingModalCategory(null)}>
@@ -1939,7 +2012,8 @@ export default function FormBuilderPage() {
                       </div>
                     </div>
 
-                    {/* Paramètres fiscaux et généraux */}
+                    {/* Paramètres fiscaux et généraux — uniquement pour tarification (non sinistre) */}
+                    {!pricingRules.find((r) => r.id === activePricingRuleId)?.driver?.startsWith('sinistre_') && (
                     <div className="pricing-params-group">
                       <h4>Frais & Fiscalité Cameroun (Code CIMA)</h4>
                       <div className="pricing-grid-3">
@@ -1966,6 +2040,7 @@ export default function FormBuilderPage() {
                         </div>
                       </div>
                     </div>
+                    )}
 
                     {/* Paramètres selon le driver */}
                     {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'automobile' && (
@@ -2273,6 +2348,274 @@ export default function FormBuilderPage() {
                       </div>
                     )}
 
+
+                    {/* ═══ PARAMÈTRES SINISTRE AUTO ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_auto' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Auto — Franchises &amp; Convention IDA (Code CIMA)</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Taux franchise vol (ex: 0.10 pour 10%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.franchise_vol_rate ?? 0.10}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_vol_rate: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Franchise fixe Tous Risques (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.franchise_fixe_tous_risques ?? 75000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_fixe_tous_risques: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux franchise 50% responsable (ex: 0.10)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.franchise_partage_rate ?? 0.10}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_partage_rate: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Minimum franchise partage (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.franchise_partage_min ?? 50000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_partage_min: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE HABITATION ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_habitation' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Habitation — Règle proportionnelle Art. 32 CIMA</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Franchise contractuelle par défaut (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.default_franchise_contractuelle ?? 50000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, default_franchise_contractuelle: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE SANTÉ ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_sante' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Santé &amp; Corporel — Barème CIMA</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Taux prise en charge par défaut (ex: 80 pour 80%)</label>
+                            <input
+                              type="number"
+                              value={editingParams.taux_couverture_default ?? 80}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, taux_couverture_default: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Plafond annuel par défaut (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.plafond_annuel_default ?? 1500000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, plafond_annuel_default: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Capital base IPP CIMA (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.capital_base_cima_ipp ?? 2000000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, capital_base_cima_ipp: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE RC ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_rc' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Responsabilité Civile — Code CIMA</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Franchise à charge assuré (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.franchise_rc_assure ?? 50000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_rc_assure: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE PROFESSIONNELLE ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_professionnelle' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Entreprise — Perte d'exploitation (OHADA)</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Taux marge brute par défaut (ex: 0.30)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.taux_marge_brute_default ?? 0.30}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, taux_marge_brute_default: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Franchise en jours d'activité</label>
+                            <input
+                              type="number"
+                              value={editingParams.franchise_jours ?? 3}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_jours: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Jours de référence par mois</label>
+                            <input
+                              type="number"
+                              value={editingParams.jours_par_mois ?? 30}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, jours_par_mois: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE VOYAGE / TRANSPORT ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_voyage' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Transport &amp; Voyage — DTS / Port Autonome de Douala</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Plafond aérien DTS / kg (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.dts_par_kg_fcfa ?? 13500}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, dts_par_kg_fcfa: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Franchise terrestre/maritime (ex: 0.05)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.franchise_marchandises_rate ?? 0.05}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_marchandises_rate: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE AGRICOLE ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_agricole' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Agricole — Assurance indicielle</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Franchise indicielle (ex: 0.15 pour 15%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editingParams.franchise_indicielle_rate ?? 0.15}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_indicielle_rate: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Prix marché FCFA / tonne (par défaut)</label>
+                            <input
+                              type="number"
+                              value={editingParams.prix_marche_defaut ?? 250000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, prix_marche_defaut: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Rendement historique par défaut (t/ha)</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={editingParams.rendement_moyen_defaut ?? 3.5}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, rendement_moyen_defaut: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ═══ PARAMÈTRES SINISTRE AUTRES ═══ */}
+                    {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_autres' && (
+                      <div className="pricing-params-group">
+                        <h4>Sinistre Autres Risques — Plafonds &amp; Franchises</h4>
+                        <div className="pricing-grid-3">
+                          <div className="pricing-field">
+                            <label>Plafond indemnisation par défaut (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.plafond_indemnisation_defaut ?? 500000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, plafond_indemnisation_defaut: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Franchise par défaut (FCFA)</label>
+                            <input
+                              type="number"
+                              value={editingParams.franchise_defaut ?? 25000}
+                              onChange={(e) =>
+                                setEditingParams({ ...editingParams, franchise_defaut: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* Mode JSON brut pour modification avancée de tous les paramètres */}
                     <div style={{ marginTop: '14px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
                       <label className="choice" style={{ cursor: 'pointer', marginBottom: '8px' }}>
@@ -2641,6 +2984,342 @@ export default function FormBuilderPage() {
                           </div>
                         </>
                       )}
+
+                      {/* ═══ TESTEUR SINISTRE AUTO ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_auto' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Responsabilité dans l'accident</label>
+                            <select
+                              value={testInputs.choc_responsabilite ?? '0%_Responsable'}
+                              onChange={(e) => setTestInputs({ ...testInputs, choc_responsabilite: e.target.value })}
+                            >
+                              <option value="0%_Responsable">0% Responsable (tiers fautif)</option>
+                              <option value="50%_Responsable">50% Responsable (partage de torts)</option>
+                              <option value="100%_Responsable">100% Responsable</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Type de garantie</label>
+                            <select
+                              value={testInputs.type_garantie ?? 'Tous_Risques'}
+                              onChange={(e) => setTestInputs({ ...testInputs, type_garantie: e.target.value })}
+                            >
+                              <option value="Tous_Risques">Tous Risques</option>
+                              <option value="Tiers">Tiers (RC simple)</option>
+                              <option value="Vol">Vol de véhicule</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Devis expert / Coût réparation (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 500000"
+                              value={testInputs.devis_expert ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, devis_expert: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Valeur vénale du véhicule (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 3000000"
+                              value={testInputs.valeur_venale ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, valeur_venale: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE HABITATION ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_habitation' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Montant des dégâts (expertise) (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 2000000"
+                              value={testInputs.montant_degats_expert ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, montant_degats_expert: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Valeur réelle des biens (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 20000000"
+                              value={testInputs.valeur_reelle_biens ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, valeur_reelle_biens: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Valeur déclarée au contrat (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 10000000"
+                              value={testInputs.valeur_declaree_contrat ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, valeur_declaree_contrat: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Franchise contractuelle (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 50000"
+                              value={testInputs.franchise_contractuelle ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, franchise_contractuelle: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE SANTÉ ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_sante' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Facture clinique agréée (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 350000"
+                              value={testInputs.facture_clinique_agreee ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, facture_clinique_agreee: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux de couverture (%)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 80"
+                              value={testInputs.taux_couverture ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, taux_couverture: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Plafond annuel restant (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 1500000"
+                              value={testInputs.plafond_annuel_restant ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, plafond_annuel_restant: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux d'IPP (invalidité permanente, %)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 0 (ou 20 si invalide)"
+                              value={testInputs.taux_ipp ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, taux_ipp: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE RC ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_rc' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Devis réparation tiers victime (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 800000"
+                              value={testInputs.devis_reparation_tiers ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, devis_reparation_tiers: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE PROFESSIONNELLE ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_professionnelle' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>CA année N-1 (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 50000000"
+                              value={testInputs.chiffre_affaires_n_moins_1 ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, chiffre_affaires_n_moins_1: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>CA pendant le sinistre (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 30000000"
+                              value={testInputs.chiffre_affaires_sinistre ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, chiffre_affaires_sinistre: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux de marge brute (ex: 0.30)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Ex: 0.30"
+                              value={testInputs.taux_marge_brute ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, taux_marge_brute: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Charges fixes permanentes (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 2000000"
+                              value={testInputs.charges_fixes_permanentes ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, charges_fixes_permanentes: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE VOYAGE / TRANSPORT ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_voyage' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Type de transport</label>
+                            <select
+                              value={testInputs.type_transport ?? 'Terrestre_National'}
+                              onChange={(e) => setTestInputs({ ...testInputs, type_transport: e.target.value })}
+                            >
+                              <option value="Terrestre_National">Terrestre national</option>
+                              <option value="Maritime">Maritime (Port de Douala)</option>
+                              <option value="Aerien_Bagages">Aérien — Bagages perdus</option>
+                            </select>
+                          </div>
+                          <div className="pricing-field">
+                            <label>Valeur facture marchandise (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 1500000"
+                              value={testInputs.valeur_facture_marchandise ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, valeur_facture_marchandise: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Coût de fret (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 150000"
+                              value={testInputs.cout_fret ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, cout_fret: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Poids perdu (kg) — aérien uniquement</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 23"
+                              value={testInputs.poids_perdu_kg ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, poids_perdu_kg: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE AGRICOLE ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_agricole' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Superficie (hectares)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 5"
+                              value={testInputs.superficie_hectares ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, superficie_hectares: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Rendement moyen historique (t/ha)</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              placeholder="Ex: 2.5"
+                              value={testInputs.rendement_moyen_historique ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, rendement_moyen_historique: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Prix marché FCFA / tonne</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 250000"
+                              value={testInputs.prix_marquet_cameroun ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, prix_marquet_cameroun: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div className="pricing-field">
+                            <label>Taux de perte estimé par expert (%)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 70"
+                              value={testInputs.taux_perte_expert ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, taux_perte_expert: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* ═══ TESTEUR SINISTRE AUTRES ═══ */}
+                      {pricingRules.find((r) => r.id === activePricingRuleId)?.driver === 'sinistre_autres' && (
+                        <>
+                          <div className="pricing-field">
+                            <label>Valeur estimée du sinistre (FCFA)</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 150000"
+                              value={testInputs.estimated_value ?? ''}
+                              onChange={(e) =>
+                                setTestInputs({ ...testInputs, estimated_value: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <button
@@ -2657,11 +3336,27 @@ export default function FormBuilderPage() {
                       <div className="quote-pricing-card calculated">
                         <div className="quote-pricing-header">
                           <h3 className="quote-pricing-title">
-                            <Calculator size={18} style={{ color: '#059669' }} />
+                            <Calculator size={18} style={{ color: pricingRules.find((r) => r.id === activePricingRuleId)?.driver?.startsWith('sinistre_') ? '#0f766e' : '#059669' }} />
                             Résultat de la simulation
                           </h3>
                           <span className="quote-pricing-badge">Code CIMA Certifié</span>
                         </div>
+                        {pricingRules.find((r) => r.id === activePricingRuleId)?.driver?.startsWith('sinistre_') ? (
+                          <div className="quote-pricing-grid">
+                            <div className="quote-pricing-item">
+                              <small>Dommages Bruts</small>
+                              <span>{formatFcfa(testResult.montant_brut_formatted || testResult.montant_brut)}</span>
+                            </div>
+                            <div className="quote-pricing-item">
+                              <small>Franchise</small>
+                              <span>{formatFcfa(testResult.franchise_formatted || testResult.franchise)}</span>
+                            </div>
+                            <div className="quote-pricing-item highlight">
+                              <small>Indemnité Nette</small>
+                              <span>{formatFcfa(testResult.indemnisation_estimee_formatted || testResult.indemnisation_estimee)}</span>
+                            </div>
+                          </div>
+                        ) : (
                         <div className="quote-pricing-grid">
                           <div className="quote-pricing-item">
                             <small>Prime Nette</small>
@@ -2680,6 +3375,7 @@ export default function FormBuilderPage() {
                             <span>{formatFcfa(testResult.prime_ttc_formatted || testResult.prime_ttc)}</span>
                           </div>
                         </div>
+                        )}
 
                         {testResult.breakdown?.length > 0 && (
                           <table className="quote-pricing-breakdown-table">

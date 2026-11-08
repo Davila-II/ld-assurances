@@ -424,6 +424,37 @@ export const updateSubmissionNotes = (id: number, notes: string) =>
     true
   );
 
+export interface CalculateSubmissionPayload {
+  pricing_rule_id?: number | null;
+  extra_params?: Record<string, unknown>;
+  manual_montant_brut?: number;
+  manual_franchise?: number;
+  reduction_percent?: number;
+  reduction_fixed?: number;
+  admin_note?: string;
+  preview_only?: boolean;
+}
+
+export const calculateSubmission = (id: number, payload: CalculateSubmissionPayload) =>
+  request<{ message: string; quote_calculation: QuoteCalculation; preview_only: boolean }>(
+    `/admin/submissions/${id}/calculate`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+    true
+  );
+
+export const resetSubmissionCalculation = (id: number) =>
+  request<{ message: string }>(
+    `/admin/submissions/${id}/calculate`,
+    {
+      method: 'DELETE',
+    },
+    true
+  );
+
 export async function replyToSubmission(id: number, message: string, attachments?: File[]): Promise<{ message: string }> {
   const formData = new FormData();
   formData.append('message', message);

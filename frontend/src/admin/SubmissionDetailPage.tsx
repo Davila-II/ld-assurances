@@ -1,9 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Download, Paperclip, X } from 'lucide-react';
-import { downloadAttachment, downloadSubmissionPdfAdmin, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
+import {
+  Download,
+  Paperclip,
+  X,
+  Calculator,
+  RefreshCw,
+  CheckCircle,
+  Percent,
+  Sliders,
+  Edit3,
+  RotateCcw,
+  Clock,
+  Info,
+  Eye,
+  MessageSquare,
+} from 'lucide-react';
+import {
+  calculateSubmission,
+  downloadAttachment,
+  downloadSubmissionPdfAdmin,
+  getPricingRules,
+  getSubmission,
+  replyToSubmission,
+  resetSubmissionCalculation,
+  updateSubmissionNotes,
+  updateSubmissionStatus,
+  type CalculateSubmissionPayload,
+} from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
+import type { AttachmentInfo, PricingRule, QuoteCalculation, SubmissionDetail, SubmissionStatus } from '../types';
 import StatusBadge from './StatusBadge';
 import {
   STATUSES,
@@ -53,6 +79,21 @@ export default function SubmissionDetailPage() {
   const [notesNotice, setNotesNotice] = useState('');
   const [replyNotice, setReplyNotice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // États pour le calcul manuel & tarification admin
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('');
+  const [manualMontant, setManualMontant] = useState<string>('');
+  const [manualFranchise, setManualFranchise] = useState<string>('');
+  const [reductionPercent, setReductionPercent] = useState<string>('');
+  const [reductionFixed, setReductionFixed] = useState<string>('');
+  const [calcAdminNote, setCalcAdminNote] = useState<string>('');
+  const [calculating, setCalculating] = useState<boolean>(false);
+  const [calcPreview, setCalcPreview] = useState<QuoteCalculation | null>(null);
+  const [calcNotice, setCalcNotice] = useState<string>('');
+  const [calcError, setCalcError] = useState<string>('');
+  const [showCalcConfig, setShowCalcConfig] = useState<boolean>(false);
+
   const invalidId = !id || !/^\d+$/.test(id);
   const submission =
     !invalidId && loadedSubmission?.id === id ? loadedSubmission.data : null;
@@ -74,6 +115,13 @@ export default function SubmissionDetailPage() {
       };
     }
 
+    // Charger les règles de tarification pour le sélecteur
+    getPricingRules()
+      .then((rules) => {
+        if (!cancelled) setPricingRules(rules);
+      })
+      .catch(() => {});
+
     getSubmission(id)
       .then((data) => {
         if (cancelled) return;
@@ -81,6 +129,48 @@ export default function SubmissionDetailPage() {
         setNewStatus(data.status);
         setRejectionReason(data.rejection_reason ?? '');
         setNotes(data.notes ?? '');
+
+        // Initialiser l'état du calcul
+        if (data.quote_calculation) {
+          setShowCalcConfig(false);
+          if (data.quote_calculation.driver === 'manual') {
+            setSelectedRuleId('manual');
+            setManualMontant(
+              String(
+                data.quote_calculation.montant_brut ??
+                  data.quote_calculation.prime_ttc ??
+                  ''
+              )
+            );
+            setManualFranchise(
+              data.quote_calculation.franchise
+                ? String(data.quote_calculation.franchise)
+                : ''
+            );
+          } else if (data.quote_calculation.admin_rule_id) {
+            setSelectedRuleId(String(data.quote_calculation.admin_rule_id));
+          } else {
+            setSelectedRuleId('');
+          }
+          if (data.quote_calculation.reduction_applied_percent) {
+            setReductionPercent(String(data.quote_calculation.reduction_applied_percent));
+          }
+          if (data.quote_calculation.reduction_applied_fixed) {
+            setReductionFixed(String(data.quote_calculation.reduction_applied_fixed));
+          }
+          if (data.quote_calculation.admin_note) {
+            setCalcAdminNote(data.quote_calculation.admin_note);
+          }
+        } else {
+          setShowCalcConfig(true);
+          setSelectedRuleId('');
+          setManualMontant('');
+          setManualFranchise('');
+          setReductionPercent('');
+          setReductionFixed('');
+          setCalcAdminNote('');
+          setCalcPreview(null);
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setRequestError({ id, message: errorMessage(err) });
@@ -188,6 +278,103 @@ export default function SubmissionDetailPage() {
       setActionError({ id: String(submission.id), message: errorMessage(err) });
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handleRunCalculation = async (save: boolean = false) => {
+    if (!submission || !id) return;
+    setCalculating(true);
+    setCalcError('');
+    setCalcNotice('');
+
+    try {
+      const payload: CalculateSubmissionPayload = {
+        preview_only: !save,
+        reduction_percent: reductionPercent ? Number(reductionPercent) : undefined,
+        reduction_fixed: reductionFixed ? Number(reductionFixed) : undefined,
+        admin_note: calcAdminNote.trim() || undefined,
+      };
+
+      if (selectedRuleId === 'manual') {
+        if (!manualMontant) {
+          setCalcError(
+            lang === 'en'
+              ? 'Please enter a manual amount.'
+              : 'Veuillez saisir un montant manuel.'
+          );
+          setCalculating(false);
+          return;
+        }
+        payload.manual_montant_brut = Number(manualMontant);
+        payload.manual_franchise = manualFranchise ? Number(manualFranchise) : 0;
+      } else if (selectedRuleId) {
+        payload.pricing_rule_id = Number(selectedRuleId);
+      }
+
+      const res = await calculateSubmission(submission.id, payload);
+
+      if (save) {
+        setLoadedSubmission({
+          id,
+          data: {
+            ...submission,
+            quote_calculation: res.quote_calculation,
+          },
+        });
+        setCalcPreview(null);
+        setShowCalcConfig(false);
+        setCalcNotice(
+          lang === 'en'
+            ? 'Calculation validated and saved. The official PDF now includes this amount.'
+            : 'Calcul validé et sauvegardé. Le PDF officiel du client inclut désormais ce montant.'
+        );
+      } else {
+        setCalcPreview(res.quote_calculation);
+        setCalcNotice(
+          lang === 'en'
+            ? 'Calculation preview ready. Click "Validate and save" to apply it to the file.'
+            : 'Prévisualisation réussie. Cliquez sur "Valider et enregistrer sur le dossier" pour l\'appliquer.'
+        );
+      }
+    } catch (err) {
+      setCalcError(errorMessage(err));
+    } finally {
+      setCalculating(false);
+    }
+  };
+
+  const handleResetCalculation = async () => {
+    if (!submission || !id) return;
+    const confirmMsg =
+      lang === 'en'
+        ? 'Are you sure you want to reset this calculation? The client PDF will no longer contain any amount.'
+        : 'Êtes-vous sûr de vouloir réinitialiser la tarification de ce dossier ? Le PDF du client ne contiendra plus aucun montant.';
+    if (!window.confirm(confirmMsg)) return;
+
+    setCalculating(true);
+    setCalcError('');
+    setCalcNotice('');
+
+    try {
+      await resetSubmissionCalculation(submission.id);
+      setLoadedSubmission({
+        id,
+        data: {
+          ...submission,
+          quote_calculation: null,
+        },
+      });
+      setCalcPreview(null);
+      setShowCalcConfig(true);
+      setCalcNotice(
+        lang === 'en'
+          ? 'Calculation reset. The file now has no validated amount.'
+          : 'Calcul réinitialisé. Le dossier n\'a plus de montant validé.'
+      );
+    } catch (err) {
+      setCalcError(errorMessage(err));
+    } finally {
+      setCalculating(false);
     }
   };
 
@@ -324,107 +511,6 @@ export default function SubmissionDetailPage() {
             {notice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{notice}</p>}
           </section>
 
-          {submission.quote_calculation && (
-            <section className="card" style={{ borderLeft: submission.form_type === 'claim' ? '4px solid #1aaca8' : '4px solid #144983' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <h2 style={{ margin: 0, color: submission.form_type === 'claim' ? '#0f766e' : '#144983' }}>
-                  📊 {submission.form_type === 'claim'
-                    ? (lang === 'en' ? 'Claim Compensation Estimation (CIMA / IDA)' : 'Estimation Indemnisation Sinistre (CIMA / IDA)')
-                    : (lang === 'en' ? 'Calculated Pricing (CIMA Code)' : 'Tarification calculée (Code CIMA)')}
-                </h2>
-                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px', background: submission.form_type === 'claim' ? '#0f766e' : '#1aaca8' }}>
-                  {submission.form_type === 'claim'
-                    ? formatFcfa(submission.quote_calculation.indemnisation_estimee_formatted || submission.quote_calculation.indemnisation_estimee || submission.quote_calculation.prime_ttc)
-                    : formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
-                </span>
-              </div>
-
-              {submission.form_type === 'claim' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f0fdfa', padding: '14px', borderRadius: '8px', border: '1px solid #ccfbf1' }}>
-                  <div>
-                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}</small>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                      {formatFcfa(submission.quote_calculation.montant_brut_formatted || submission.quote_calculation.montant_brut)}
-                    </div>
-                  </div>
-                  <div>
-                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Deductible' : 'Franchise Déduite'}</small>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#dc2626' }}>
-                      {formatFcfa(submission.quote_calculation.franchise_formatted || submission.quote_calculation.franchise)}
-                    </div>
-                  </div>
-                  <div>
-                    <small style={{ color: '#0f766e', fontWeight: 600 }}>{lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}</small>
-                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#0f766e' }}>
-                      {formatFcfa(submission.quote_calculation.indemnisation_estimee_formatted || submission.quote_calculation.indemnisation_estimee || submission.quote_calculation.prime_ttc)}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
-                  <div>
-                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                      {formatFcfa(submission.quote_calculation.prime_nette_formatted || submission.quote_calculation.prime_nette)}
-                    </div>
-                  </div>
-                  <div>
-                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}</small>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                      {formatFcfa(submission.quote_calculation.accessoires_formatted || submission.quote_calculation.accessoires)}
-                    </div>
-                  </div>
-                  <div>
-                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}</small>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                      {formatFcfa(submission.quote_calculation.taxe_unique_formatted || submission.quote_calculation.taxe_unique)}
-                    </div>
-                  </div>
-                  <div>
-                    <small style={{ color: '#144983', fontWeight: 600 }}>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
-                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#144983' }}>
-                      {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {submission.quote_calculation.notes_explicatives && (
-                <p style={{ margin: '8px 0 12px', fontSize: '0.88rem', color: '#475569', background: '#f8fafc', padding: '8px 12px', borderRadius: '6px' }}>
-                  <strong>ℹ️ {lang === 'en' ? 'Rule Applied:' : 'Règle CIMA / Convention :'}</strong>{' '}
-                  {lang === 'en' && submission.quote_calculation.notes_explicatives_en
-                    ? submission.quote_calculation.notes_explicatives_en
-                    : submission.quote_calculation.notes_explicatives}
-                </p>
-              )}
-
-              {submission.quote_calculation.breakdown?.length > 0 && (
-                <div className="table-responsive" style={{ margin: '10px 0 0' }}>
-                  <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
-                        <th style={{ padding: '8px 4px' }}>{lang === 'en' ? 'Coverage / Items' : 'Garantie / Éléments'}</th>
-                        <th style={{ padding: '8px 4px', textAlign: 'right' }}>{lang === 'en' ? 'Amount' : 'Montant'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {submission.quote_calculation.breakdown.map((item, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '8px 4px' }}>
-                            {lang === 'en' && item.label_en ? item.label_en : item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
-                          </td>
-                          <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600, color: item.amount < 0 ? '#dc2626' : undefined }}>
-                            {formatFcfa(item.formatted || item.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          )}
-
           {/* 2. Demande du client / Demande de devis */}
           <section className="card">
             <h2>{submission.form_type === 'claim' ? t('admin.detail_answers_title_claim') : t('admin.detail_answers_title_quote')}</h2>
@@ -482,7 +568,541 @@ export default function SubmissionDetailPage() {
             {notesNotice && <p className="notice" role="status">{notesNotice}</p>}
           </section>
 
-          {/* 5. Répondre au client */}
+          {/* 5. Tarification & Indemnisation (Gestion Admin) */}
+          <section
+            className="card"
+            style={{
+              borderLeft: submission.form_type === 'claim' ? '4px solid #0f766e' : '4px solid #144983',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginBottom: '12px',
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    color: submission.form_type === 'claim' ? '#0f766e' : '#144983',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Calculator size={22} />
+                  {submission.form_type === 'claim'
+                    ? t('admin.detail_calc_title_claim')
+                    : t('admin.detail_calc_title_quote')}
+                </h2>
+                <small style={{ color: '#64748b' }}>
+                  {t('admin.detail_calc_hint')}
+                </small>
+              </div>
+
+              {submission.quote_calculation ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span
+                    className="badge"
+                    style={{
+                      background: '#ecfdf5',
+                      color: '#065f46',
+                      border: '1px solid #a7f3d0',
+                      padding: '4px 10px',
+                      fontSize: '0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <CheckCircle size={14} /> {t('admin.detail_calc_validated_badge')}
+                  </span>
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: '1rem',
+                      padding: '6px 14px',
+                      fontWeight: 700,
+                      background: submission.form_type === 'claim' ? '#0f766e' : '#144983',
+                      color: '#fff',
+                    }}
+                  >
+                    {submission.form_type === 'claim'
+                      ? formatFcfa(
+                          submission.quote_calculation.indemnisation_estimee_formatted ||
+                            submission.quote_calculation.indemnisation_estimee ||
+                            submission.quote_calculation.prime_ttc
+                        )
+                      : formatFcfa(
+                          submission.quote_calculation.prime_ttc_formatted ||
+                            submission.quote_calculation.prime_ttc
+                        )}
+                  </span>
+                </div>
+              ) : (
+                <span
+                  className="badge"
+                  style={{
+                    background: '#fffbeb',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    padding: '6px 12px',
+                    fontSize: '0.85rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Clock size={14} />
+                  {t('admin.detail_calc_pending_badge')}
+                </span>
+              )}
+            </div>
+
+            {/* A. Si un calcul est validé et que la config est repliée */}
+            {submission.quote_calculation && !showCalcConfig && (
+              <div style={{ marginTop: '12px' }}>
+                {submission.form_type === 'claim' ? (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: '12px',
+                      margin: '12px 0',
+                      background: '#f0fdfa',
+                      padding: '14px',
+                      borderRadius: '8px',
+                      border: '1px solid #ccfbf1',
+                    }}
+                  >
+                    <div>
+                      <small style={{ color: '#64748b' }}>
+                        {lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}
+                      </small>
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.montant_brut_formatted ||
+                            submission.quote_calculation.montant_brut
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b' }}>
+                        {lang === 'en' ? 'Deductible' : 'Franchise Déduite'}
+                      </small>
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#dc2626' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.franchise_formatted ||
+                            submission.quote_calculation.franchise
+                        )}
+                      </div>
+                    </div>
+                    {(submission.quote_calculation.reduction_applied_percent ||
+                      submission.quote_calculation.reduction_applied_fixed) && (
+                      <div>
+                        <small style={{ color: '#059669', fontWeight: 600 }}>
+                          {lang === 'en' ? 'Adjustment / Reduction' : 'Ajustement / Réduction'}
+                        </small>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#059669' }}>
+                          {submission.quote_calculation.reduction_applied_percent
+                            ? `-${submission.quote_calculation.reduction_applied_percent}% `
+                            : ''}
+                          {submission.quote_calculation.reduction_applied_fixed
+                            ? `-${formatFcfa(submission.quote_calculation.reduction_applied_fixed)}`
+                            : ''}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <small style={{ color: '#0f766e', fontWeight: 600 }}>
+                        {lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}
+                      </small>
+                      <div style={{ fontWeight: 700, fontSize: '1.25rem', color: '#0f766e' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.indemnisation_estimee_formatted ||
+                            submission.quote_calculation.indemnisation_estimee ||
+                            submission.quote_calculation.prime_ttc
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: '12px',
+                      margin: '12px 0',
+                      background: '#f8fafc',
+                      padding: '14px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div>
+                      <small style={{ color: '#64748b' }}>
+                        {lang === 'en' ? 'Net Premium' : 'Prime Nette'}
+                      </small>
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.prime_nette_formatted ||
+                            submission.quote_calculation.prime_nette
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b' }}>
+                        {lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}
+                      </small>
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.accessoires_formatted ||
+                            submission.quote_calculation.accessoires
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b' }}>
+                        {lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}
+                      </small>
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.taxe_unique_formatted ||
+                            submission.quote_calculation.taxe_unique
+                        )}
+                      </div>
+                    </div>
+                    {(submission.quote_calculation.reduction_applied_percent ||
+                      submission.quote_calculation.reduction_applied_fixed) && (
+                      <div>
+                        <small style={{ color: '#059669', fontWeight: 600 }}>
+                          {lang === 'en' ? 'Commercial Discount' : 'Remise commerciale'}
+                        </small>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#059669' }}>
+                          {submission.quote_calculation.reduction_applied_percent
+                            ? `-${submission.quote_calculation.reduction_applied_percent}% `
+                            : ''}
+                          {submission.quote_calculation.reduction_applied_fixed
+                            ? `-${formatFcfa(submission.quote_calculation.reduction_applied_fixed)}`
+                            : ''}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <small style={{ color: '#144983', fontWeight: 600 }}>
+                        {lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}
+                      </small>
+                      <div style={{ fontWeight: 700, fontSize: '1.25rem', color: '#144983' }}>
+                        {formatFcfa(
+                          submission.quote_calculation.prime_ttc_formatted ||
+                            submission.quote_calculation.prime_ttc
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {submission.quote_calculation.notes_explicatives && (
+                  <p
+                    style={{
+                      margin: '8px 0 12px',
+                      fontSize: '0.88rem',
+                      color: '#475569',
+                      background: '#f8fafc',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Info size={16} style={{ color: '#0284c7', flexShrink: 0 }} />
+                    <span>
+                      <strong>{lang === 'en' ? 'Rule Applied / Note:' : 'Règle CIMA / Note :'}</strong>{' '}
+                      {lang === 'en' && submission.quote_calculation.notes_explicatives_en
+                        ? submission.quote_calculation.notes_explicatives_en
+                        : submission.quote_calculation.notes_explicatives}
+                    </span>
+                  </p>
+                )}
+
+                {submission.quote_calculation.breakdown?.length > 0 && (
+                  <div className="table-responsive" style={{ margin: '10px 0 0' }}>
+                    <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                          <th style={{ padding: '8px 4px' }}>
+                            {lang === 'en' ? 'Coverage / Items' : 'Garantie / Éléments'}
+                          </th>
+                          <th style={{ padding: '8px 4px', textAlign: 'right' }}>
+                            {lang === 'en' ? 'Amount' : 'Montant'}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {submission.quote_calculation.breakdown.map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '8px 4px' }}>
+                              {lang === 'en' && item.label_en ? item.label_en : item.label}{' '}
+                              {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                            </td>
+                            <td
+                              style={{
+                                padding: '8px 4px',
+                                textAlign: 'right',
+                                fontWeight: 600,
+                                color: item.amount < 0 ? '#dc2626' : undefined,
+                              }}
+                            >
+                              {formatFcfa(item.formatted || item.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setShowCalcConfig(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Edit3 size={15} />
+                    {t('admin.detail_calc_btn_edit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={handleResetCalculation}
+                    disabled={calculating}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RotateCcw size={15} />
+                    {t('admin.detail_calc_btn_reset')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* B. Formulaire interactif de calcul / modification */}
+            {(showCalcConfig || !submission.quote_calculation) && (
+              <div
+                style={{
+                  marginTop: '14px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '16px',
+                }}
+              >
+                {/* 1. Sélection de l'algorithme ou saisie manuelle */}
+                <div className="field" style={{ marginBottom: '14px' }}>
+                  <label htmlFor="select-calc-rule" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sliders size={16} />
+                    {t('admin.detail_calc_system')}
+                  </label>
+                  <select
+                    id="select-calc-rule"
+                    value={selectedRuleId}
+                    onChange={(e) => setSelectedRuleId(e.target.value)}
+                  >
+                    <option value="">
+                      {t('admin.detail_calc_system_default')} ({submission.category ?? 'Auto'})
+                    </option>
+                    <optgroup label="── Règles Sinistres (Indemnisation CIMA) ──">
+                      {pricingRules
+                        .filter((r) => r.driver.startsWith('sinistre_'))
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} [{r.driver}]
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="── Règles Devis (Tarification CIMA) ──">
+                      {pricingRules
+                        .filter((r) => !r.driver.startsWith('sinistre_'))
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} [{r.driver}]
+                          </option>
+                        ))}
+                    </optgroup>
+                    <option value="manual">
+                      {t('admin.detail_calc_system_manual')}
+                    </option>
+                  </select>
+                </div>
+
+                {/* Si mode manuel : champs directs */}
+                {selectedRuleId === 'manual' && (
+                  <div className="grid-2-col" style={{ marginBottom: '14px', background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <div className="field" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                        {submission.form_type === 'claim' ? 'Montant brut des dommages (FCFA) *' : 'Montant de la prime TTC (FCFA) *'}
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 500000"
+                        value={manualMontant}
+                        onChange={(e) => setManualMontant(e.target.value)}
+                      />
+                    </div>
+                    {submission.form_type === 'claim' && (
+                      <div className="field" style={{ margin: 0 }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                          Franchise à déduire (FCFA, optionnel)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="Ex: 50000"
+                          value={manualFranchise}
+                          onChange={(e) => setManualFranchise(e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. Ajustements et réductions commerciales */}
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: '0.92rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Percent size={15} style={{ color: '#059669' }} />
+                    {lang === 'en' ? 'Commercial Adjustments & Reductions' : 'Ajustements & Réductions commerciales (optionnel)'}
+                  </h4>
+                  <div className="grid-2-col" style={{ marginBottom: '10px' }}>
+                    <div className="field" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.82rem', color: '#475569' }}>
+                        {lang === 'en' ? 'Discount percentage (%)' : 'Réduction en pourcentage (%)'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        placeholder="Ex: 5 pour -5%"
+                        value={reductionPercent}
+                        onChange={(e) => setReductionPercent(e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.82rem', color: '#475569' }}>
+                        {lang === 'en' ? 'Fixed discount (FCFA)' : 'Réduction fixe en montant (FCFA)'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        placeholder="Ex: 15000"
+                        value={reductionFixed}
+                        onChange={(e) => setReductionFixed(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="field" style={{ marginTop: '10px' }}>
+                    <label style={{ fontSize: '0.82rem', color: '#475569' }}>
+                      {lang === 'en' ? 'Admin note / Justification (visible on PDF)' : 'Note justificative / Motif de la réduction (visible sur le PDF)'}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Remise commerciale 5% accordée suite à fidélité client..."
+                      value={calcAdminNote}
+                      onChange={(e) => setCalcAdminNote(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Messages de retour */}
+                {calcError && (
+                  <p className="alert" role="alert" style={{ margin: '12px 0 0' }}>
+                    {calcError}
+                  </p>
+                )}
+                {calcNotice && (
+                  <p className="notice" role="status" style={{ margin: '12px 0 0' }}>
+                    {calcNotice}
+                  </p>
+                )}
+
+                {/* Prévisualisation immédiate si disponible */}
+                {calcPreview && (
+                  <div
+                    style={{
+                      marginTop: '14px',
+                      padding: '14px',
+                      background: '#ecfdf5',
+                      border: '1.5px solid #a7f3d0',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <strong style={{ color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Eye size={16} />
+                        {lang === 'en' ? 'Calculation Preview (not yet saved)' : 'Aperçu du calcul (non sauvegardé)'}
+                      </strong>
+                      <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#065f46' }}>
+                        {submission.form_type === 'claim'
+                          ? formatFcfa(calcPreview.indemnisation_estimee_formatted || calcPreview.indemnisation_estimee)
+                          : formatFcfa(calcPreview.prime_ttc_formatted || calcPreview.prime_ttc)}
+                      </span>
+                    </div>
+                    <small style={{ color: '#047857' }}>
+                      {calcPreview.notes_explicatives}
+                    </small>
+                  </div>
+                )}
+
+                {/* Boutons d'action */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={calculating}
+                    onClick={() => handleRunCalculation(false)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RefreshCw size={15} />
+                    {calculating ? t('admin.loading') : t('admin.detail_calc_btn_preview')}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={calculating}
+                    onClick={() => handleRunCalculation(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <CheckCircle size={15} />
+                    {calculating ? t('admin.loading') : t('admin.detail_calc_btn_validate')}
+                  </button>
+
+                  {submission.quote_calculation && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={calculating}
+                      onClick={() => {
+                        setShowCalcConfig(false);
+                        setCalcPreview(null);
+                        setCalcError('');
+                      }}
+                    >
+                      {lang === 'en' ? 'Cancel edit' : 'Annuler'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* 6. Répondre au client */}
           <section className="card">
             <h2>{t('admin.detail_reply_title')}</h2>
             <div className="field">
@@ -545,7 +1165,7 @@ export default function SubmissionDetailPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
               <button
                 type="button"
                 className="btn"
@@ -571,14 +1191,67 @@ export default function SubmissionDetailPage() {
             </div>
             {replyNotice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{replyNotice}</p>}
 
-            {/* Liste des pièces envoyées par l'administration */}
-            {submission.attachments.filter(a => a.source === 'admin').length > 0 && (
+            {/* Historique des réponses envoyées par l'administration */}
+            {submission.replies && submission.replies.length > 0 && (
               <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                <h3 style={{ fontSize: '1rem', color: '#144983', margin: '0 0 10px' }}>
-                  📎 {lang === 'en' ? 'Attachments sent with replies:' : 'Pièces jointes transmises au client :'}
+                <h3 style={{ fontSize: '1rem', color: '#144983', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MessageSquare size={16} />
+                  {lang === 'en' ? 'History of replies sent to client:' : 'Historique des réponses transmises au client :'}
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {submission.replies.map((rep) => (
+                    <div
+                      key={rep.id}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '12px 14px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#1e293b' }}>
+                          Administration LD Assurances
+                        </strong>
+                        <small style={{ color: '#64748b' }}>
+                          {formatDate(rep.created_at, lang)}
+                        </small>
+                      </div>
+                      <p style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                        {rep.message}
+                      </p>
+                      {rep.attachments && rep.attachments.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                          {rep.attachments.map((att) => (
+                            <button
+                              key={att.id}
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              disabled={downloadingId === att.id}
+                              onClick={() => handleDownload(att)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
+                            >
+                              <Paperclip size={12} />
+                              {att.original_name} <small>({formatSize(att.size, lang)})</small>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Liste générale des pièces envoyées par l'administration */}
+            {submission.attachments.filter((a) => a.source === 'admin').length > 0 && (!submission.replies || submission.replies.length === 0) && (
+              <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <h3 style={{ fontSize: '1rem', color: '#144983', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Paperclip size={16} />
+                  {lang === 'en' ? 'Attachments sent with replies:' : 'Pièces jointes transmises au client :'}
                 </h3>
                 <ul className="attachments">
-                  {submission.attachments.filter(a => a.source === 'admin').map((att) => (
+                  {submission.attachments.filter((a) => a.source === 'admin').map((att) => (
                     <li key={att.id}>
                       <span>
                         {att.original_name} <small>({formatSize(att.size, lang)})</small>
