@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -17,6 +18,7 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
+        'staff_role_id',
     ];
 
     protected $hidden = [
@@ -44,8 +46,30 @@ class User extends Authenticatable
         return $this->role === 'client';
     }
 
+    public function staffRole(): BelongsTo
+    {
+        return $this->belongsTo(StaffRole::class, 'staff_role_id');
+    }
+
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);
+    }
+
+    /**
+     * Vérifie si l'utilisateur staff a une permission donnée.
+     * Les admins (role='admin') ont toutes les permissions.
+     */
+    public function hasPermission(string $key): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        if (! $this->staffRole) {
+            return false;
+        }
+
+        return $this->staffRole->permissions->contains('key', $key);
     }
 }
