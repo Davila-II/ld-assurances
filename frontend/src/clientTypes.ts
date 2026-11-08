@@ -22,6 +22,8 @@ export interface ClientSubmission {
   created_at: string;
   updated_at: string;
   processed_at?: string | null;
+  taken_at?: string | null;
+  closed_at?: string | null;
 }
 
 export interface ClientPage<T> {

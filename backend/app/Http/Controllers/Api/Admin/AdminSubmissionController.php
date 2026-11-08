@@ -76,6 +76,8 @@ class AdminSubmissionController extends Controller
             'attachments_count' => $s->attachments_count,
             'created_at'        => $s->created_at?->toIso8601String(),
             'processed_at'      => $s->processed_at?->toIso8601String(),
+            'taken_at'          => $s->taken_at?->toIso8601String(),
+            'closed_at'         => $s->closed_at?->toIso8601String(),
         ]);
 
         return response()->json($page);
@@ -111,6 +113,8 @@ class AdminSubmissionController extends Controller
             'rejection_reason' => $submission->rejection_reason,
             'created_at'       => $submission->created_at?->toIso8601String(),
             'processed_at'     => $submission->processed_at?->toIso8601String(),
+            'taken_at'         => $submission->taken_at?->toIso8601String(),
+            'closed_at'        => $submission->closed_at?->toIso8601String(),
             'answers'     => $answers,
             'attachments' => $submission->attachments->map(fn (Attachment $a) => [
                 'id'            => $a->id,
@@ -122,6 +126,7 @@ class AdminSubmissionController extends Controller
     }
 
     // Changement de statut : received, in_progress, answered, closed, rejected
+    // Règle : on ne peut pas revenir à un statut de rang inférieur
     public function updateStatus(Request $request, Submission $submission): JsonResponse
     {
         $data = $request->validate([
@@ -136,9 +141,22 @@ class AdminSubmissionController extends Controller
             'rejection_reason.required' => 'Le motif du rejet est obligatoire pour rejeter un dossier.',
         ]);
 
+        $newStatus  = $data['status'];
+        $oldStatus  = $submission->status;
+        $rankMap    = Submission::STATUS_RANK;
+        $currentRank = $rankMap[$oldStatus] ?? 0;
+        $newRank     = $rankMap[$newStatus] ?? 0;
+
+        // Bloquer tout retour en arrière dans la hiérarchie
+        if ($newRank < $currentRank) {
+            return response()->json([
+                'message' => "Impossible de repasser le statut de « {$submission->statusLabel()} » à un statut antérieur.",
+            ], 422);
+        }
+
         $submission->update([
-            'status'           => $data['status'],
-            'rejection_reason' => $data['status'] === 'rejected'
+            'status'           => $newStatus,
+            'rejection_reason' => $newStatus === 'rejected'
                 ? ($data['rejection_reason'] ?? null)
                 : null,
         ]);
@@ -154,6 +172,8 @@ class AdminSubmissionController extends Controller
             'id'               => $submission->id,
             'status'           => $submission->status,
             'rejection_reason' => $submission->rejection_reason,
+            'taken_at'         => $submission->taken_at?->toIso8601String(),
+            'closed_at'        => $submission->closed_at?->toIso8601String(),
         ]);
     }
 
@@ -193,12 +213,28 @@ class AdminSubmissionController extends Controller
         ]);
     }
 
-    // Réponse envoyée par email au client
+    // Réponse envoyée par email au client (avec pièces jointes optionnelles)
     public function reply(Request $request, Submission $submission): JsonResponse
     {
         $data = $request->validate([
-            'message' => ['required', 'string', 'max:5000'],
+            'message'      => ['required', 'string', 'max:5000'],
+            'attachments'  => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:20480'], // 20 Mo max par fichier
         ]);
+
+        // Stocker les pièces jointes de la réponse admin dans storage/app/admin-replies/
+        $replyFiles = [];
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store("admin-replies/{$submission->id}", 'local');
+                $replyFiles[] = [
+                    'path'          => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type'     => $file->getMimeType(),
+                    'size'          => $file->getSize(),
+                ];
+            }
+        }
 
         try {
             Mail::to($submission->email)->send(new SubmissionReply($submission, $data['message']));

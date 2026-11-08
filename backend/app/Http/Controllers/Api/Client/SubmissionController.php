@@ -46,6 +46,8 @@ class SubmissionController extends Controller
             'created_at'       => $submission->created_at?->toIso8601String(),
             'updated_at'       => $submission->updated_at?->toIso8601String(),
             'processed_at'     => $submission->processed_at?->toIso8601String(),
+            'taken_at'         => $submission->taken_at?->toIso8601String(),
+            'closed_at'        => $submission->closed_at?->toIso8601String(),
         ]);
 
         return response()->json($page);

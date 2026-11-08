@@ -9,10 +9,19 @@ use Illuminate\Support\Str;
 
 class Submission extends Model
 {
+    // Ordre hiérarchique des statuts (du plus bas au plus haut)
+    public const STATUS_RANK = [
+        'received'    => 1,
+        'in_progress' => 2,
+        'answered'    => 3,
+        'closed'      => 4,
+        'rejected'    => 4, // même niveau que closed (terminal)
+    ];
+
     protected $fillable = [
         'reference', 'category_id', 'user_id', 'form_type',
         'email', 'status', 'answers', 'form_snapshot', 'quote_calculation',
-        'notes', 'rejection_reason', 'processed_at',
+        'notes', 'rejection_reason', 'processed_at', 'taken_at', 'closed_at',
     ];
 
     protected $casts = [
@@ -20,6 +29,8 @@ class Submission extends Model
         'form_snapshot'     => 'array',
         'quote_calculation' => 'array',
         'processed_at'      => 'datetime',
+        'taken_at'          => 'datetime',
+        'closed_at'         => 'datetime',
     ];
 
     protected static function booted(): void
@@ -30,15 +41,28 @@ class Submission extends Model
             }
         });
 
-        // Enregistre la date de traitement dès que le statut quitte "received"
+        // Enregistrement automatique des dates de changement de statut
         static::updating(function (Submission $submission) {
-            if (
-                $submission->isDirty('status')
-                && $submission->getOriginal('status') === 'received'
-                && $submission->status !== 'received'
-                && $submission->processed_at === null
-            ) {
+            if (! $submission->isDirty('status')) {
+                return;
+            }
+
+            $old = $submission->getOriginal('status');
+            $new = $submission->status;
+
+            // processed_at : première sortie du statut "received"
+            if ($old === 'received' && $new !== 'received' && $submission->processed_at === null) {
                 $submission->processed_at = now();
+            }
+
+            // taken_at : passage à "in_progress"
+            if ($new === 'in_progress' && $submission->taken_at === null) {
+                $submission->taken_at = now();
+            }
+
+            // closed_at : passage à "closed" ou "rejected"
+            if (in_array($new, ['closed', 'rejected']) && $submission->closed_at === null) {
+                $submission->closed_at = now();
             }
         });
     }

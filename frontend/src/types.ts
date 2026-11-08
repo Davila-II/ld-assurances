@@ -241,6 +241,8 @@ export interface SubmissionDetail {
   rejection_reason?: string | null;
   created_at: string;
   processed_at?: string | null;
+  taken_at?: string | null;
+  closed_at?: string | null;
   answers: SubmissionAnswer[];
   attachments: AttachmentInfo[];
   quote_calculation?: QuoteCalculation | null;
