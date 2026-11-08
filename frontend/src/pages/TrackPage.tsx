@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Edit2, X, Check } from 'lucide-react';
-import { trackSubmission, downloadTrackPdf, updateTrackSubmission, ApiError } from '../api';
+import { Download, Edit2, X, Check, Paperclip } from 'lucide-react';
+import { trackSubmission, downloadTrackPdf, downloadTrackAttachment, updateTrackSubmission, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
-import { formatDate } from '../admin/labels';
+import { formatDate, formatSize } from '../admin/labels';
 import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -21,6 +21,7 @@ export default function TrackPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingAttId, setDownloadingAttId] = useState<number | null>(null);
 
   // Edition state
   const [editing, setEditing] = useState(false);
@@ -88,6 +89,18 @@ export default function TrackPage() {
       // ignore
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachmentId: number, filename: string) => {
+    if (!result) return;
+    setDownloadingAttId(attachmentId);
+    try {
+      await downloadTrackAttachment(result.reference, email.trim(), attachmentId, filename);
+    } catch {
+      // ignore
+    } finally {
+      setDownloadingAttId(null);
     }
   };
 
@@ -210,15 +223,66 @@ export default function TrackPage() {
                   <dd style={{ color: '#b91c1c', fontWeight: 600 }}>{result.rejection_reason}</dd>
                 </>
               )}
-              <dt>{t('track.date_label')}</dt>
+              <dt>{t('client.col_date')}</dt>
               <dd>{formatDate(result.created_at, lang)}</dd>
-              <dt style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : undefined}>
-                {t('track.processed_date_label')}
+              {result.taken_at && (
+                <>
+                  <dt style={{ color: '#2563eb', fontWeight: 600 }}>{t('client.col_taken_at')}</dt>
+                  <dd style={{ color: '#2563eb', fontWeight: 600 }}>{formatDate(result.taken_at, lang)}</dd>
+                </>
+              )}
+              <dt style={result.processed_at ? { color: result.status === 'rejected' ? '#dc2626' : '#16a34a', fontWeight: 600 } : undefined}>
+                {t('client.col_processed_at')}
               </dt>
-              <dd style={result.processed_at ? { color: '#1aaca8', fontWeight: 600 } : { color: '#64748b' }}>
-                {result.processed_at ? formatDate(result.processed_at, lang) : t('track.pending_processing')}
+              <dd style={result.processed_at ? { color: result.status === 'rejected' ? '#dc2626' : '#16a34a', fontWeight: 600 } : { color: '#64748b' }}>
+                {result.processed_at ? formatDate(result.processed_at, lang) : t('client.not_processed')}
               </dd>
             </dl>
+
+            {/* Pièces jointes administratives reçues */}
+            {result.admin_attachments && result.admin_attachments.length > 0 && (
+              <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <h3 style={{ margin: '0 0 6px', fontSize: '1rem', color: '#144983' }}>
+                  {t('client.admin_attachments')}
+                </h3>
+                <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: '#64748b' }}>
+                  {t('client.admin_attachments_help')}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {result.admin_attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Paperclip size={16} color="#0284c7" />
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{att.original_name}</span>
+                        <small style={{ color: '#64748b' }}>({formatSize(att.size, lang)})</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleDownloadAttachment(att.id, att.original_name)}
+                        disabled={downloadingAttId === att.id}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Download size={13} />
+                        <span>{downloadingAttId === att.id ? '…' : t('client.download_attachment')}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Formulaire d'édition — uniquement quand status === 'received' */}
             {result.status === 'received' && (

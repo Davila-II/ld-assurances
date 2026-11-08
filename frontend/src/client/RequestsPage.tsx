@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Edit2, ExternalLink, FileText, Plus } from 'lucide-react';
-import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf } from '../clientApi';
+import { Download, Edit2, ExternalLink, FileText, Paperclip, Plus } from 'lucide-react';
+import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf, downloadClientAttachment } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import EmptyState from './EmptyState';
 import StatusBadge from '../admin/StatusBadge';
 import type { SubmissionStatus } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import { formatSize } from '../admin/labels';
 
 export default function RequestsPage() {
   const { lang, t } = useLanguage();
@@ -14,6 +15,7 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadingAttId, setDownloadingAttId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +43,17 @@ export default function RequestsPage() {
       // silently fail
     } finally {
       setDownloading(null);
+    }
+  };
+
+  const handleDownloadAttachment = async (reference: string, attachmentId: number, filename: string) => {
+    setDownloadingAttId(attachmentId);
+    try {
+      await downloadClientAttachment(reference, attachmentId, filename);
+    } catch {
+      // silently fail
+    } finally {
+      setDownloadingAttId(null);
     }
   };
 
@@ -81,7 +94,6 @@ export default function RequestsPage() {
                 <th>{t('client.col_date')}</th>
                 <th>{t('client.col_taken_at')}</th>
                 <th>{t('client.col_processed_at')}</th>
-                <th>{t('client.col_closed_at')}</th>
                 <th>{t('client.col_status')}</th>
                 <th style={{ textAlign: 'right' }}>{t('client.col_action')}</th>
               </tr>
@@ -114,22 +126,41 @@ export default function RequestsPage() {
                       hour: '2-digit',
                       minute: '2-digit',
                     })
-                  : (sub.status === 'received' ? t('client.not_processed') : '—');
-
-                const closedStr = sub.closed_at
-                  ? new Date(sub.closed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : t('client.closed_pending');
+                  : t('client.not_processed');
 
                 return (
                   <tr key={sub.reference}>
                     <td>
                       <span className="client-ref-code">{sub.reference}</span>
+                      {sub.admin_attachments && sub.admin_attachments.length > 0 && (
+                        <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {sub.admin_attachments.map((att) => (
+                            <button
+                              key={att.id}
+                              type="button"
+                              onClick={() => handleDownloadAttachment(sub.reference, att.id, att.original_name)}
+                              disabled={downloadingAttId === att.id}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: '#e0f2fe',
+                                color: '#0284c7',
+                                border: '1px solid #bae6fd',
+                                borderRadius: '4px',
+                                padding: '2px 6px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                              }}
+                              title={`${att.original_name} (${formatSize(att.size, lang)})`}
+                            >
+                              <Paperclip size={11} />
+                              <span>{att.original_name.length > 18 ? att.original_name.slice(0, 16) + '…' : att.original_name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <strong>{lang === 'en' && sub.category_en ? sub.category_en : (sub.category || '-')}</strong>
@@ -140,9 +171,6 @@ export default function RequestsPage() {
                     </td>
                     <td style={{ color: sub.processed_at ? '#1aaca8' : '#94a3b8', fontWeight: sub.processed_at ? 600 : 400, fontSize: '0.85rem' }}>
                       {processedStr}
-                    </td>
-                    <td style={{ color: sub.closed_at ? (sub.status === 'rejected' ? '#dc2626' : '#16a34a') : '#94a3b8', fontSize: '0.85rem' }}>
-                      {closedStr}
                     </td>
                     <td>
                       <StatusBadge status={sub.status as SubmissionStatus} />
