@@ -84,7 +84,7 @@ class SubmissionController extends Controller
         // 5.b Vérification stricte de la cohérence temporelle des dates
         $this->validateDateAnswers($answers, $category->slug);
 
-        // Calcul automatique de la tarification du devis si applicable
+        // Calcul automatique de la tarification du devis ou de l'indemnisation de sinistre
         $quoteCalculation = null;
         if ($base['form_type'] === 'quote') {
             try {
@@ -95,6 +95,16 @@ class SubmissionController extends Controller
                 }
             } catch (Throwable $e) {
                 Log::warning('Échec calcul devis automatique', ['message' => $e->getMessage()]);
+            }
+        } elseif ($base['form_type'] === 'claim') {
+            try {
+                $claimService = app(\App\Services\ClaimCompensationService::class);
+                $quoteCalculation = $claimService->calculate($category, $answers);
+                if ($quoteCalculation) {
+                    $answers['_calculated_claim'] = $quoteCalculation;
+                }
+            } catch (Throwable $e) {
+                Log::warning('Échec calcul indemnisation sinistre automatique', ['message' => $e->getMessage()]);
             }
         }
 
@@ -195,6 +205,29 @@ class SubmissionController extends Controller
         $answers = $data['answers'] ?? [];
 
         $calculation = $pricingService->calculate($target, $answers);
+
+        if (! $calculation) {
+            return response()->json(['has_calculation' => false]);
+        }
+
+        return response()->json($calculation);
+    }
+
+    /**
+     * Calcule en temps réel l'indemnisation estimative d'un sinistre (Code CIMA & Marché Camerounais).
+     */
+    public function calculateClaim(Request $request, \App\Services\ClaimCompensationService $claimService): JsonResponse
+    {
+        $data = $request->validate([
+            'category' => ['required', 'string'],
+            'answers'  => ['nullable', 'array'],
+        ]);
+
+        $category = Category::where('slug', $data['category'])->first();
+        $target = $category ?: $data['category'];
+        $answers = $data['answers'] ?? [];
+
+        $calculation = $claimService->calculate($target, $answers);
 
         if (! $calculation) {
             return response()->json(['has_calculation' => false]);

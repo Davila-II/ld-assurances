@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
 Route::post('/quotes/calculate', [SubmissionController::class, 'calculateQuote']);
+Route::post('/claims/calculate', [SubmissionController::class, 'calculateClaim']);
 
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submissions');

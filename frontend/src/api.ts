@@ -354,6 +354,31 @@ export const calculateQuote = (categorySlug: string, answers: Record<string, unk
     body: JSON.stringify({ category: categorySlug, answers }),
   });
 
+// Simulation / calcul direct public de l'indemnisation d'un sinistre (Code CIMA)
+export const calculateClaim = (categorySlug: string, answers: Record<string, unknown>) =>
+  request<{
+    calculated?: boolean;
+    has_calculation?: boolean;
+    category?: string;
+    calculation?: QuoteCalculation | null;
+    indemnisation_estimee?: number;
+    indemnisation_estimee_formatted?: string;
+    franchise?: number;
+    franchise_formatted?: string;
+    montant_brut?: number;
+    montant_brut_formatted?: string;
+    regle_appliquee?: string;
+    regle_appliquee_en?: string;
+    notes_explicatives?: string;
+    notes_explicatives_en?: string;
+    breakdown?: Array<{ label: string; label_en?: string; amount: number; formatted: string }>;
+    message?: string;
+  }>('/claims/calculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: categorySlug, answers }),
+  });
+
 export const deleteBuilderCategory = (id: number) =>
   request<{ message: string }>(`/admin/form-builder/categories/${id}`, { method: 'DELETE' }, true);
 

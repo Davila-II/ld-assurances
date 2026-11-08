@@ -41,20 +41,32 @@ export interface QuoteBreakdownItem {
 }
 
 export interface QuoteCalculation {
-  driver: string;
+  driver?: string;
+  type?: 'quote' | 'claim';
   rule_id?: number | null;
   rule_name?: string | null;
-  prime_nette: number;
-  prime_nette_formatted: string;
-  accessoires: number;
-  accessoires_formatted: string;
-  taxe_unique: number;
-  taxe_unique_formatted: string;
+  prime_nette?: number;
+  prime_nette_formatted?: string;
+  accessoires?: number;
+  accessoires_formatted?: string;
+  taxe_unique?: number;
+  taxe_unique_formatted?: string;
   prime_ttc: number;
   prime_ttc_formatted: string;
   breakdown: QuoteBreakdownItem[];
   currency: string;
   calculated_at?: string;
+  // Champs spécifiques à l'indemnisation de sinistre
+  indemnisation_estimee?: number;
+  indemnisation_estimee_formatted?: string;
+  franchise?: number;
+  franchise_formatted?: string;
+  montant_brut?: number;
+  montant_brut_formatted?: string;
+  regle_appliquee?: string;
+  regle_appliquee_en?: string;
+  notes_explicatives?: string;
+  notes_explicatives_en?: string;
 }
 
 export interface PricingRule {

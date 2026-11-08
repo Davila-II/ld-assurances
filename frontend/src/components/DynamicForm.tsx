@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Calculator, Check, CheckCircle2, ChevronDown, ChevronUp, Download, Sparkles, X } from 'lucide-react';
-import { calculateQuote, downloadTrackPdf, getForm, submitForm, ApiError } from '../api';
+import { calculateQuote, calculateClaim, downloadTrackPdf, getForm, submitForm, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
 import type { Answers, Category, FormField, FormType, QuoteCalculation } from '../types';
@@ -159,10 +159,8 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
     };
   }, [category.slug, formType]);
 
-  // Calcul du devis en temps réel lorsque l'utilisateur répond aux questions
+  // Calcul du devis ou de l'indemnisation de sinistre en temps réel lorsque l'utilisateur répond aux questions
   useEffect(() => {
-    if (formType !== 'quote') return;
-
     let cancelled = false;
     const timer = setTimeout(async () => {
       // Filtrer les fichiers ou objets non sérialisables dans les réponses pour l'API
@@ -174,9 +172,16 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
 
       try {
         setCalculatingQuote(true);
-        const res = await calculateQuote(category.slug, cleanAnswers);
-        if (!cancelled && res.calculated && res.calculation) {
-          setQuoteCalculation(res.calculation);
+        if (formType === 'quote') {
+          const res = await calculateQuote(category.slug, cleanAnswers);
+          if (!cancelled && res.calculated && res.calculation) {
+            setQuoteCalculation(res.calculation);
+          }
+        } else if (formType === 'claim') {
+          const res = await calculateClaim(category.slug, cleanAnswers);
+          if (!cancelled && (res.has_calculation || res.indemnisation_estimee !== undefined)) {
+            setQuoteCalculation(res as unknown as QuoteCalculation);
+          }
         }
       } catch {
         // En cas d'erreur de calcul réseau silencieuse, on conserve l'ancien résultat

@@ -66,7 +66,8 @@ class FormController extends Controller
                 'sort_order',
             ]);
 
-        $hasPricing = ($type === 'quote' && ($category->pricing_rule_id !== null || in_array($category->slug, ['auto', 'voyage', 'habitation', 'personne', 'professionnelle', 'responsabilite-civile', 'autres'], true)));
+        $hasPricing = ($type === 'quote' && ($category->pricing_rule_id !== null || in_array($category->slug, ['auto', 'voyage', 'habitation', 'personne', 'professionnelle', 'responsabilite-civile', 'autres'], true)))
+            || ($type === 'claim');
 
         return response()->json([
             'category'  => [
