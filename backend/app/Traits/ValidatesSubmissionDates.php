@@ -29,6 +29,16 @@ trait ValidatesSubmissionDates
             $name = strtolower($key);
             $cat = strtolower($categorySlug ?? '');
 
+            // Seuls les champs de type date doivent être soumis à ces vérifications
+            $isDateField = str_ends_with($name, '_date')
+                || str_starts_with($name, 'date_')
+                || str_contains($name, 'birthdate')
+                || in_array($name, ['birth_date', 'date_naissance', 'incident_date', 'known_date', 'license_date', 'first_registration_date', 'departure_date', 'return_date', 'start_date', 'effective_date'], true);
+
+            if (! $isDateField) {
+                continue;
+            }
+
             // 1. Date de naissance du conducteur : le conducteur doit avoir au moins 21 ans
             $isDriverBirth = in_array($name, ['driver_birthdate', 'driver_birth_date', 'date_naissance_conducteur'], true)
                 || (($cat === 'auto' || str_contains($cat, 'auto')) && in_array($name, ['birth_date', 'driver_birthdate'], true))

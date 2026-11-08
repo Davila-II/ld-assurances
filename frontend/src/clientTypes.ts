@@ -31,6 +31,7 @@ export interface ClientSubmission {
   processed_at?: string | null;
   taken_at?: string | null;
   closed_at?: string | null;
+  quote_calculation?: import('./types').QuoteCalculation | null;
   admin_attachments?: AdminAttachment[];
 }
 

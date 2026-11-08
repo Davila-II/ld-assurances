@@ -47,6 +47,7 @@ class TrackingController extends Controller
             'updated_at'       => $submission->updated_at?->toIso8601String(),
             'taken_at'         => $submission->taken_at?->toIso8601String(),
             'processed_at'     => $submission->processed_at?->toIso8601String(),
+            'quote_calculation' => $submission->quote_calculation,
             'answers'          => $submission->answers,
             'form_snapshot'    => $submission->form_snapshot,
             'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
@@ -84,9 +85,22 @@ class TrackingController extends Controller
 
         $this->validateDateAnswers($data['answers'], $submission->category?->slug);
 
-        $submission->update([
-            'answers' => array_merge($submission->answers ?? [], $data['answers']),
-        ]);
+        $newAnswers = array_merge($submission->answers ?? [], $data['answers']);
+        $updatePayload = ['answers' => $newAnswers];
+
+        if ($submission->form_type === 'claim') {
+            $calc = app(\App\Services\ClaimCompensationService::class)->calculate($submission->category, $newAnswers);
+            if ($calc) {
+                $updatePayload['quote_calculation'] = $calc;
+            }
+        } else {
+            $calc = app(\App\Services\PricingService::class)->calculate($submission->category, $newAnswers);
+            if ($calc) {
+                $updatePayload['quote_calculation'] = $calc;
+            }
+        }
+
+        $submission->update($updatePayload);
 
         return response()->json([
             'reference'    => $submission->reference,

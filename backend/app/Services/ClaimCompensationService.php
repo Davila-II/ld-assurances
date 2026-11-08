@@ -102,42 +102,49 @@ class ClaimCompensationService
         $motif = '';
         $motifEn = '';
 
+        $respUpper = strtoupper($responsabilite);
+        $isFifty = str_contains($respUpper, '50%');
+        $isHundred = str_contains($respUpper, '100%');
+        $isZero = str_contains($respUpper, '0%') && ! $isFifty && ! $isHundred;
+
         if (stripos($garantie, 'Vol') !== false) {
             // Vol de Véhicule : valeur vénale - franchise 10%
             $franchise = $valeurVenale * 0.10;
             $indemnisation = max(0, $valeurVenale - $franchise);
             $motif = "Vol de véhicule : Indemnisation sur la base de la valeur vénale au jour du sinistre avec franchise légale de 10%.";
             $motifEn = "Vehicle theft: Compensation based on market value on incident day with mandatory 10% deductible.";
-        } elseif (stripos($garantie, 'Tiers') !== false && stripos($responsabilite, '100%') !== false) {
+        } elseif (stripos($garantie, 'Tiers') !== false && $isHundred) {
             // Tiers et 100% responsable : RC uniquement pour le tiers
             $indemnisation = 0;
             $franchise = 0;
             $motif = "Garantie Tiers avec responsabilité 100% : Les dommages matériels du véhicule assuré ne sont pas couverts.";
             $motifEn = "Third-Party warranty with 100% fault: Own vehicle property damage is not covered.";
-        } elseif (stripos($responsabilite, '0%') !== false || $isIda) {
-            // 0% Responsable (Convention IDA) : Remboursement intégral du devis
-            $franchise = 0;
-            $indemnisation = $devisExpert;
-            $motif = "Convention IDA (0% Responsable) : Prise en charge intégrale des réparations validées.";
-            $motifEn = "Direct Settlement (0% fault): Full coverage of certified repair estimate.";
-        } elseif (stripos($responsabilite, '50%') !== false) {
+        } elseif ($isFifty) {
             // 50% Responsable : partage 50% et franchise 10% de la valeur ou min 50 000
-            $franchise = max(50000, $valeurVenale * 0.05);
+            $franchise = max(50000, $valeurVenale * 0.10);
             $indemnisation = max(0, ($devisExpert / 2) - $franchise);
             $motif = "Partage des responsabilités (50%) : Moitié du montant du devis déduction faite de la franchise.";
             $motifEn = "Shared fault (50%): Half of repair estimate minus deductible.";
-        } else {
+        } elseif ($isHundred) {
             // 100% Responsable Tous Risques : devis - franchise fixe
             $franchise = 75000;
             $indemnisation = max(0, $devisExpert - $franchise);
             $motif = "Formule Tous Risques : Prise en charge des réparations avec déduction de la franchise contractuelle (75 000 FCFA).";
             $motifEn = "Comprehensive coverage: Repairs covered minus contractual deductible (75,000 FCFA).";
+        } else {
+            // 0% Responsable (Convention IDA) : Remboursement intégral du devis
+            $franchise = 0;
+            $indemnisation = $devisExpert;
+            $motif = "Convention IDA (0% Responsable) : Prise en charge intégrale des réparations validées.";
+            $motifEn = "Direct Settlement (0% fault): Full coverage of certified repair estimate.";
         }
+
+        $montantBrut = $isFifty ? ($devisExpert / 2) : (stripos($garantie, 'Vol') !== false ? $valeurVenale : $devisExpert);
 
         return [
             'regle_appliquee'       => 'Convention IDA & Code CIMA (Automobile)',
             'regle_appliquee_en'    => 'IDA Convention & CIMA Code (Motor)',
-            'montant_brut'          => $devisExpert,
+            'montant_brut'          => $montantBrut,
             'franchise'             => $franchise,
             'indemnisation_estimee' => $indemnisation,
             'notes_explicatives'    => $motif,

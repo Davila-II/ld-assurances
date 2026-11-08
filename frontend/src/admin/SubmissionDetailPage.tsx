@@ -325,39 +325,79 @@ export default function SubmissionDetailPage() {
           </section>
 
           {submission.quote_calculation && (
-            <section className="card" style={{ borderLeft: '4px solid #144983' }}>
+            <section className="card" style={{ borderLeft: submission.form_type === 'claim' ? '4px solid #1aaca8' : '4px solid #144983' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <h2 style={{ margin: 0, color: '#144983' }}>📊 {lang === 'en' ? 'Calculated Pricing (CIMA Code)' : 'Tarification calculée (Code CIMA)'}</h2>
-                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px', background: '#1aaca8' }}>
-                  {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
+                <h2 style={{ margin: 0, color: submission.form_type === 'claim' ? '#0f766e' : '#144983' }}>
+                  📊 {submission.form_type === 'claim'
+                    ? (lang === 'en' ? 'Claim Compensation Estimation (CIMA / IDA)' : 'Estimation Indemnisation Sinistre (CIMA / IDA)')
+                    : (lang === 'en' ? 'Calculated Pricing (CIMA Code)' : 'Tarification calculée (Code CIMA)')}
+                </h2>
+                <span className="badge badge-success" style={{ fontSize: '0.95rem', padding: '6px 12px', background: submission.form_type === 'claim' ? '#0f766e' : '#1aaca8' }}>
+                  {submission.form_type === 'claim'
+                    ? formatFcfa(submission.quote_calculation.indemnisation_estimee_formatted || submission.quote_calculation.indemnisation_estimee || submission.quote_calculation.prime_ttc)
+                    : formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
-                <div>
-                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                    {formatFcfa(submission.quote_calculation.prime_nette_formatted || submission.quote_calculation.prime_nette)}
+
+              {submission.form_type === 'claim' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f0fdfa', padding: '14px', borderRadius: '8px', border: '1px solid #ccfbf1' }}>
+                  <div>
+                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}</small>
+                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                      {formatFcfa(submission.quote_calculation.montant_brut_formatted || submission.quote_calculation.montant_brut)}
+                    </div>
+                  </div>
+                  <div>
+                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Deductible' : 'Franchise Déduite'}</small>
+                    <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#dc2626' }}>
+                      {formatFcfa(submission.quote_calculation.franchise_formatted || submission.quote_calculation.franchise)}
+                    </div>
+                  </div>
+                  <div>
+                    <small style={{ color: '#0f766e', fontWeight: 600 }}>{lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}</small>
+                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#0f766e' }}>
+                      {formatFcfa(submission.quote_calculation.indemnisation_estimee_formatted || submission.quote_calculation.indemnisation_estimee || submission.quote_calculation.prime_ttc)}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}</small>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                    {formatFcfa(submission.quote_calculation.accessoires_formatted || submission.quote_calculation.accessoires)}
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', margin: '16px 0', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
+                  <div>
+                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
+                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                      {formatFcfa(submission.quote_calculation.prime_nette_formatted || submission.quote_calculation.prime_nette)}
+                    </div>
+                  </div>
+                  <div>
+                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Accessories / Fees' : 'Accessoires / Vignette'}</small>
+                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                      {formatFcfa(submission.quote_calculation.accessoires_formatted || submission.quote_calculation.accessoires)}
+                    </div>
+                  </div>
+                  <div>
+                    <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}</small>
+                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                      {formatFcfa(submission.quote_calculation.taxe_unique_formatted || submission.quote_calculation.taxe_unique)}
+                    </div>
+                  </div>
+                  <div>
+                    <small style={{ color: '#144983', fontWeight: 600 }}>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
+                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#144983' }}>
+                      {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <small style={{ color: '#64748b' }}>{lang === 'en' ? 'Unique Tax (15%)' : 'Taxe Unique (15%)'}</small>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                    {formatFcfa(submission.quote_calculation.taxe_unique_formatted || submission.quote_calculation.taxe_unique)}
-                  </div>
-                </div>
-                <div>
-                  <small style={{ color: '#144983', fontWeight: 600 }}>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
-                  <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#144983' }}>
-                    {formatFcfa(submission.quote_calculation.prime_ttc_formatted || submission.quote_calculation.prime_ttc)}
-                  </div>
-                </div>
-              </div>
+              )}
+
+              {submission.quote_calculation.notes_explicatives && (
+                <p style={{ margin: '8px 0 12px', fontSize: '0.88rem', color: '#475569', background: '#f8fafc', padding: '8px 12px', borderRadius: '6px' }}>
+                  <strong>ℹ️ {lang === 'en' ? 'Rule Applied:' : 'Règle CIMA / Convention :'}</strong>{' '}
+                  {lang === 'en' && submission.quote_calculation.notes_explicatives_en
+                    ? submission.quote_calculation.notes_explicatives_en
+                    : submission.quote_calculation.notes_explicatives}
+                </p>
+              )}
+
               {submission.quote_calculation.breakdown?.length > 0 && (
                 <div className="table-responsive" style={{ margin: '10px 0 0' }}>
                   <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
@@ -373,7 +413,7 @@ export default function SubmissionDetailPage() {
                           <td style={{ padding: '8px 4px' }}>
                             {lang === 'en' && item.label_en ? item.label_en : item.label} {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
                           </td>
-                          <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
+                          <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600, color: item.amount < 0 ? '#dc2626' : undefined }}>
                             {formatFcfa(item.formatted || item.amount)}
                           </td>
                         </tr>

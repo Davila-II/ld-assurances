@@ -131,6 +131,7 @@ export interface TrackResult {
   updated_at: string;
   taken_at?: string | null;
   processed_at?: string | null;
+  quote_calculation?: QuoteCalculation | null;
   answers?: Record<string, unknown> | null;
   form_snapshot?: Array<{ name: string; label: string; field_type: string }> | null;
   admin_attachments?: Array<{

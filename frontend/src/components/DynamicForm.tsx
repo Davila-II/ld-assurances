@@ -875,6 +875,89 @@ export default function DynamicForm({ category, formType = 'claim', presetAnswer
         </div>
       )}
 
+      {/* Estimation de l'indemnisation de sinistre en direct (Convention IDA / Code CIMA Cameroun) */}
+      {formType === 'claim' && quoteCalculation && (
+        <div className={`quote-pricing-card ${quoteCalculation.indemnisation_estimee && quoteCalculation.indemnisation_estimee > 0 ? 'calculated' : ''}`} style={{ borderLeft: '4px solid #1aaca8' }}>
+          <div className="quote-pricing-header">
+            <h3 className="quote-pricing-title">
+              <Calculator size={18} style={{ color: '#1aaca8' }} />
+              {lang === 'en' ? 'Estimated Claim Compensation' : 'Estimation de votre indemnisation'}
+            </h3>
+            <span className="quote-pricing-badge" style={{ background: '#e6f7f5', color: '#0e7a6e' }}>
+              {calculatingQuote
+                ? (lang === 'en' ? 'Calculating…' : 'Calcul en cours…')
+                : (lang === 'en' ? (quoteCalculation.regle_appliquee_en || 'CIMA Standard') : (quoteCalculation.regle_appliquee || 'Barème CIMA / IDA'))}
+            </span>
+          </div>
+
+          <div className="quote-pricing-grid">
+            <div className="quote-pricing-item">
+              <small>{lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}</small>
+              <span>{formatFcfa(quoteCalculation.montant_brut_formatted || quoteCalculation.montant_brut)}</span>
+            </div>
+            <div className="quote-pricing-item">
+              <small>{lang === 'en' ? 'Applicable Deductible' : 'Franchise Applicable'}</small>
+              <span style={{ color: '#dc2626' }}>{formatFcfa(quoteCalculation.franchise_formatted || quoteCalculation.franchise)}</span>
+            </div>
+            <div className="quote-pricing-item highlight" style={{ background: '#f0fdfa', borderColor: '#99f6e4' }}>
+              <small style={{ color: '#0f766e' }}>{lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}</small>
+              <span style={{ color: '#0f766e' }}>{formatFcfa(quoteCalculation.indemnisation_estimee_formatted || quoteCalculation.indemnisation_estimee || quoteCalculation.prime_ttc)}</span>
+            </div>
+          </div>
+
+          {quoteCalculation.notes_explicatives && (
+            <div style={{ marginTop: '10px', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.85rem', color: '#334155' }}>
+              <strong>ℹ️ {lang === 'en' ? 'Principle:' : 'Principe appliqué :'}</strong> {lang === 'en' && quoteCalculation.notes_explicatives_en ? quoteCalculation.notes_explicatives_en : quoteCalculation.notes_explicatives}
+            </div>
+          )}
+
+          {quoteCalculation.breakdown && quoteCalculation.breakdown.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="quote-pricing-toggle-breakdown"
+                onClick={() => setShowCalculationBreakdown(!showCalculationBreakdown)}
+              >
+                {showCalculationBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {showCalculationBreakdown
+                  ? (lang === 'en' ? 'Hide details' : 'Masquer le détail du calcul')
+                  : (lang === 'en' ? 'View calculation details' : 'Voir le détail du calcul')}
+              </button>
+
+              {showCalculationBreakdown && (
+                <table className="quote-pricing-breakdown-table">
+                  <thead>
+                    <tr>
+                      <th>{lang === 'en' ? 'Item' : 'Poste de préjudice / Franchise'}</th>
+                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Amount' : 'Montant'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quoteCalculation.breakdown.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          {lang === 'en' && item.label_en ? item.label_en : item.label}{' '}
+                          {item.detail && <small style={{ color: '#64748b' }}>({item.detail})</small>}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: item.amount < 0 ? '#dc2626' : undefined }}>
+                          {formatFcfa(item.formatted || item.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
+
+          <p className="quote-pricing-note">
+            {lang === 'en'
+              ? 'Indemnity estimate calculated in compliance with the CIMA Code (Inter-African Conference of Insurance Markets) and Cameroon direct settlement conventions. The final indemnity remains subject to survey validation.'
+              : 'Estimation établie selon les règles de la Convention IDA et les dispositions du Code CIMA applicables au Cameroun. L\'indemnisation définitive sera confirmée après rapport d\'expertise.'}
+          </p>
+        </div>
+      )}
+
       {stepped ? (
         <div className="step-actions">
           {currentStep > 0 ? (

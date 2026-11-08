@@ -48,6 +48,7 @@ class SubmissionController extends Controller
             'processed_at'     => $submission->processed_at?->toIso8601String(),
             'taken_at'         => $submission->taken_at?->toIso8601String(),
             'closed_at'        => $submission->closed_at?->toIso8601String(),
+            'quote_calculation' => $submission->quote_calculation,
             'admin_attachments' => $submission->attachments->where('source', 'admin')->map(fn ($a) => [
                 'id'            => $a->id,
                 'original_name' => $a->original_name,
@@ -94,9 +95,22 @@ class SubmissionController extends Controller
 
         $this->validateDateAnswers($data['answers'], $submission->category?->slug);
 
-        $submission->update([
-            'answers' => array_merge($submission->answers ?? [], $data['answers']),
-        ]);
+        $newAnswers = array_merge($submission->answers ?? [], $data['answers']);
+        $updatePayload = ['answers' => $newAnswers];
+
+        if ($submission->form_type === 'claim') {
+            $calc = app(\App\Services\ClaimCompensationService::class)->calculate($submission->category, $newAnswers);
+            if ($calc) {
+                $updatePayload['quote_calculation'] = $calc;
+            }
+        } else {
+            $calc = app(\App\Services\PricingService::class)->calculate($submission->category, $newAnswers);
+            if ($calc) {
+                $updatePayload['quote_calculation'] = $calc;
+            }
+        }
+
+        $submission->update($updatePayload);
 
         return response()->json([
             'reference'    => $submission->reference,

@@ -1,13 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Edit2, X, Check, Paperclip } from 'lucide-react';
+import { Download, Edit2, X, Check, Paperclip, Calculator } from 'lucide-react';
 import { trackSubmission, downloadTrackPdf, downloadTrackAttachment, updateTrackSubmission, ApiError } from '../api';
 import { clientMe } from '../clientApi';
 import { getClientToken } from '../clientAuth';
 import { formatDate, formatSize } from '../admin/labels';
 import type { TrackResult } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+
+function formatFcfa(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === '') return '0 FCFA';
+  if (typeof val === 'string' && val.includes('FCFA')) return val;
+  const num = Number(val);
+  return isNaN(num) ? String(val) : num.toLocaleString('fr-FR') + ' FCFA';
+}
 
 export default function TrackPage() {
   const { lang, t } = useLanguage();
@@ -238,6 +245,87 @@ export default function TrackPage() {
                 {result.processed_at ? formatDate(result.processed_at, lang) : t('client.not_processed')}
               </dd>
             </dl>
+
+            {/* Estimation financière / Indemnisation (si disponible) */}
+            {result.quote_calculation && (
+              <div
+                style={{
+                  marginTop: '20px',
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    background: result.form_type === 'claim' ? '#f0fdfa' : '#f0f9ff',
+                    border: `1px solid ${result.form_type === 'claim' ? '#99f6e4' : '#bae6fd'}`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: result.form_type === 'claim' ? '#0f766e' : '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Calculator size={18} />
+                      {result.form_type === 'claim'
+                        ? (lang === 'en' ? 'Estimated Claim Compensation' : 'Estimation de votre indemnisation')
+                        : (lang === 'en' ? 'Indicative Quote Calculation' : 'Estimation tarifaire indicative')}
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: result.form_type === 'claim' ? '#ccfbf1' : '#e0f2fe',
+                        color: result.form_type === 'claim' ? '#115e59' : '#0284c7',
+                      }}
+                    >
+                      {lang === 'en'
+                        ? (result.quote_calculation.regle_appliquee_en || result.quote_calculation.rule_name || 'CIMA Standard')
+                        : (result.quote_calculation.regle_appliquee || result.quote_calculation.rule_name || 'Barème CIMA / Convention Cameroun')}
+                    </span>
+                  </div>
+
+                  {result.form_type === 'claim' ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                      <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #ccfbf1' }}>
+                        <small style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>{lang === 'en' ? 'Assessed Gross Damage' : 'Dommages Bruts Évalués'}</small>
+                        <strong style={{ fontSize: '1rem', color: '#1e293b' }}>{formatFcfa(result.quote_calculation.montant_brut_formatted || result.quote_calculation.montant_brut)}</strong>
+                      </div>
+                      <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #ccfbf1' }}>
+                        <small style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>{lang === 'en' ? 'Applicable Deductible' : 'Franchise Applicable'}</small>
+                        <strong style={{ fontSize: '1rem', color: '#dc2626' }}>{formatFcfa(result.quote_calculation.franchise_formatted || result.quote_calculation.franchise)}</strong>
+                      </div>
+                      <div style={{ background: '#ccfbf1', padding: '10px', borderRadius: '6px', border: '1px solid #5eead4' }}>
+                        <small style={{ color: '#0f766e', display: 'block', fontSize: '0.75rem', fontWeight: 600 }}>{lang === 'en' ? 'Estimated Net Indemnity' : 'Indemnité Nette Estimée'}</small>
+                        <strong style={{ fontSize: '1.1rem', color: '#0f766e' }}>{formatFcfa(result.quote_calculation.indemnisation_estimee_formatted || result.quote_calculation.indemnisation_estimee || result.quote_calculation.prime_ttc)}</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                      <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                        <small style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>{lang === 'en' ? 'Net Premium' : 'Prime Nette'}</small>
+                        <strong style={{ fontSize: '1rem', color: '#1e293b' }}>{formatFcfa(result.quote_calculation.prime_nette_formatted || result.quote_calculation.prime_nette)}</strong>
+                      </div>
+                      <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                        <small style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>{lang === 'en' ? 'Taxes & Fees' : 'Accessoires & Taxes'}</small>
+                        <strong style={{ fontSize: '1rem', color: '#1e293b' }}>{formatFcfa((result.quote_calculation.accessoires || 0) + (result.quote_calculation.taxe_unique || 0))}</strong>
+                      </div>
+                      <div style={{ background: '#e0f2fe', padding: '10px', borderRadius: '6px', border: '1px solid #7dd3fc' }}>
+                        <small style={{ color: '#0369a1', display: 'block', fontSize: '0.75rem', fontWeight: 600 }}>{lang === 'en' ? 'Total Premium (TTC)' : 'Prime Totale TTC'}</small>
+                        <strong style={{ fontSize: '1.1rem', color: '#0369a1' }}>{formatFcfa(result.quote_calculation.prime_ttc_formatted || result.quote_calculation.prime_ttc)}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {result.quote_calculation.notes_explicatives && (
+                    <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#475569' }}>
+                      <strong>ℹ️ {lang === 'en' ? 'Principle:' : 'Principe appliqué :'}</strong> {lang === 'en' && result.quote_calculation.notes_explicatives_en ? result.quote_calculation.notes_explicatives_en : result.quote_calculation.notes_explicatives}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Pièces jointes administratives reçues */}
             {result.admin_attachments && result.admin_attachments.length > 0 && (
