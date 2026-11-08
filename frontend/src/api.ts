@@ -370,16 +370,20 @@ export const updateSubmissionNotes = (id: number, notes: string) =>
     true
   );
 
-export const replyToSubmission = (id: number, message: string) =>
-  request<{ message: string }>(
-    `/admin/submissions/${id}/reply`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    },
-    true
-  );
+export async function replyToSubmission(id: number, message: string, attachments?: File[]): Promise<{ message: string }> {
+  const formData = new FormData();
+  formData.append('message', message);
+  if (attachments && attachments.length > 0) {
+    attachments.forEach((file) => formData.append('attachments[]', file));
+  }
+  // Ne pas setter Content-Type : le navigateur le fait automatiquement avec le boundary multipart
+  const res = await rawFetch(`/admin/submissions/${id}/reply`, { method: 'POST', body: formData }, true);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError((body as { message?: string }).message ?? messageFor(res.status), res.status);
+  }
+  return res.json() as Promise<{ message: string }>;
+}
 
 // Télécharge une pièce jointe en envoyant le jeton, puis propose le fichier au navigateur
 export async function downloadAttachment(id: number, filename: string): Promise<void> {

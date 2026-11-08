@@ -79,7 +79,9 @@ export default function RequestsPage() {
                 <th>{t('client.col_reference')}</th>
                 <th>{t('client.col_category')}</th>
                 <th>{t('client.col_date')}</th>
+                <th>{t('client.col_taken_at')}</th>
                 <th>{t('client.col_processed_at')}</th>
+                <th>{t('client.col_closed_at')}</th>
                 <th>{t('client.col_status')}</th>
                 <th style={{ textAlign: 'right' }}>{t('client.col_action')}</th>
               </tr>
@@ -94,6 +96,16 @@ export default function RequestsPage() {
                     })
                   : '-';
 
+                const takenStr = sub.taken_at
+                  ? new Date(sub.taken_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : t('client.taken_pending');
+
                 const processedStr = sub.processed_at
                   ? new Date(sub.processed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
                       year: 'numeric',
@@ -104,6 +116,16 @@ export default function RequestsPage() {
                     })
                   : (sub.status === 'received' ? t('client.not_processed') : '—');
 
+                const closedStr = sub.closed_at
+                  ? new Date(sub.closed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : t('client.closed_pending');
+
                 return (
                   <tr key={sub.reference}>
                     <td>
@@ -113,8 +135,14 @@ export default function RequestsPage() {
                       <strong>{lang === 'en' && sub.category_en ? sub.category_en : (sub.category || '-')}</strong>
                     </td>
                     <td>{dateStr}</td>
-                    <td style={{ color: sub.processed_at ? '#1aaca8' : '#64748b', fontWeight: sub.processed_at ? 600 : 400 }}>
+                    <td style={{ color: sub.taken_at ? '#2563eb' : '#94a3b8', fontSize: '0.85rem' }}>
+                      {takenStr}
+                    </td>
+                    <td style={{ color: sub.processed_at ? '#1aaca8' : '#94a3b8', fontWeight: sub.processed_at ? 600 : 400, fontSize: '0.85rem' }}>
                       {processedStr}
+                    </td>
+                    <td style={{ color: sub.closed_at ? (sub.status === 'rejected' ? '#dc2626' : '#16a34a') : '#94a3b8', fontSize: '0.85rem' }}>
+                      {closedStr}
                     </td>
                     <td>
                       <StatusBadge status={sub.status as SubmissionStatus} />
@@ -131,7 +159,7 @@ export default function RequestsPage() {
                             to={`/suivi?ref=${encodeURIComponent(sub.reference)}&edit=1`}
                             className="client-table-action-btn"
                             title={t('client.edit_btn')}
-                            style={{ color: '#144983', borderColor: '#144983' }}
+                            style={{ background: '#2563eb', color: '#fff' }}
                           >
                             <Edit2 size={13} />
                             <span>{t('client.edit_btn')}</span>
@@ -143,6 +171,7 @@ export default function RequestsPage() {
                           title={lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}
                           onClick={() => handleDownloadPdf(sub.reference)}
                           disabled={downloading === sub.reference}
+                          style={{ background: '#475569', color: '#fff' }}
                         >
                           <Download size={13} />
                           <span>{downloading === sub.reference ? '…' : 'PDF'}</span>
@@ -151,6 +180,7 @@ export default function RequestsPage() {
                           to={`/suivi?ref=${encodeURIComponent(sub.reference)}`}
                           className="client-table-action-btn"
                           title={t('client.track_btn')}
+                          style={{ background: '#0284c7', color: '#fff' }}
                         >
                           <ExternalLink size={13} />
                           <span>{t('client.track_btn')}</span>

@@ -1110,10 +1110,13 @@ h3 {
   background: var(--blue);
   color: #fff;
   text-decoration: none;
+  border: none;
   border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 500;
+  cursor: pointer;
   transition: opacity 0.15s;
+  white-space: nowrap;
 }
 
 .client-table-action-btn:hover {

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, Paperclip, X } from 'lucide-react';
 import { downloadAttachment, downloadSubmissionPdfAdmin, getSubmission, replyToSubmission, updateSubmissionNotes, updateSubmissionStatus } from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { AttachmentInfo, SubmissionDetail, SubmissionStatus } from '../types';
@@ -13,6 +13,15 @@ import {
   formatDate,
   formatSize,
 } from './labels';
+
+// Rang hiérarchique des statuts (plus le rang est élevé, plus le statut est avancé)
+const STATUS_RANK: Record<SubmissionStatus, number> = {
+  received:    1,
+  in_progress: 2,
+  answered:    3,
+  closed:      4,
+  rejected:    4,
+};
 
 function formatFcfa(val: number | string | undefined | null): string {
   if (val === undefined || val === null || val === '') return '0 FCFA';
@@ -38,10 +47,12 @@ export default function SubmissionDetailPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [notes, setNotes] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [savingNotes, setSavingNotes] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const [notesNotice, setNotesNotice] = useState('');
   const [replyNotice, setReplyNotice] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const invalidId = !id || !/^\d+$/.test(id);
   const submission =
     !invalidId && loadedSubmission?.id === id ? loadedSubmission.data : null;
@@ -82,6 +93,13 @@ export default function SubmissionDetailPage() {
 
   const saveStatus = async () => {
     if (!submission || !id) return;
+    // Vérification côté client de la hiérarchie des statuts
+    const currentRank = STATUS_RANK[submission.status] ?? 0;
+    const selectedRank = STATUS_RANK[newStatus] ?? 0;
+    if (selectedRank < currentRank) {
+      setActionError({ id, message: t('admin.detail_status_no_downgrade') });
+      return;
+    }
     if (newStatus === 'rejected' && !rejectionReason.trim()) {
       setActionError({ id, message: 'Veuillez saisir le motif du rejet (obligatoire).' });
       return;
@@ -98,6 +116,8 @@ export default function SubmissionDetailPage() {
           ...submission,
           status: result.status,
           rejection_reason: result.rejection_reason ?? (newStatus === 'rejected' ? rejectionReason.trim() : null),
+          taken_at: (result as typeof result & { taken_at?: string }).taken_at ?? submission.taken_at,
+          closed_at: (result as typeof result & { closed_at?: string }).closed_at ?? submission.closed_at,
         },
       });
       setNotice(newStatus === 'rejected' ? 'Dossier rejeté et client notifié par email avec le motif.' : 'Statut mis à jour.');
@@ -132,9 +152,10 @@ export default function SubmissionDetailPage() {
     setActionError(null);
 
     try {
-      await replyToSubmission(submission.id, replyMessage.trim());
-      setReplyMessage('');
-      setReplyNotice('Réponse envoyée au client.');
+      await replyToSubmission(submission.id, replyMessage.trim(), replyFiles);
+      setReplyFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setReplyNotice(lang === 'en' ? 'Reply sent to client.' : 'Réponse envoyée au client.');
     } catch (err) {
       setActionError({ id, message: errorMessage(err) });
     } finally {
@@ -226,6 +247,20 @@ export default function SubmissionDetailPage() {
                   <dd style={{ color: '#1aaca8', fontWeight: 600 }}>{formatDate(submission.processed_at, lang)}</dd>
                 </div>
               )}
+              {submission.taken_at && (
+                <div className="answer">
+                  <dt>{t('admin.detail_taken_at')}</dt>
+                  <dd style={{ color: '#2563eb', fontWeight: 600 }}>{formatDate(submission.taken_at, lang)}</dd>
+                </div>
+              )}
+              {submission.closed_at && (
+                <div className="answer">
+                  <dt>{t('admin.detail_closed_at')}</dt>
+                  <dd style={{ color: submission.status === 'rejected' ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                    {formatDate(submission.closed_at, lang)}
+                  </dd>
+                </div>
+              )}
             </dl>
           </section>
 
@@ -246,11 +281,17 @@ export default function SubmissionDetailPage() {
                 value={newStatus}
                 onChange={(event) => setNewStatus(event.target.value as SubmissionStatus)}
               >
-                {STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {t(`status.${status}` as const) || STATUS_LABELS[status]}
-                  </option>
-                ))}
+                {STATUSES.map((status) => {
+                  const currentRank = STATUS_RANK[submission.status] ?? 0;
+                  const optionRank = STATUS_RANK[status] ?? 0;
+                  const isDowngrade = optionRank < currentRank;
+                  return (
+                    <option key={status} value={status} disabled={isDowngrade}>
+                      {t(`status.${status}` as const) || STATUS_LABELS[status]}
+                      {isDowngrade ? ' (—)' : ''}
+                    </option>
+                  );
+                })}
               </select>
               <button
                 type="button"
@@ -351,7 +392,7 @@ export default function SubmissionDetailPage() {
           )}
 
           <section className="card">
-            <h2>{t('admin.detail_answers_title')}</h2>
+            <h2>{submission.form_type === 'claim' ? t('admin.detail_answers_title_claim') : t('admin.detail_answers_title_quote')}</h2>
             <dl className="answers">
               {submission.answers.map((answer, index) => (
                 <div className="answer" key={`${answer.label}-${index}`}>
@@ -391,15 +432,81 @@ export default function SubmissionDetailPage() {
                 placeholder={t('admin.detail_reply_placeholder')}
               />
             </div>
-            <button
-              type="button"
-              className="btn"
-              disabled={sendingReply || !replyMessage.trim()}
-              onClick={sendReply}
-            >
-              {sendingReply ? (lang === 'en' ? 'Sending…' : 'Envoi…') : t('admin.detail_send_reply')}
-            </button>
-            {replyNotice && <p className="notice" role="status">{replyNotice}</p>}
+
+            <div className="field" style={{ marginTop: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                <Paperclip size={16} />
+                <span>{t('admin.detail_reply_attachments')}</span>
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                style={{ marginTop: '6px' }}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setReplyFiles(Array.from(e.target.files));
+                  }
+                }}
+              />
+              <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                {t('admin.detail_reply_attachments_hint')}
+              </small>
+
+              {replyFiles.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {replyFiles.map((f, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#f1f5f9',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {f.name} ({formatSize(f.size, lang)})
+                      <button
+                        type="button"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                        onClick={() => setReplyFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <X size={14} color="#ef4444" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={sendingReply || !replyMessage.trim()}
+                onClick={sendReply}
+              >
+                {sendingReply ? (lang === 'en' ? 'Sending…' : 'Envoi…') : t('admin.detail_send_reply')}
+              </button>
+              {replyMessage && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={sendingReply}
+                  onClick={() => {
+                    setReplyMessage('');
+                    setReplyFiles([]);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                >
+                  {t('admin.detail_reply_cancel_edit')}
+                </button>
+              )}
+            </div>
+            {replyNotice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{replyNotice}</p>}
           </section>
 
           <section className="card">
