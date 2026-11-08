@@ -29,6 +29,14 @@ export type PricingDriver =
   | 'professionnelle'
   | 'responsabilite_civile'
   | 'autres'
+  | 'sinistre_auto'
+  | 'sinistre_habitation'
+  | 'sinistre_sante'
+  | 'sinistre_rc'
+  | 'sinistre_professionnelle'
+  | 'sinistre_voyage'
+  | 'sinistre_agricole'
+  | 'sinistre_autres'
   | 'custom';
 
 export interface QuoteBreakdownItem {

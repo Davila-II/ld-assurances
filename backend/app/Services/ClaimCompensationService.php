@@ -3,20 +3,66 @@
 namespace App\Services;
 
 use App\Models\Category;
+use App\Models\PricingRule;
 use Illuminate\Support\Str;
 
 class ClaimCompensationService
 {
     /**
-     * Calcule l'estimation de l'indemnisation pour un sinistre selon les règles CIMA / Marché Camerounais.
+     * Résout la règle d'indemnisation de sinistre à partir d'une catégorie, d'une règle ou d'un slug.
      */
-    public function calculate(Category|string|null $target, array $answers): ?array
+    public function resolvePricingRule(Category|PricingRule|string|null $target): ?PricingRule
     {
+        if ($target instanceof PricingRule) {
+            return $target;
+        }
+
+        if ($target instanceof Category) {
+            if ($target->pricing_rule_id) {
+                return PricingRule::find($target->pricing_rule_id);
+            }
+            return PricingRule::where('code', $target->slug)
+                ->orWhere('code', str_replace('-', '_', $target->slug))
+                ->orWhere('driver', $target->slug)
+                ->orWhere('driver', str_replace('-', '_', $target->slug))
+                ->first();
+        }
+
+        if (is_string($target)) {
+            $cat = Category::where('slug', $target)->first();
+            if ($cat && $cat->pricing_rule_id) {
+                return PricingRule::find($cat->pricing_rule_id);
+            }
+            return PricingRule::where('code', $target)
+                ->orWhere('code', str_replace('-', '_', $target))
+                ->orWhere('driver', $target)
+                ->orWhere('driver', str_replace('-', '_', $target))
+                ->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Calcule l'estimation de l'indemnisation pour un sinistre selon les règles CIMA / Marché Camerounais
+     * configurées en base de données dans PricingRule.
+     */
+    public function calculate(Category|PricingRule|string|null $target, array $answers): ?array
+    {
+        $rule = $this->resolvePricingRule($target);
+        $params = $rule?->parameters ?? [];
+
         $slug = '';
         if ($target instanceof Category) {
             $slug = $target->slug;
+        } elseif ($target instanceof PricingRule) {
+            $slug = $target->driver ?: $target->code;
         } elseif (is_string($target)) {
             $slug = $target;
+        }
+
+        if ($rule && $rule->driver) {
+            $slug = $rule->driver;
         }
 
         // Harmonisation du slug ou type
@@ -28,21 +74,21 @@ class ClaimCompensationService
         $result = null;
 
         if (str_contains($slug, 'auto')) {
-            $result = $this->calculateAuto($answers);
+            $result = $this->calculateAuto($answers, $params);
         } elseif (str_contains($slug, 'habitation')) {
-            $result = $this->calculateHabitation($answers);
+            $result = $this->calculateHabitation($answers, $params);
         } elseif (str_contains($slug, 'sante')) {
-            $result = $this->calculateSante($answers);
+            $result = $this->calculateSante($answers, $params);
         } elseif (str_contains($slug, 'rc') || str_contains($slug, 'responsabilite')) {
-            $result = $this->calculateRc($answers);
+            $result = $this->calculateRc($answers, $params);
         } elseif (str_contains($slug, 'professionnelle') || str_contains($slug, 'entreprise')) {
-            $result = $this->calculateProfessionnelle($answers);
+            $result = $this->calculateProfessionnelle($answers, $params);
         } elseif (str_contains($slug, 'voyage') || str_contains($slug, 'transport')) {
-            $result = $this->calculateTransportVoyage($answers);
+            $result = $this->calculateTransportVoyage($answers, $params);
         } elseif (str_contains($slug, 'agricole')) {
-            $result = $this->calculateAgricole($answers);
+            $result = $this->calculateAgricole($answers, $params);
         } else {
-            $result = $this->calculateAutres($answers);
+            $result = $this->calculateAutres($answers, $params);
         }
 
         if (!$result) {
@@ -63,9 +109,12 @@ class ClaimCompensationService
         return array_merge([
             'has_calculation'                  => true,
             'type'                             => 'claim',
+            'driver'                           => $rule?->driver ?: $slug,
+            'rule_id'                          => $rule?->id,
+            'rule_name'                        => $rule?->name,
             'currency'                         => 'FCFA',
-            'regle_appliquee'                  => $result['regle_appliquee'] ?? 'Barème CIMA / Convention Cameroun',
-            'regle_appliquee_en'               => $result['regle_appliquee_en'] ?? 'CIMA Code / Cameroon Convention',
+            'regle_appliquee'                  => $result['regle_appliquee'] ?? ($rule?->name ?: 'Barème CIMA / Convention Cameroun'),
+            'regle_appliquee_en'               => $result['regle_appliquee_en'] ?? ($rule?->name_en ?: 'CIMA Code / Cameroon Convention'),
             'montant_brut'                     => $montantBrut,
             'montant_brut_formatted'           => number_format($montantBrut, 0, ',', ' ') . ' FCFA',
             'franchise'                        => $franchise,
@@ -83,18 +132,25 @@ class ClaimCompensationService
     /**
      * 1. Sinistre Automobile (Convention IDA Cameroun & Formules)
      */
-    private function calculateAuto(array $answers): array
+    private function calculateAuto(array $answers, array $params = []): array
     {
+        $defaultDevis = (float) ($params['default_devis_expert'] ?? 500000);
+        $defaultValeur = (float) ($params['default_valeur_venale'] ?? 3000000);
+        $franchiseVolRate = (float) ($params['franchise_vol_rate'] ?? 0.10);
+        $franchiseTousRisques = (float) ($params['franchise_fixe_tous_risques'] ?? 75000);
+        $franchisePartageRate = (float) ($params['franchise_partage_rate'] ?? 0.10);
+        $franchisePartageMin = (float) ($params['franchise_partage_min'] ?? 50000);
+
         // Données d'entrée extraites du formulaire ou saisies
         $devisExpert = (float) ($answers['devis_expert'] ?? $answers['estimated_value'] ?? $answers['cout_devis_expert'] ?? 0);
-        $valeurVenale = (float) ($answers['valeur_venale'] ?? $answers['vehicle_value'] ?? 3000000);
+        $valeurVenale = (float) ($answers['valeur_venale'] ?? $answers['vehicle_value'] ?? $defaultValeur);
         $garantie = (string) ($answers['type_garantie'] ?? $answers['garantie'] ?? 'Tous_Risques');
         $responsabilite = (string) ($answers['choc_responsabilite'] ?? $answers['responsabilite'] ?? '0%_Responsable');
 
         // Cas par défaut si valeurs non renseignées : si un constat/IDA est coché
         $isIda = !empty($answers['ida_convention']);
         if ($devisExpert <= 0) {
-            $devisExpert = 500000; // estimation plancher indicative
+            $devisExpert = $defaultDevis;
         }
 
         $franchise = 0;
@@ -108,11 +164,12 @@ class ClaimCompensationService
         $isZero = str_contains($respUpper, '0%') && ! $isFifty && ! $isHundred;
 
         if (stripos($garantie, 'Vol') !== false) {
-            // Vol de Véhicule : valeur vénale - franchise 10%
-            $franchise = $valeurVenale * 0.10;
+            // Vol de Véhicule : valeur vénale - franchise %
+            $franchise = $valeurVenale * $franchiseVolRate;
             $indemnisation = max(0, $valeurVenale - $franchise);
-            $motif = "Vol de véhicule : Indemnisation sur la base de la valeur vénale au jour du sinistre avec franchise légale de 10%.";
-            $motifEn = "Vehicle theft: Compensation based on market value on incident day with mandatory 10% deductible.";
+            $pct = round($franchiseVolRate * 100);
+            $motif = "Vol de véhicule : Indemnisation sur la base de la valeur vénale au jour du sinistre avec franchise légale de {$pct}%.";
+            $motifEn = "Vehicle theft: Compensation based on market value on incident day with mandatory {$pct}% deductible.";
         } elseif (stripos($garantie, 'Tiers') !== false && $isHundred) {
             // Tiers et 100% responsable : RC uniquement pour le tiers
             $indemnisation = 0;
@@ -120,17 +177,18 @@ class ClaimCompensationService
             $motif = "Garantie Tiers avec responsabilité 100% : Les dommages matériels du véhicule assuré ne sont pas couverts.";
             $motifEn = "Third-Party warranty with 100% fault: Own vehicle property damage is not covered.";
         } elseif ($isFifty) {
-            // 50% Responsable : partage 50% et franchise 10% de la valeur ou min 50 000
-            $franchise = max(50000, $valeurVenale * 0.10);
+            // 50% Responsable : partage 50% et franchise % de la valeur ou min FCFA
+            $franchise = max($franchisePartageMin, $valeurVenale * $franchisePartageRate);
             $indemnisation = max(0, ($devisExpert / 2) - $franchise);
             $motif = "Partage des responsabilités (50%) : Moitié du montant du devis déduction faite de la franchise.";
             $motifEn = "Shared fault (50%): Half of repair estimate minus deductible.";
         } elseif ($isHundred) {
             // 100% Responsable Tous Risques : devis - franchise fixe
-            $franchise = 75000;
+            $franchise = $franchiseTousRisques;
             $indemnisation = max(0, $devisExpert - $franchise);
-            $motif = "Formule Tous Risques : Prise en charge des réparations avec déduction de la franchise contractuelle (75 000 FCFA).";
-            $motifEn = "Comprehensive coverage: Repairs covered minus contractual deductible (75,000 FCFA).";
+            $fmtFranchise = number_format($franchiseTousRisques, 0, ',', ' ');
+            $motif = "Formule Tous Risques : Prise en charge des réparations avec déduction de la franchise contractuelle ({$fmtFranchise} FCFA).";
+            $motifEn = "Comprehensive coverage: Repairs covered minus contractual deductible ({$fmtFranchise} FCFA).";
         } else {
             // 0% Responsable (Convention IDA) : Remboursement intégral du devis
             $franchise = 0;
@@ -160,12 +218,16 @@ class ClaimCompensationService
     /**
      * 2. Sinistre Habitation (Règle proportionnelle - Article 32 Code CIMA)
      */
-    private function calculateHabitation(array $answers): array
+    private function calculateHabitation(array $answers, array $params = []): array
     {
-        $degats = (float) ($answers['estimated_value'] ?? $answers['montant_degats_expert'] ?? 1000000);
-        $valeurDeclaree = (float) ($answers['valeur_declaree_contrat'] ?? 15000000);
-        $valeurReelle = (float) ($answers['valeur_reelle_biens'] ?? 15000000);
-        $franchise = (float) ($answers['franchise_contractuelle'] ?? 50000);
+        $defaultFranchise = (float) ($params['default_franchise_contractuelle'] ?? 50000);
+        $defaultDegats = (float) ($params['default_degats'] ?? 1000000);
+        $defaultValeurReelle = (float) ($params['default_valeur_reelle'] ?? 15000000);
+
+        $degats = (float) ($answers['estimated_value'] ?? $answers['montant_degats_expert'] ?? $defaultDegats);
+        $valeurDeclaree = (float) ($answers['valeur_declaree_contrat'] ?? $defaultValeurReelle);
+        $valeurReelle = (float) ($answers['valeur_reelle_biens'] ?? $defaultValeurReelle);
+        $franchise = (float) ($answers['franchise_contractuelle'] ?? $defaultFranchise);
 
         if ($valeurReelle > 0 && $valeurDeclaree < $valeurReelle) {
             // Sous-assurance : application de l'article 32 CIMA
@@ -200,11 +262,15 @@ class ClaimCompensationService
     /**
      * 3. Santé & Corporel (Tiers-Payant et Barème CIMA Incapacité)
      */
-    private function calculateSante(array $answers): array
+    private function calculateSante(array $answers, array $params = []): array
     {
+        $defaultTaux = (float) ($params['taux_couverture_default'] ?? 80);
+        $defaultPlafond = (float) ($params['plafond_annuel_default'] ?? 2000000);
+        $capitalBaseCima = (float) ($params['capital_base_cima_ipp'] ?? 2000000);
+
         $facture = (float) ($answers['facture_clinique_agreee'] ?? $answers['medical_expenses'] ?? 250000);
-        $tauxCouverture = (float) ($answers['taux_couverture'] ?? 80);
-        $plafondRestant = (float) ($answers['plafond_annuel_restant'] ?? 2000000);
+        $tauxCouverture = (float) ($answers['taux_couverture'] ?? $defaultTaux);
+        $plafondRestant = (float) ($answers['plafond_annuel_restant'] ?? $defaultPlafond);
         $isAccidentCorporel = !empty($answers['injured']) && $answers['injured'] === 'Oui';
         $tauxIpp = (float) ($answers['taux_ipp'] ?? 0);
 
@@ -215,7 +281,6 @@ class ClaimCompensationService
 
         $indemniteCorporelle = 0;
         if ($isAccidentCorporel && $tauxIpp > 0) {
-            $capitalBaseCima = 2000000;
             $indemniteCorporelle = $capitalBaseCima * ($tauxIpp / 100);
         }
 
@@ -242,19 +307,24 @@ class ClaimCompensationService
     /**
      * 4. Sinistre Professionnel (Perte d'exploitation selon états financiers OHADA)
      */
-    private function calculateProfessionnelle(array $answers): array
+    private function calculateProfessionnelle(array $answers, array $params = []): array
     {
+        $tauxMargeDefault = (float) ($params['taux_marge_brute_default'] ?? 0.30);
+        $franchiseJours = (int) ($params['franchise_jours'] ?? 3);
+        $joursParMois = (int) ($params['jours_par_mois'] ?? 30);
+
         $caN1 = (float) ($answers['chiffre_affaires_n_moins_1'] ?? 50000000);
         $caSinistre = (float) ($answers['chiffre_affaires_sinistre'] ?? 30000000);
-        $tauxMarge = (float) ($answers['taux_marge_brute'] ?? 0.30);
+        $tauxMarge = (float) ($answers['taux_marge_brute'] ?? $tauxMargeDefault);
         $chargesFixes = (float) ($answers['charges_fixes_permanentes'] ?? $answers['business_value'] ?? 2000000);
 
         $perteCa = max(0, $caN1 - $caSinistre);
         $perteMarge = $perteCa * $tauxMarge;
         $indemnisationBrute = $perteMarge + $chargesFixes;
 
-        // Franchise 3 jours sur 30 jours (10%)
-        $franchise = $indemnisationBrute * (3 / 30);
+        // Franchise jours
+        $franchiseRatio = $joursParMois > 0 ? ($franchiseJours / $joursParMois) : 0.10;
+        $franchise = $indemnisationBrute * $franchiseRatio;
         $net = max(0, $indemnisationBrute - $franchise);
 
         return [
@@ -263,12 +333,12 @@ class ClaimCompensationService
             'montant_brut'          => $indemnisationBrute,
             'franchise'             => $franchise,
             'indemnisation_estimee' => $net,
-            'notes_explicatives'    => "Calcul basé sur la baisse de marge brute certifiée et le maintien des charges fixes, déduction faite de la franchise de 3 jours.",
-            'notes_explicatives_en' => "Calculated based on gross margin loss and continuing fixed expenses, minus 3 days franchise.",
+            'notes_explicatives'    => "Calcul basé sur la baisse de marge brute certifiée et le maintien des charges fixes, déduction faite de la franchise de {$franchiseJours} jours.",
+            'notes_explicatives_en' => "Calculated based on gross margin loss and continuing fixed expenses, minus {$franchiseJours} days franchise.",
             'breakdown'             => [
                 ['label' => 'Baisse de marge brute d\'exploitation', 'label_en' => 'Operating gross margin drop', 'amount' => $perteMarge],
                 ['label' => 'Prise en charge des charges fixes (salaires, loyers)', 'label_en' => 'Standing charges coverage (wages, rent)', 'amount' => $chargesFixes],
-                ['label' => 'Franchise contractuelle (3 jours d\'activité)', 'label_en' => 'Contractual waiting period (3 days)', 'amount' => -$franchise],
+                ['label' => "Franchise contractuelle ({$franchiseJours} jours d'activité)", 'label_en' => "Contractual waiting period ({$franchiseJours} days)", 'amount' => -$franchise],
             ],
         ];
     }
@@ -276,10 +346,10 @@ class ClaimCompensationService
     /**
      * 5. Responsabilité Civile (Indemnisation intégrale du tiers lésé)
      */
-    private function calculateRc(array $answers): array
+    private function calculateRc(array $answers, array $params = []): array
     {
+        $franchiseAssure = (float) ($params['franchise_rc_assure'] ?? ($answers['franchise_assure'] ?? 50000));
         $devisTiers = (float) ($answers['devis_reparation_tiers'] ?? $answers['estimated_value'] ?? 800000);
-        $franchiseAssure = (float) ($answers['franchise_assure'] ?? 50000);
 
         return [
             'regle_appliquee'       => 'Code CIMA - Responsabilité Civile (Réparation Intégrale)',
@@ -300,23 +370,26 @@ class ClaimCompensationService
     /**
      * 6. Transport & Voyage (Maritime, Terrestre et Aérien)
      */
-    private function calculateTransportVoyage(array $answers): array
+    private function calculateTransportVoyage(array $answers, array $params = []): array
     {
+        $dtsKg = (float) ($params['dts_par_kg_fcfa'] ?? 13500);
+        $franchiseRate = (float) ($params['franchise_marchandises_rate'] ?? 0.05);
+
         $valeurFacture = (float) ($answers['cargo_value'] ?? $answers['valeur_facture_marchandise'] ?? 1500000);
         $fret = (float) ($answers['cout_fret'] ?? 150000);
         $typeTransport = (string) ($answers['type_transport'] ?? 'Terrestre_National');
         $poidsPerdu = (float) ($answers['poids_perdu_kg'] ?? 0);
 
         if (stripos($typeTransport, 'Aerien') !== false && $poidsPerdu > 0) {
-            $plafondParKg = 13500; // équivalent DTS en FCFA
-            $indemnisation = $poidsPerdu * $plafondParKg;
+            $indemnisation = $poidsPerdu * $dtsKg;
             $montantBrut = $indemnisation;
             $franchise = 0;
-            $note = "Convention internationale transport aérien : Plafond légal de 13 500 FCFA par kilogramme de bagage perdu.";
-            $noteEn = "International air convention: Legal cap of 13,500 FCFA per kg of lost luggage.";
+            $fmtDts = number_format($dtsKg, 0, ',', ' ');
+            $note = "Convention internationale transport aérien : Plafond légal de {$fmtDts} FCFA par kilogramme de bagage perdu.";
+            $noteEn = "International air convention: Legal cap of {$fmtDts} FCFA per kg of lost luggage.";
         } else {
             $montantBrut = $valeurFacture + $fret;
-            $franchise = $montantBrut * 0.05; // 5% franchise avarie transport
+            $franchise = $montantBrut * $franchiseRate;
             $indemnisation = max(0, $montantBrut - $franchise);
             $note = "Transport Terrestre / Maritime : Valeur marchande déclarée majorée des frais de fret proratisés.";
             $noteEn = "Inland / Sea Transit: Declared invoice value plus prorated freight costs.";
@@ -341,18 +414,24 @@ class ClaimCompensationService
     /**
      * 7. Sinistre Agricole (Pertes de récoltes & aléas climatiques)
      */
-    private function calculateAgricole(array $answers): array
+    private function calculateAgricole(array $answers, array $params = []): array
     {
+        $franchiseRate = (float) ($params['franchise_indicielle_rate'] ?? 0.15);
+        $prixDefaut = (float) ($params['prix_marche_defaut'] ?? 250000);
+        $rendementDefaut = (float) ($params['rendement_moyen_defaut'] ?? 2.5);
+
         $superficie = (float) ($answers['superficie_hectares'] ?? 5);
-        $rendementMoyen = (float) ($answers['rendement_moyen_historique'] ?? 2.5); // tonnes/ha
-        $prixMarche = (float) ($answers['prix_marquet_cameroun'] ?? 250000); // FCFA/tonne
-        $tauxPerte = (float) ($answers['taux_perte_expert'] ?? 70); // % de perte
+        $rendementMoyen = (float) ($answers['rendement_moyen_historique'] ?? $rendementDefaut);
+        $prixMarche = (float) ($answers['prix_marquet_cameroun'] ?? $prixDefaut);
+        $tauxPerte = (float) ($answers['taux_perte_expert'] ?? 70);
 
         $productionAttendue = $superficie * $rendementMoyen;
         $valeurRecolte = $productionAttendue * $prixMarche;
         $indemnisationBrute = $valeurRecolte * ($tauxPerte / 100);
-        $franchise = $indemnisationBrute * 0.15; // 15% franchise indicielle agricole
+        $franchise = $indemnisationBrute * $franchiseRate;
         $net = max(0, $indemnisationBrute - $franchise);
+
+        $pctFranchise = round($franchiseRate * 100);
 
         return [
             'regle_appliquee'       => 'Assurance Agricole Indicielle & Pertes de Récolte',
@@ -360,12 +439,12 @@ class ClaimCompensationService
             'montant_brut'          => $indemnisationBrute,
             'franchise'             => $franchise,
             'indemnisation_estimee' => $net,
-            'notes_explicatives'    => "Calcul du déficit de rendement par rapport à l'historique de production avec franchise indicielle de 15%.",
-            'notes_explicatives_en' => "Calculated on yield loss vs historical benchmark with 15% index deductible.",
+            'notes_explicatives'    => "Calcul du déficit de rendement par rapport à l'historique de production avec franchise indicielle de {$pctFranchise}%.",
+            'notes_explicatives_en' => "Calculated on yield loss vs historical benchmark with {$pctFranchise}% index deductible.",
             'breakdown'             => [
                 ['label' => 'Valeur financière de la récolte attendue', 'label_en' => 'Expected crop market value', 'amount' => $valeurRecolte],
                 ['label' => 'Perte brute évaluée (' . $tauxPerte . '%)', 'label_en' => 'Assessed gross loss (' . $tauxPerte . '%)', 'amount' => $indemnisationBrute],
-                ['label' => 'Franchise agricole (15%)', 'label_en' => 'Agricultural deductible (15%)', 'amount' => -$franchise],
+                ['label' => "Franchise agricole ({$pctFranchise}%)", 'label_en' => "Agricultural deductible ({$pctFranchise}%)", 'amount' => -$franchise],
             ],
         ];
     }
@@ -373,22 +452,27 @@ class ClaimCompensationService
     /**
      * 8. Autres Sinistres (ex : Assurance Scolaire / Plafonds)
      */
-    private function calculateAutres(array $answers): array
+    private function calculateAutres(array $answers, array $params = []): array
     {
-        $frais = (float) ($answers['frais_medicaux_eleve'] ?? $answers['estimated_value'] ?? 150000);
-        $plafond = (float) ($answers['plafond_garantie_scolaire'] ?? 500000);
+        $plafond = (float) ($params['plafond_indemnisation_defaut'] ?? 500000);
+        $franchiseBase = (float) ($params['franchise_defaut'] ?? 0);
 
-        $indemnisation = min($frais, $plafond);
-        $excedent = max(0, $frais - $plafond);
+        $frais = (float) ($answers['frais_medicaux_eleve'] ?? $answers['estimated_value'] ?? 150000);
+        $plafondSaisi = (float) ($answers['plafond_garantie_scolaire'] ?? $plafond);
+
+        $indemnisation = min($frais, $plafondSaisi);
+        $excedent = max(0, $frais - $plafondSaisi) + $franchiseBase;
+
+        $fmtPlafond = number_format($plafondSaisi, 0, ',', ' ');
 
         return [
             'regle_appliquee'       => 'Garantie Individuelle Accidents & Prévoyance Scolaire',
             'regle_appliquee_en'    => 'Personal Accident & School Insurance Policy',
             'montant_brut'          => $frais,
             'franchise'             => $excedent,
-            'indemnisation_estimee' => $indemnisation,
-            'notes_explicatives'    => "Prise en charge intégrale des frais médicaux dans la limite du plafond garanti contractuel (500 000 FCFA).",
-            'notes_explicatives_en' => "Full coverage of medical expenses up to the contractual policy limit (500,000 FCFA).",
+            'indemnisation_estimee' => max(0, $indemnisation - $franchiseBase),
+            'notes_explicatives'    => "Prise en charge intégrale des frais médicaux dans la limite du plafond garanti contractuel ({$fmtPlafond} FCFA).",
+            'notes_explicatives_en' => "Full coverage of medical expenses up to the contractual policy limit ({$fmtPlafond} FCFA).",
             'breakdown'             => [
                 ['label' => 'Total des frais réels engagés', 'label_en' => 'Total actual expenses incurred', 'amount' => $frais],
                 ['label' => 'Montant indemnisé (dans la limite du plafond)', 'label_en' => 'Indemnified amount (within limit)', 'amount' => $indemnisation],

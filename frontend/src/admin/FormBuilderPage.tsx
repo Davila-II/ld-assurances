@@ -981,20 +981,18 @@ export default function FormBuilderPage() {
                         <span className="slider round" />
                       </label>
 
-                      {formType === 'quote' && (
-                        <button
-                          type="button"
-                          className="cat-btn-icon"
-                          title="Paramétrer le calcul de prime"
-                          style={{ color: cat.pricing_rule ? '#0284c7' : '#64748b' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openPricingModal(cat);
-                          }}
-                        >
-                          <Calculator size={14} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="cat-btn-icon"
+                        title={formType === 'claim' ? 'Paramétrer le calcul d\'indemnisation CIMA' : 'Paramétrer le calcul de prime'}
+                        style={{ color: cat.pricing_rule ? (formType === 'claim' ? '#0f766e' : '#0284c7') : '#64748b' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPricingModal(cat);
+                        }}
+                      >
+                        <Calculator size={14} />
+                      </button>
 
                       <button
                         type="button"
@@ -1041,16 +1039,16 @@ export default function FormBuilderPage() {
                       <span className={`badge ${selectedCategory.is_active ? 'badge-success' : 'badge-warning'}`}>
                         {selectedCategory.is_active ? t('builder.active_on_site') : t('builder.deactivated')}
                       </span>
-                      {formType === 'quote' && (
-                        <span
-                          className={`badge ${selectedCategory.pricing_rule ? 'badge-info' : 'badge-neutral'}`}
-                          style={{ cursor: 'pointer', marginLeft: '6px' }}
-                          onClick={() => openPricingModal(selectedCategory)}
-                          title="Cliquez pour configurer le calcul de prime"
-                        >
-                          {selectedCategory.pricing_rule ? `Calcul : ${selectedCategory.pricing_rule.name}` : 'Calcul manuel'}
-                        </span>
-                      )}
+                      <span
+                        className={`badge ${selectedCategory.pricing_rule ? (formType === 'claim' ? 'badge-success' : 'badge-info') : 'badge-neutral'}`}
+                        style={{ cursor: 'pointer', marginLeft: '6px' }}
+                        onClick={() => openPricingModal(selectedCategory)}
+                        title={formType === 'claim' ? 'Cliquez pour configurer le calcul d\'indemnisation' : 'Cliquez pour configurer le calcul de prime'}
+                      >
+                        {selectedCategory.pricing_rule
+                          ? (formType === 'claim' ? `Indemnisation : ${selectedCategory.pricing_rule.name}` : `Calcul : ${selectedCategory.pricing_rule.name}`)
+                          : (formType === 'claim' ? 'Indemnisation manuelle' : 'Calcul manuel')}
+                      </span>
                     </h2>
                     <p className="builder-active-meta">
                       {formType === 'quote' ? t('builder.quotes_tab') : t('builder.claims_tab')} ·{' '}
@@ -1059,17 +1057,15 @@ export default function FormBuilderPage() {
                   </div>
 
                   <div className="builder-active-actions">
-                    {formType === 'quote' && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => openPricingModal(selectedCategory)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <Calculator size={15} />
-                        Tarification & Calcul
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => openPricingModal(selectedCategory)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Calculator size={15} style={{ color: formType === 'claim' ? '#0f766e' : '#0284c7' }} />
+                      {formType === 'claim' ? 'Indemnisation & Calcul' : 'Tarification & Calcul'}
+                    </button>
                     {viewMode === 'editor' && (
                       <>
                         <label className="choice filter-inactive-toggle">

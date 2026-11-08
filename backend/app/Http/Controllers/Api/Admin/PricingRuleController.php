@@ -136,7 +136,12 @@ class PricingRuleController extends Controller
             $simulatedRule->parameters = $request->input('parameters');
         }
 
-        $result = $pricingService->calculate($simulatedRule, $answers);
+        if (str_starts_with($simulatedRule->driver ?? '', 'sinistre_') || str_starts_with($simulatedRule->code ?? '', 'sinistre')) {
+            $claimService = app(\App\Services\ClaimCompensationService::class);
+            $result = $claimService->calculate($simulatedRule, $answers);
+        } else {
+            $result = $pricingService->calculate($simulatedRule, $answers);
+        }
 
         return response()->json($result ?: ['has_calculation' => false]);
     }

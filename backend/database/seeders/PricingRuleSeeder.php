@@ -46,5 +46,23 @@ class PricingRuleSeeder extends Seeder
                     ->update(['pricing_rule_id' => $createdRules[$ruleCode]->id]);
             }
         }
+
+        // Associer les catégories de sinistres existantes
+        $claimMapping = [
+            'sinistre-auto'            => 'sinistre_auto',
+            'sinistre-habitation'      => 'sinistre_habitation',
+            'sinistre-sante'           => 'sinistre_sante',
+            'sinistre-rc'              => 'sinistre_rc',
+            'sinistre-professionnelle' => 'sinistre_professionnelle',
+            'sinistre-voyage'          => 'sinistre_voyage',
+            'sinistre-autres'          => 'sinistre_autres',
+        ];
+
+        foreach ($claimMapping as $catSlug => $ruleCode) {
+            if (isset($createdRules[$ruleCode])) {
+                Category::where('slug', $catSlug)
+                    ->update(['pricing_rule_id' => $createdRules[$ruleCode]->id]);
+            }
+        }
     }
 }
