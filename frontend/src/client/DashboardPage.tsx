@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Download, Edit2, ExternalLink, FileText, MessageSquare, Paperclip, ShieldAlert } from 'lucide-react';
-import { getMySubmissions, downloadSubmissionPdf, downloadClientAttachment } from '../clientApi';
+import { getMySubmissions, downloadSubmissionPdf, downloadClientAttachment, markSubmissionRepliesAsRead } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import StatusBadge from '../admin/StatusBadge';
 import type { SubmissionStatus } from '../types';
@@ -52,6 +52,27 @@ export default function DashboardPage() {
       // silently ignore
     } finally {
       setDownloadingAttId(null);
+    }
+  };
+
+  const handleOpenReplies = (sub: ClientSubmission) => {
+    setActiveModalSub(sub);
+
+    const unread = sub.unread_replies_count ?? (sub.replies?.filter((r) => !r.is_read).length ?? 0);
+    if (unread > 0) {
+      markSubmissionRepliesAsRead(sub.reference).catch(() => {});
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.reference === sub.reference
+            ? {
+                ...s,
+                unread_replies_count: 0,
+                replies: s.replies?.map((r) => ({ ...r, is_read: true })),
+              }
+            : s
+        )
+      );
+      window.dispatchEvent(new Event('unread-notifications-updated'));
     }
   };
 
@@ -119,9 +140,10 @@ export default function DashboardPage() {
                   const dateStr = sub.created_at ? formatDate(sub.created_at, lang) : '-';
                   const takenStr = sub.taken_at ? formatDate(sub.taken_at, lang) : t('client.taken_pending');
                   const processedStr = sub.processed_at ? formatDate(sub.processed_at, lang) : t('client.taken_pending');
-                  const replyCount = (sub.replies_count && sub.replies_count > 0)
+                  const totalReplies = (sub.replies_count && sub.replies_count > 0)
                     ? sub.replies_count
                     : (sub.replies && sub.replies.length > 0 ? sub.replies.length : 0);
+                  const unreadReplies = sub.unread_replies_count ?? (sub.replies?.filter((r) => !r.is_read).length ?? 0);
 
                   return (
                     <tr key={sub.reference}>
@@ -179,16 +201,18 @@ export default function DashboardPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          {replyCount > 0 && (
+                          {totalReplies > 0 && (
                             <button
                               type="button"
                               className="client-table-action-btn client-replies-btn"
                               title={t('client.replies_btn')}
-                              onClick={() => setActiveModalSub(sub)}
+                              onClick={() => handleOpenReplies(sub)}
                             >
                               <MessageSquare size={13} />
                               <span>{t('client.replies_btn')}</span>
-                              <span className="client-replies-badge">{replyCount}</span>
+                              {unreadReplies > 0 && (
+                                <span className="client-replies-badge">{unreadReplies}</span>
+                              )}
                             </button>
                           )}
                           {sub.status === 'received' && (

@@ -171,4 +171,44 @@ class ClientSubmissionEditTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data' => [['processed_at']]]);
     }
+
+    public function test_client_unread_notifications_and_mark_read(): void
+    {
+        $client = $this->makeClient();
+        $submission = $this->makeSubmission($client);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Admin envoie une réponse
+        Sanctum::actingAs($admin);
+        $this->postJson("/api/admin/submissions/{$submission->id}/reply", [
+            'message' => 'Votre devis a été validé.',
+        ])->assertOk();
+
+        // Le client se connecte
+        Sanctum::actingAs($client, ['client']);
+
+        // Vérifier le compteur de notifications non lues (doit valoir 1)
+        $this->getJson('/api/client/notifications/unread-count')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1);
+
+        // Vérifier la liste des notifications
+        $notifRes = $this->getJson('/api/client/notifications')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1)
+            ->assertJsonPath('notifications.0.is_read', false);
+
+        $replyId = $notifRes->json('notifications.0.id');
+
+        // Marquer la réponse comme lue
+        $this->postJson("/api/client/replies/{$replyId}/mark-read")
+            ->assertOk()
+            ->assertJsonPath('is_read', true);
+
+        // Le compteur non lu doit maintenant être à 0
+        $this->getJson('/api/client/notifications/unread-count')
+            ->assertOk()
+            ->assertJsonPath('unread_count', 0);
+    }
 }

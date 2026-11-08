@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  Bell,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -10,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { SITE } from '../siteConfig';
-import { clientErrorMessage, clientLogout, clientMe } from '../clientApi';
+import { clientErrorMessage, clientLogout, clientMe, getClientUnreadCount } from '../clientApi';
 import { clearClientToken, getClientToken } from '../clientAuth';
 import type { ClientUser } from '../clientTypes';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -26,12 +27,14 @@ interface NavItem {
   labelKey: TranslationKey;
   icon: React.ReactNode;
   end?: boolean;
+  hasBadge?: boolean;
 }
 
 const NAV: NavItem[] = [
   { to: '/espace-client', labelKey: 'client.dashboard', icon: <LayoutDashboard size={18} />, end: true },
   { to: '/espace-client/demandes', labelKey: 'client.my_requests', icon: <FileText size={18} /> },
   { to: '/espace-client/sinistres', labelKey: 'client.my_claims', icon: <AlertTriangle size={18} /> },
+  { to: '/espace-client/notifications', labelKey: 'client.notifications', icon: <Bell size={18} />, hasBadge: true },
   { to: '/espace-client/profil', labelKey: 'client.my_profile', icon: <User size={18} /> },
 ];
 
@@ -44,10 +47,20 @@ export default function ClientLayout() {
   const [ready, setReady] = useState(!hasToken);
   const [error, setError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const closeMenu = () => setMenuOpen(false);
 
-  // Chargement du compte connecté
+  // Chargement du compte connecté et du nombre de notifications non lues
+  const fetchUnread = useCallback(async () => {
+    if (!getClientToken()) return;
+    try {
+      const res = await getClientUnreadCount();
+      setUnreadCount(res.unread_count);
+    } catch {
+      // silently ignore
+    }
+  }, []);
   useEffect(() => {
     if (!hasToken) return;
     let cancelled = false;
@@ -63,10 +76,21 @@ export default function ClientLayout() {
         if (!cancelled) setReady(true);
       });
 
+    void fetchUnread();
+
+    const handleUpdate = () => {
+      void fetchUnread();
+    };
+
+    window.addEventListener('unread-notifications-updated', handleUpdate);
+    const interval = setInterval(() => void fetchUnread(), 25000);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('unread-notifications-updated', handleUpdate);
+      clearInterval(interval);
     };
-  }, [hasToken]);
+  }, [hasToken, fetchUnread]);
 
   const refresh = useCallback(async () => {
     setUser(await clientMe());
@@ -123,15 +147,43 @@ export default function ClientLayout() {
           </span>
         </Link>
 
-        <button
-          type="button"
-          className="client-hamburger-btn"
-          aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link
+            to="/espace-client/notifications"
+            className="client-bell-btn"
+            aria-label="Notifications"
+            onClick={closeMenu}
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              background: '#f1f5f9',
+              color: unreadCount > 0 ? '#0d9488' : '#64748b',
+              textDecoration: 'none',
+            }}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="client-replies-badge" style={{ top: '-4px', right: '-4px' }}>
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+
+          <button
+            type="button"
+            className="client-hamburger-btn"
+            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </header>
 
       {/* Fond obscurci lorsque le menu mobile est ouvert */}
@@ -175,9 +227,27 @@ export default function ClientLayout() {
               end={item.end}
               className={({ isActive }) => (isActive ? 'active' : '')}
               onClick={closeMenu}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              {item.icon}
-              <span>{t(item.labelKey)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {item.icon}
+                <span>{t(item.labelKey)}</span>
+              </div>
+              {item.hasBadge && unreadCount > 0 && (
+                <span
+                  style={{
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    lineHeight: '1.2',
+                  }}
+                >
+                  {unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

@@ -18,6 +18,7 @@ import ClientRegisterPage from './client/RegisterPage';
 import ClientDashboardPage from './client/DashboardPage';
 import ClientRequestsPage from './client/RequestsPage';
 import ClientClaimsPage from './client/ClaimsPage';
+import ClientNotificationsPage from './client/NotificationsPage';
 import ClientProfilePage from './client/ProfilePage';
 import ForgotPasswordPage from './client/ForgotPasswordPage';
 import ResetPasswordPage from './client/ResetPasswordPage';
@@ -43,6 +44,7 @@ export default function App() {
         <Route index element={<ClientDashboardPage />} />
         <Route path="demandes" element={<ClientRequestsPage />} />
         <Route path="sinistres" element={<ClientClaimsPage />} />
+        <Route path="notifications" element={<ClientNotificationsPage />} />
         <Route path="contrats" element={<Navigate to="/espace-client" replace />} />
         <Route path="documents" element={<Navigate to="/espace-client" replace />} />
         <Route path="profil" element={<ClientProfilePage />} />

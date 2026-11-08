@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, Edit2, ExternalLink, MessageSquare, Paperclip, Plus, ShieldAlert } from 'lucide-react';
-import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf, downloadClientAttachment } from '../clientApi';
+import { getMySubmissions, clientErrorMessage, downloadSubmissionPdf, downloadClientAttachment, markSubmissionRepliesAsRead } from '../clientApi';
 import type { ClientSubmission } from '../clientTypes';
 import EmptyState from './EmptyState';
 import StatusBadge from '../admin/StatusBadge';
@@ -59,6 +59,27 @@ export default function ClaimsPage() {
     }
   };
 
+  const handleOpenReplies = (sub: ClientSubmission) => {
+    setActiveModalSub(sub);
+
+    const unread = sub.unread_replies_count ?? (sub.replies?.filter((r) => !r.is_read).length ?? 0);
+    if (unread > 0) {
+      markSubmissionRepliesAsRead(sub.reference).catch(() => {});
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.reference === sub.reference
+            ? {
+                ...s,
+                unread_replies_count: 0,
+                replies: s.replies?.map((r) => ({ ...r, is_read: true })),
+              }
+            : s
+        )
+      );
+      window.dispatchEvent(new Event('unread-notifications-updated'));
+    }
+  };
+
   return (
     <div className="client-content-inner">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
@@ -105,9 +126,10 @@ export default function ClaimsPage() {
                 const dateStr = sub.created_at ? formatDate(sub.created_at, lang) : '-';
                 const takenStr = sub.taken_at ? formatDate(sub.taken_at, lang) : t('client.taken_pending');
                 const processedStr = sub.processed_at ? formatDate(sub.processed_at, lang) : t('client.taken_pending');
-                const replyCount = (sub.replies_count && sub.replies_count > 0)
+                const totalReplies = (sub.replies_count && sub.replies_count > 0)
                   ? sub.replies_count
                   : (sub.replies && sub.replies.length > 0 ? sub.replies.length : 0);
+                const unreadReplies = sub.unread_replies_count ?? (sub.replies?.filter((r) => !r.is_read).length ?? 0);
 
                 return (
                   <tr key={sub.reference}>
@@ -164,16 +186,18 @@ export default function ClaimsPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        {replyCount > 0 && (
+                        {totalReplies > 0 && (
                           <button
                             type="button"
                             className="client-table-action-btn client-replies-btn"
                             title={t('client.replies_btn')}
-                            onClick={() => setActiveModalSub(sub)}
+                            onClick={() => handleOpenReplies(sub)}
                           >
                             <MessageSquare size={13} />
                             <span>{t('client.replies_btn')}</span>
-                            <span className="client-replies-badge">{replyCount}</span>
+                            {unreadReplies > 0 && (
+                              <span className="client-replies-badge">{unreadReplies}</span>
+                            )}
                           </button>
                         )}
                         {sub.status === 'received' && (

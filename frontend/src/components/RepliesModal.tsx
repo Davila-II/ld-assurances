@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, ChevronRight, Download, FileText, MessageSquare, Paperclip, ShieldCheck, X } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatDate, formatSize } from '../admin/labels';
+import { markReplyAsRead } from '../clientApi';
 
 export interface ReplyAttachment {
   id: number;
@@ -14,6 +15,8 @@ export interface ModalReply {
   id: number;
   message: string;
   created_at: string;
+  is_read?: boolean;
+  read_at?: string | null;
   attachments?: ReplyAttachment[];
 }
 
@@ -22,7 +25,9 @@ interface Props {
   onClose: () => void;
   reference: string;
   replies: ModalReply[];
+  initialReplyId?: number | null;
   onDownloadAttachment?: (attachmentId: number, filename: string) => Promise<void> | void;
+  onMarkAsRead?: (replyId: number) => void;
 }
 
 export default function RepliesModal({
@@ -30,24 +35,41 @@ export default function RepliesModal({
   onClose,
   reference,
   replies,
+  initialReplyId,
   onDownloadAttachment,
+  onMarkAsRead,
 }: Props) {
   const { lang, t } = useLanguage();
   const [selectedReplyId, setSelectedReplyId] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   // When modal opens or replies change:
-  // If only 1 reply, automatically open it directly.
+  // If initialReplyId is specified, select that one.
+  // Else if only 1 reply, automatically open it directly.
   // If multiple replies, show list view first (selectedReplyId = null).
   useEffect(() => {
     if (isOpen) {
-      if (replies.length === 1) {
+      if (initialReplyId) {
+        setSelectedReplyId(initialReplyId);
+      } else if (replies.length === 1) {
         setSelectedReplyId(replies[0].id);
       } else {
         setSelectedReplyId(null);
       }
     }
-  }, [isOpen, replies]);
+  }, [isOpen, initialReplyId, replies]);
+
+  // When a reply is viewed, mark it as read immediately if it was unread!
+  useEffect(() => {
+    if (!isOpen || !selectedReplyId) return;
+    const target = replies.find((r) => r.id === selectedReplyId);
+    if (target && target.is_read === false) {
+      target.is_read = true;
+      markReplyAsRead(target.id).catch(() => {});
+      onMarkAsRead?.(target.id);
+      window.dispatchEvent(new Event('unread-notifications-updated'));
+    }
+  }, [isOpen, selectedReplyId, replies, onMarkAsRead]);
 
   if (!isOpen) return null;
 
@@ -239,6 +261,21 @@ export default function RepliesModal({
                             <Calendar size={13} />
                             {replyDate}
                           </span>
+                          {reply.is_read === false && (
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                border: '1px solid #fca5a5',
+                                padding: '1px 6px',
+                                borderRadius: '999px',
+                              }}
+                            >
+                              {t('client.notification_new')}
+                            </span>
+                          )}
                           {attCount > 0 && (
                             <span
                               style={{
