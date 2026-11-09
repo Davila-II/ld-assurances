@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\AdminSubmissionController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\FormBuilderController;
 use App\Http\Controllers\Api\Admin\PricingRuleController;
+use App\Http\Controllers\Api\Admin\RoleController;
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Client\SubmissionController as ClientSubmissionController;
 use App\Http\Controllers\Api\FormController;
@@ -109,5 +110,14 @@ Route::prefix('admin')->group(function () {
         Route::post('/form-builder/categories/{category}/fields/reorder', [FormBuilderController::class, 'reorder']);
         Route::patch('/form-builder/fields/{field}', [FormBuilderController::class, 'updateField']);
         Route::delete('/form-builder/fields/{field}', [FormBuilderController::class, 'destroyField']);
+
+        // Rôles & Permissions du staff
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::patch('/roles/{role}', [RoleController::class, 'update']);
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
+        Route::get('/roles/{role}/users', [RoleController::class, 'users']);
+        Route::post('/roles/{role}/assign', [RoleController::class, 'assignUser']);
+        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser']);
     });
 });
