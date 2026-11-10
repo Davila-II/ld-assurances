@@ -16,6 +16,32 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsClient;
 use Illuminate\Support\Facades\Route;
 
+// Test de diagnostic SMTP pour vérifier en direct l'envoi d'emails
+Route::get('/test-email', function (\Illuminate\Http\Request $request) {
+    $to = $request->query('to', 'nyatchebe703@gmail.com');
+    try {
+        \Illuminate\Support\Facades\Mail::raw('Test d\'envoi réussi depuis LD Assurances en production !', function ($message) use ($to) {
+            $message->to($to)->subject('Test d\'envoi d\'e-mail LD Assurances');
+        });
+        return response()->json([
+            'status'  => 'success',
+            'message' => "E-mail de test envoyé avec succès à {$to}.",
+            'mailer'  => config('mail.default'),
+            'host'    => config('mail.mailers.smtp.host'),
+            'port'    => config('mail.mailers.smtp.port'),
+            'from'    => config('mail.from.address'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage(),
+            'mailer'  => config('mail.default'),
+            'host'    => config('mail.mailers.smtp.host'),
+            'port'    => config('mail.mailers.smtp.port'),
+        ], 500);
+    }
+});
+
 // --- Public ---
 Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
