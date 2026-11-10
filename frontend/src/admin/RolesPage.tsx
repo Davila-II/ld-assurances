@@ -39,7 +39,7 @@ interface FormState {
 }
 
 /* ── Libellés des groupes ────────────────────────────────────────────────── */
-const GROUP_ORDER = ['dossiers', 'finances', 'clients', 'parametres'];
+const GROUP_ORDER = ['sinistres', 'devis', 'dossiers', 'finances', 'clients', 'parametres'];
 
 /* ── Composant principal ─────────────────────────────────────────────────── */
 export default function RolesPage() {

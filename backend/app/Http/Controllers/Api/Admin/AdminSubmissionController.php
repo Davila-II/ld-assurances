@@ -40,6 +40,23 @@ class AdminSubmissionController extends Controller
             ->withCount('attachments')
             ->latest();
 
+        $user = $request->user();
+
+        // Filtrage automatique selon les permissions du collaborateur
+        if ($user && ! $user->isAdmin()) {
+            $canClaims = $user->hasPermission('view_claims');
+            $canQuotes = $user->hasPermission('view_quotes');
+
+            if ($canClaims && ! $canQuotes) {
+                $query->where('form_type', 'claim');
+            } elseif ($canQuotes && ! $canClaims) {
+                $query->where('form_type', 'quote');
+            } elseif (! $canClaims && ! $canQuotes) {
+                // Aucun accès aux dossiers
+                $query->whereRaw('1 = 0');
+            }
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
@@ -87,8 +104,18 @@ class AdminSubmissionController extends Controller
     }
 
     // Détail d'une déclaration : réponses lisibles (avec les questions d'origine) et pièces jointes
-    public function show(Submission $submission): JsonResponse
+    public function show(Request $request, Submission $submission): JsonResponse
     {
+        $user = $request->user();
+        if ($user && ! $user->isAdmin()) {
+            if ($submission->form_type === 'claim' && ! $user->hasPermission('view_claims')) {
+                return response()->json(['message' => 'Accès refusé à ce dossier de sinistre.'], 403);
+            }
+            if ($submission->form_type === 'quote' && ! $user->hasPermission('view_quotes')) {
+                return response()->json(['message' => 'Accès refusé à ce dossier de devis.'], 403);
+            }
+        }
+
         $submission->load(['category:id,name,slug,pricing_rule_id', 'attachments']);
 
         $stored = $submission->answers ?? [];

@@ -68,7 +68,8 @@ export default function AdminLayout() {
 
   // Détermination des droits d'affichage pour la navigation
   const canViewDashboard = hasPermission('view_stats');
-  const canViewSubmissions = hasAnyPermission(['view_submissions', 'view_all_submissions']);
+  const canViewClaims = hasPermission('view_claims');
+  const canViewQuotes = hasPermission('view_quotes');
   const canViewClients = hasAnyPermission(['view_clients', 'manage_clients']);
   const canViewSettings = hasAnyPermission(['manage_form_builder', 'manage_roles', 'manage_settings', 'manage_pricing_rules']);
 
@@ -108,23 +109,24 @@ export default function AdminLayout() {
               </NavLink>
             )}
 
-            {canViewSubmissions && (
-              <>
-                <NavLink
-                  to="/admin/submissions?form_type=claim"
-                  className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
-                >
-                  <AlertTriangle size={16} />
-                  <span>{t('admin.nav_claims')}</span>
-                </NavLink>
-                <NavLink
-                  to="/admin/submissions?form_type=quote"
-                  className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
-                >
-                  <FileText size={16} />
-                  <span>{t('admin.nav_quotes')}</span>
-                </NavLink>
-              </>
+            {canViewClaims && (
+              <NavLink
+                to="/admin/submissions?form_type=claim"
+                className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
+              >
+                <AlertTriangle size={16} />
+                <span>{t('admin.nav_claims')}</span>
+              </NavLink>
+            )}
+
+            {canViewQuotes && (
+              <NavLink
+                to="/admin/submissions?form_type=quote"
+                className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
+              >
+                <FileText size={16} />
+                <span>{t('admin.nav_quotes')}</span>
+              </NavLink>
             )}
 
             {canViewClients && (
@@ -189,25 +191,26 @@ export default function AdminLayout() {
             </NavLink>
           )}
 
-          {canViewSubmissions && (
-            <>
-              <NavLink
-                to="/admin/submissions?form_type=claim"
-                className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
-                onClick={closeMenu}
-              >
-                <AlertTriangle size={18} />
-                <span>{t('admin.nav_claims_long')}</span>
-              </NavLink>
-              <NavLink
-                to="/admin/submissions?form_type=quote"
-                className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
-                onClick={closeMenu}
-              >
-                <FileText size={18} />
-                <span>{t('admin.nav_quotes_long')}</span>
-              </NavLink>
-            </>
+          {canViewClaims && (
+            <NavLink
+              to="/admin/submissions?form_type=claim"
+              className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
+              onClick={closeMenu}
+            >
+              <AlertTriangle size={18} />
+              <span>{t('admin.nav_claims_long')}</span>
+            </NavLink>
+          )}
+
+          {canViewQuotes && (
+            <NavLink
+              to="/admin/submissions?form_type=quote"
+              className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
+              onClick={closeMenu}
+            >
+              <FileText size={18} />
+              <span>{t('admin.nav_quotes_long')}</span>
+            </NavLink>
           )}
 
           {canViewClients && (

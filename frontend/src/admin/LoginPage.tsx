@@ -42,7 +42,24 @@ export default function LoginPage() {
       const result = await adminLogin(email, password);
       setToken(result.token);
       setAdminUser(result.user);
-      navigate('/admin', { replace: true });
+
+      // Redirection intelligente selon le profil du collaborateur
+      const perms = result.user.permissions || [];
+      const isAdmin = result.user.is_admin || result.user.role === 'admin';
+
+      if (isAdmin) {
+        navigate(location.state?.from || '/admin', { replace: true });
+      } else if (perms.includes('view_claims') && !perms.includes('view_quotes')) {
+        // Gestionnaire de sinistres dédié
+        navigate('/admin/submissions?form_type=claim', { replace: true });
+      } else if (perms.includes('view_quotes') && !perms.includes('view_claims')) {
+        // Gestionnaire de devis dédié
+        navigate('/admin/submissions?form_type=quote', { replace: true });
+      } else if (perms.includes('view_stats')) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/admin/submissions', { replace: true });
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {

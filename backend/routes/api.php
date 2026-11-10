@@ -80,15 +80,15 @@ Route::prefix('admin')->group(function () {
             ->middleware(CheckStaffPermission::class . ':view_stats');
 
         Route::get('/submissions', [AdminSubmissionController::class, 'index'])
-            ->middleware(CheckStaffPermission::class . ':view_submissions,view_all_submissions');
+            ->middleware(CheckStaffPermission::class . ':view_claims,view_quotes');
         Route::get('/submissions/{submission}', [AdminSubmissionController::class, 'show'])
-            ->middleware(CheckStaffPermission::class . ':view_submissions,view_all_submissions');
+            ->middleware(CheckStaffPermission::class . ':view_claims,view_quotes');
         Route::patch('/submissions/{submission}/status', [AdminSubmissionController::class, 'updateStatus'])
-            ->middleware(CheckStaffPermission::class . ':change_status');
+            ->middleware(CheckStaffPermission::class . ':change_status_claims,change_status_quotes,reject_claims,close_claims');
         Route::patch('/submissions/{submission}/notes', [AdminSubmissionController::class, 'updateNotes'])
-            ->middleware(CheckStaffPermission::class . ':change_status,reply_submissions');
+            ->middleware(CheckStaffPermission::class . ':change_status_claims,change_status_quotes,reply_claims,reply_quotes');
         Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply'])
-            ->middleware(CheckStaffPermission::class . ':reply_submissions');
+            ->middleware(CheckStaffPermission::class . ':reply_claims,reply_quotes');
         Route::post('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'calculateForSubmission'])
             ->middleware(CheckStaffPermission::class . ':manage_calculation');
         Route::delete('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'resetCalculation'])

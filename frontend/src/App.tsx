@@ -12,6 +12,7 @@ import FormBuilderPage from './admin/FormBuilderPage';
 import ClientsPage from './admin/ClientsPage';
 import SettingsPage from './admin/SettingsPage';
 import RolesPage from './admin/RolesPage';
+import RolesPortalRedirect from './admin/RolesPortalRedirect';
 import ClientLayout from './client/ClientLayout';
 import ClientLoginPage from './client/LoginPage';
 import ClientRegisterPage from './client/RegisterPage';
@@ -62,8 +63,8 @@ export default function App() {
         <Route path="roles" element={<RolesPage />} />
       </Route>
 
-      {/* Raccourci direct /roles demandé par l'utilisateur */}
-      <Route path="/roles" element={<Navigate to="/admin/roles" replace />} />
+      {/* Raccourci intelligent /roles demandé par l'utilisateur */}
+      <Route path="/roles" element={<RolesPortalRedirect />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

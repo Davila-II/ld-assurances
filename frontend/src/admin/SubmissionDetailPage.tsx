@@ -456,7 +456,9 @@ export default function SubmissionDetailPage() {
               </div>
             )}
 
-            {hasPermission('change_status') && (
+            {((submission.form_type === 'claim' && hasPermission('change_status_claims')) ||
+              (submission.form_type === 'quote' && hasPermission('change_status_quotes')) ||
+              hasPermission('change_status')) && (
               <>
                 <div className="status-row">
                   <label htmlFor="new-status">{t('admin.detail_status_label')}</label>
@@ -1112,7 +1114,9 @@ export default function SubmissionDetailPage() {
           {/* 6. Répondre au client */}
           <section className="card">
             <h2>{t('admin.detail_reply_title')}</h2>
-            {hasPermission('reply_submissions') ? (
+            {((submission.form_type === 'claim' && hasPermission('reply_claims')) ||
+              (submission.form_type === 'quote' && hasPermission('reply_quotes')) ||
+              hasPermission('reply_submissions')) ? (
               <>
                 <div className="field">
                   <label htmlFor="reply">{lang === 'en' ? 'Message' : 'Message'}</label>
