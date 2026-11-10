@@ -3161,3 +3161,447 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   ESPACE ROLE / PORTAIL COLLABORATEUR (/role)
+   ========================================================================== */
+
+.role-portal-root {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.role-portal-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(135deg, #0e7a6e 0%, #144983 100%);
+  color: #ffffff;
+  padding: 24px 28px;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(14, 122, 110, 0.2);
+  margin-bottom: 28px;
+}
+
+.role-portal-hero-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.role-portal-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.role-portal-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.role-portal-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e6f7f5;
+  letter-spacing: 0.03em;
+}
+
+.role-portal-status-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #bbf7d0;
+  font-weight: 600;
+}
+
+.role-portal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.role-portal-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.role-portal-email {
+  margin: 2px 0 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.role-portal-pwd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.role-portal-pwd-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.role-portal-section-title {
+  margin-bottom: 16px;
+}
+
+.role-portal-section-title h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.role-portal-section-title p {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.role-portal-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.role-portal-action-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-portal-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+.role-action-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.role-action-content h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.role-action-content p {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.role-action-arrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0e7a6e;
+}
+
+.role-portal-action-card:hover .role-action-arrow {
+  gap: 10px;
+}
+
+.role-portal-open-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0e7a6e;
+  text-decoration: none;
+}
+
+.role-portal-open-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .role-portal-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 20px;
+  }
+
+  .role-portal-hero-actions {
+    width: 100%;
+  }
+
+  .role-portal-pwd-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .role-portal-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   PAGE MON PROFIL COLLABORATEUR (/admin/mon-profil)
+   ========================================================================== */
+
+.role-profile-root {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.role-profile-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 20px;
+}
+
+.role-profile-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.role-profile-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.role-profile-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-profile-card-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+}
+
+.role-profile-card-header p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.role-profile-role-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.role-profile-role-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0e7a6e;
+  margin-bottom: 4px;
+}
+
+.role-profile-role-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.role-profile-perms-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+.role-profile-admin-full {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.role-profile-perms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.role-profile-perm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+}
+
+.role-profile-perm-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.role-profile-perm-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.role-profile-perm-group {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.role-profile-perms-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Formulaire mot de passe */
+.role-profile-pwd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.role-profile-alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.role-profile-alert-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.role-profile-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.role-profile-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0e7a6e;
+  color: #ffffff;
+  border: none;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 6px;
+}
+
+.role-profile-submit-btn:hover:not(:disabled) {
+  background: #0b6460;
+  transform: translateY(-1px);
+}
+
+.role-profile-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .role-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}

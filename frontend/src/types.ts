@@ -168,8 +168,15 @@ export interface AdminUser {
   email: string;
   role: string;
   role_name?: string;
+  role_description?: string | null;
   is_admin?: boolean;
   permissions?: string[];
+  permissions_details?: Array<{
+    key: string;
+    name: string;
+    name_en?: string | null;
+    group: string;
+  }>;
 }
 
 export interface LoginResult {

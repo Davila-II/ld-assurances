@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  User as UserIcon,
   Users,
   X,
 } from 'lucide-react';
@@ -19,7 +20,7 @@ import { SITE } from '../siteConfig';
 import logoImg from '../images/logo.png';
 
 export default function AdminLayout() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -67,7 +68,8 @@ export default function AdminLayout() {
   const isSubmissionsPath = location.pathname.startsWith('/admin/submissions');
 
   // Détermination des droits d'affichage pour la navigation
-  const canViewDashboard = hasPermission('view_stats');
+  const isSystemAdmin = user?.is_admin || user?.role === 'admin';
+  const canViewDashboard = isSystemAdmin; // Seul le super-admin a le grand tableau de bord d'administration
   const canViewClaims = hasPermission('view_claims');
   const canViewQuotes = hasPermission('view_quotes');
   const canViewClients = hasAnyPermission(['view_clients', 'manage_clients']);
@@ -102,6 +104,11 @@ export default function AdminLayout() {
 
           {/* Navigation Desktop */}
           <nav className="admin-nav admin-nav-desktop">
+            <NavLink to="/admin/mon-role" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <LayoutDashboard size={16} />
+              <span>{lang === 'en' ? 'My Workspace' : 'Mon Espace'}</span>
+            </NavLink>
+
             {canViewDashboard && (
               <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
                 <LayoutDashboard size={16} />
@@ -142,6 +149,11 @@ export default function AdminLayout() {
                 <span>{t('admin.nav_settings')}</span>
               </NavLink>
             )}
+
+            <NavLink to="/admin/mon-profil" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <UserIcon size={16} />
+              <span>{lang === 'en' ? 'My Profile' : 'Mon Profil'}</span>
+            </NavLink>
           </nav>
 
           {/* Actions Desktop */}
@@ -184,6 +196,11 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-drawer-nav">
+          <NavLink to="/admin/mon-role" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+            <LayoutDashboard size={18} />
+            <span>{lang === 'en' ? 'My Workspace' : 'Mon Espace'}</span>
+          </NavLink>
+
           {canViewDashboard && (
             <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
               <LayoutDashboard size={18} />
@@ -226,6 +243,11 @@ export default function AdminLayout() {
               <span>{t('admin.nav_settings_long')}</span>
             </NavLink>
           )}
+
+          <NavLink to="/admin/mon-profil" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+            <UserIcon size={18} />
+            <span>{lang === 'en' ? 'My Profile' : 'Mon Profil'}</span>
+          </NavLink>
         </nav>
 
         <div className="admin-drawer-footer">

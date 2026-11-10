@@ -12,6 +12,8 @@ import FormBuilderPage from './admin/FormBuilderPage';
 import ClientsPage from './admin/ClientsPage';
 import SettingsPage from './admin/SettingsPage';
 import RolesPage from './admin/RolesPage';
+import RoleDashboardPage from './admin/RoleDashboardPage';
+import RoleProfilePage from './admin/RoleProfilePage';
 import RolesPortalRedirect from './admin/RolesPortalRedirect';
 import ClientLayout from './client/ClientLayout';
 import ClientLoginPage from './client/LoginPage';
@@ -55,15 +57,21 @@ export default function App() {
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="mon-role" element={<RoleDashboardPage />} />
+        <Route path="mon-profil" element={<RoleProfilePage />} />
         <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
         <Route path="clients" element={<ClientsPage />} />
-        <Route path="formulaires" element={<FormBuilderPage />} />
         <Route path="parametres" element={<SettingsPage />} />
-        <Route path="roles" element={<RolesPage />} />
+        <Route path="parametres/formulaire" element={<FormBuilderPage />} />
+        <Route path="parametres/role" element={<RolesPage />} />
+        {/* Rétrocompatibilité */}
+        <Route path="formulaires" element={<Navigate to="/admin/parametres/formulaire" replace />} />
+        <Route path="roles" element={<Navigate to="/admin/parametres/role" replace />} />
       </Route>
 
-      {/* Raccourci intelligent /roles demandé par l'utilisateur */}
+      {/* Accès direct à l'espace rôle pour les gestionnaires et le staff */}
+      <Route path="/role" element={<RolesPortalRedirect />} />
       <Route path="/roles" element={<RolesPortalRedirect />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

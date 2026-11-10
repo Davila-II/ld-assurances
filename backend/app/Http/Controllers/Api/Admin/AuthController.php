@@ -44,25 +44,62 @@ class AuthController extends Controller
         return response()->json(['message' => 'Déconnecté.']);
     }
 
+    public function changePassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password'     => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'new_password.min'       => 'Le nouveau mot de passe doit comporter au moins 8 caractères.',
+            'new_password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'Le mot de passe actuel est incorrect.',
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($validated['new_password']),
+        ]);
+
+        return response()->json([
+            'message' => 'Votre mot de passe a été modifié avec succès.',
+        ]);
+    }
+
     private function userData(User $user): array
     {
         $permissions = [];
+        $permissionsDetails = [];
         $roleName = $user->isAdmin() ? 'Administrateur' : ($user->staffRole?->name ?? 'Collaborateur');
+        $roleDesc = $user->isAdmin() ? 'Accès complet à toutes les fonctionnalités et paramètres de la plateforme.' : ($user->staffRole?->description ?? null);
 
         if ($user->isAdmin()) {
             $permissions = ['*'];
         } elseif ($user->staffRole) {
             $permissions = $user->staffRole->permissions->pluck('key')->values()->all();
+            $permissionsDetails = $user->staffRole->permissions->map(fn ($p) => [
+                'key'     => $p->key,
+                'name'    => $p->name,
+                'name_en' => $p->name_en,
+                'group'   => $p->group,
+            ])->values()->all();
         }
 
         return [
-            'id'          => $user->id,
-            'name'        => $user->name,
-            'email'       => $user->email,
-            'role'        => $user->role,
-            'role_name'   => $roleName,
-            'is_admin'    => $user->isAdmin(),
-            'permissions' => $permissions,
+            'id'                  => $user->id,
+            'name'                => $user->name,
+            'email'               => $user->email,
+            'role'                => $user->role,
+            'role_name'           => $roleName,
+            'role_description'    => $roleDesc,
+            'is_admin'            => $user->isAdmin(),
+            'permissions'         => $permissions,
+            'permissions_details' => $permissionsDetails,
         ];
     }
 }

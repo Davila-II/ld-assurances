@@ -214,6 +214,12 @@ export const getAdminMe = () => request<AdminUser>('/admin/me', {}, true);
 export const adminLogout = () =>
   request<{ message: string }>('/admin/logout', { method: 'POST' }, true);
 
+export const adminChangePassword = (data: { current_password: string; new_password: string; new_password_confirmation: string }) =>
+  request<{ message: string }>('/admin/password', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true);
+
 export const getSubmissions = (filters: SubmissionFilters) => {
   const qs = new URLSearchParams();
   if (filters.status) qs.set('status', filters.status);

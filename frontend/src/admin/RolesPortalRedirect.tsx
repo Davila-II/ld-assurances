@@ -1,33 +1,17 @@
 import { Navigate } from 'react-router-dom';
-import { getAdminUser, getToken, hasPermission } from '../auth';
+import { getToken } from '../auth';
 
 /**
- * Routeur de redirection pour l'URL /roles :
+ * Routeur pour l'accès /role et /roles :
  * - Si non connecté -> redirige vers la page de connexion
- * - Si connecté en tant qu'admin avec permission manage_roles -> page de gestion des rôles
- * - Si gestionnaire de sinistres -> page des sinistres
- * - Si gestionnaire de devis -> page des devis
- * - Autre collaborateur -> tableau de bord ou dossiers
+ * - Si connecté -> dirige vers la page d'accueil personnalisée de l'espace rôle
  */
 export default function RolesPortalRedirect() {
   const token = getToken();
 
   if (!token) {
-    return <Navigate to="/admin/login" state={{ from: '/roles' }} replace />;
+    return <Navigate to="/admin/login" state={{ from: '/role' }} replace />;
   }
 
-  const user = getAdminUser();
-  if (user?.is_admin || hasPermission('manage_roles')) {
-    return <Navigate to="/admin/roles" replace />;
-  }
-
-  if (hasPermission('view_claims') && !hasPermission('view_quotes')) {
-    return <Navigate to="/admin/submissions?form_type=claim" replace />;
-  }
-
-  if (hasPermission('view_quotes') && !hasPermission('view_claims')) {
-    return <Navigate to="/admin/submissions?form_type=quote" replace />;
-  }
-
-  return <Navigate to="/admin" replace />;
+  return <Navigate to="/admin/mon-role" replace />;
 }

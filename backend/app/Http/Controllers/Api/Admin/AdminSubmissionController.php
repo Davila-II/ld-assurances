@@ -226,15 +226,29 @@ class AdminSubmissionController extends Controller
     }
 
     // Statistiques du tableau de bord
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $query = Submission::query();
+
+        if ($user && ! $user->isAdmin()) {
+            $canClaims = $user->hasPermission('view_claims');
+            $canQuotes = $user->hasPermission('view_quotes');
+
+            if ($canClaims && ! $canQuotes) {
+                $query->where('form_type', 'claim');
+            } elseif ($canQuotes && ! $canClaims) {
+                $query->where('form_type', 'quote');
+            }
+        }
+
         return response()->json([
-            'total'        => Submission::count(),
-            'by_status'    => Submission::selectRaw('status, count(*) as total')
+            'total'        => (clone $query)->count(),
+            'by_status'    => (clone $query)->selectRaw('status, count(*) as total')
                 ->groupBy('status')->pluck('total', 'status'),
-            'by_form_type' => Submission::selectRaw('form_type, count(*) as total')
+            'by_form_type' => (clone $query)->selectRaw('form_type, count(*) as total')
                 ->groupBy('form_type')->pluck('total', 'form_type'),
-            'recent'       => Submission::with('category:id,name')
+            'recent'       => (clone $query)->with('category:id,name')
                 ->latest()->take(5)->get()->map(fn (Submission $s) => [
                     'id'         => $s->id,
                     'reference'  => $s->reference,

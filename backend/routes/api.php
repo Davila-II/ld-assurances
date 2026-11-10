@@ -75,9 +75,10 @@ Route::prefix('admin')->group(function () {
     Route::middleware(['auth:sanctum', EnsureUserIsAdmin::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/password', [AuthController::class, 'changePassword']);
 
         Route::get('/stats', [AdminSubmissionController::class, 'stats'])
-            ->middleware(CheckStaffPermission::class . ':view_stats');
+            ->middleware(CheckStaffPermission::class . ':view_stats,view_claims,view_quotes');
 
         Route::get('/submissions', [AdminSubmissionController::class, 'index'])
             ->middleware(CheckStaffPermission::class . ':view_claims,view_quotes');
