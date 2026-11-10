@@ -129,23 +129,6 @@ export default function SiteLayout() {
           </div>
 
           <nav id="site-nav" className={open ? 'site-nav open' : 'site-nav'}>
-            <a href={`${SITE.mainUrl}/`}>{t('nav.home')}</a>
-            <a href={`${SITE.mainUrl}/produits`}>{t('nav.products')}</a>
-            <a href={`${SITE.mainUrl}/#about`}>{t('nav.about')}</a>
-            <a href={`${SITE.mainUrl}/blog`}>{t('nav.blog')}</a>
-            <a href={`${SITE.mainUrl}/contact`}>{t('nav.contact')}</a>
-            <Link to="/suivi" onClick={close}>
-              {t('nav.track')}
-            </Link>
-            {isClientLoggedIn ? (
-              <Link to="/espace-client" onClick={close}>
-                {t('nav.client_space')}
-              </Link>
-            ) : (
-              <Link to="/espace-client/connexion" onClick={close}>
-                {t('nav.login')}
-              </Link>
-            )}
             <Link className="btn btn-gradient btn-sm" to="/?service=devis" onClick={close}>
               {t('nav.quote_btn')}
             </Link>
