@@ -36,7 +36,7 @@ class SendStaffRoleEmail implements ShouldQueue
 
             $subject = 'Vos accès collaborateur LD Assurances — Rôle ' . $this->role->name;
 
-            $mailer = new ResendMailer();
+            $mailer = new ResendMailer($_ENV['RESEND_API_KEY'] ?? getenv('RESEND_API_KEY') ?: null);
             $sent   = $mailer->send($this->user->email, $subject, $html);
 
             if (! $sent) {

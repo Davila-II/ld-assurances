@@ -17,11 +17,18 @@ class ResendMailer
     private string $fromAddress;
     private string $fromName;
 
-    public function __construct()
+    public function __construct(?string $apiKey = null)
     {
-        $this->http        = new Client(['timeout' => 10]);
-        $this->apiKey      = config('services.resend.key', env('RESEND_API_KEY', env('RESEND_KEY', '')));
-        $this->fromAddress = config('mail.from.address', 'no-reply@ld-assurances.fr');
+        $this->http = new Client(['timeout' => 10]);
+
+        // Lecture multi-source pour contourner le cache de config Laravel
+        $this->apiKey = $apiKey
+            ?? config('services.resend.key')
+            ?? ($_ENV['RESEND_API_KEY'] ?? null)
+            ?? (getenv('RESEND_API_KEY') ?: null)
+            ?? '';
+
+        $this->fromAddress = config('mail.from.address', 'onboarding@resend.dev');
         $this->fromName    = config('mail.from.name', 'LD Assurances');
     }
 
