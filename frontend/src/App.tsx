@@ -62,6 +62,9 @@ export default function App() {
         <Route path="roles" element={<RolesPage />} />
       </Route>
 
+      {/* Raccourci direct /roles demandé par l'utilisateur */}
+      <Route path="/roles" element={<Navigate to="/admin/roles" replace />} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

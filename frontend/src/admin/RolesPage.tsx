@@ -43,7 +43,7 @@ const GROUP_ORDER = ['dossiers', 'finances', 'clients', 'parametres'];
 
 /* ── Composant principal ─────────────────────────────────────────────────── */
 export default function RolesPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [roles, setRoles] = useState<StaffRole[]>([]);
   const [permGroups, setPermGroups] = useState<StaffPermissionGroup[]>([]);
@@ -65,9 +65,9 @@ export default function RolesPage() {
   /* Users sous-panel */
   const [roleUsers, setRoleUsers] = useState<Record<number, StaffRoleUser[]>>({});
   const [loadingUsers, setLoadingUsers] = useState<Record<number, boolean>>({});
-  const [assignEmail, setAssignEmail] = useState('');
-  const [assigning, setAssigning] = useState(false);
-  const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignEmailByRole, setAssignEmailByRole] = useState<Record<number, string>>({});
+  const [assigningByRole, setAssigningByRole] = useState<Record<number, boolean>>({});
+  const [assignErrorByRole, setAssignErrorByRole] = useState<Record<number, string | null>>({});
 
   /* ── Chargement ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -114,8 +114,6 @@ export default function RolesPage() {
   const closeModal = () => {
     setModalOpen(false);
     setEditingRole(null);
-    setAssignEmail('');
-    setAssignError(null);
   };
 
   /* ── Toggle permission ──────────────────────────────────────────────────── */
@@ -209,25 +207,29 @@ export default function RolesPage() {
 
   /* ── Assigner un utilisateur ─────────────────────────────────────────────── */
   const handleAssign = async (roleId: number) => {
-    if (!assignEmail.trim()) return;
-    setAssigning(true);
-    setAssignError(null);
+    const email = (assignEmailByRole[roleId] || '').trim();
+    if (!email) return;
+    setAssigningByRole((prev) => ({ ...prev, [roleId]: true }));
+    setAssignErrorByRole((prev) => ({ ...prev, [roleId]: null }));
     try {
-      const res = await assignUserToRole(roleId, assignEmail.trim());
-      setAssignEmail('');
+      const res = await assignUserToRole(roleId, email);
+      setAssignEmailByRole((prev) => ({ ...prev, [roleId]: '' }));
       // Rafraîchir la liste des users de ce rôle
       setRoleUsers((prev) => ({
         ...prev,
-        [roleId]: [...(prev[roleId] ?? []), res.user],
+        [roleId]: [...(prev[roleId] ?? []).filter((u) => u.id !== res.user.id), res.user],
       }));
-      // Incrémenter le compteur dans la liste des rôles
+      // Mettre à jour le compteur dans la liste des rôles
       setRoles((prev) =>
-        prev.map((r) => (r.id === roleId ? { ...r, users_count: r.users_count + 1 } : r))
+        prev.map((r) => (r.id === roleId ? { ...r, users_count: (roleUsers[roleId]?.length || 0) + 1 } : r))
       );
     } catch (err: unknown) {
-      setAssignError(err instanceof Error ? err.message : t('roles.error_assign'));
+      setAssignErrorByRole((prev) => ({
+        ...prev,
+        [roleId]: err instanceof Error ? err.message : t('roles.error_assign'),
+      }));
     } finally {
-      setAssigning(false);
+      setAssigningByRole((prev) => ({ ...prev, [roleId]: false }));
     }
   };
 
@@ -247,7 +249,10 @@ export default function RolesPage() {
     }
   };
 
-  /* ── Libellé groupe ─────────────────────────────────────────────────────── */
+  /* ── Libellé rôle / permission bilingue ───────────────────────────────── */
+  const roleName = (role: StaffRole) => (lang === 'en' && role.name_en ? role.name_en : role.name);
+  const permName = (perm: { name: string; name_en: string | null; key: string }) =>
+    lang === 'en' && perm.name_en ? perm.name_en : perm.name;
   const groupLabel = (group: string) =>
     t(`roles.group_${group}` as Parameters<typeof t>[0]) || group;
 
@@ -305,7 +310,7 @@ export default function RolesPage() {
                   <div className="roles-card-header">
                     <div className="roles-card-left">
                       <div className="roles-card-title-row">
-                        <span className="roles-card-name">{role.name}</span>
+                        <span className="roles-card-name">{roleName(role)}</span>
                         {role.is_system && (
                           <span className="roles-badge roles-badge--system">
                             <Lock size={10} />
@@ -325,7 +330,7 @@ export default function RolesPage() {
                       <div className="roles-perms-wrap">
                         {role.permissions.length === allPermKeys.length ? (
                           <span className="roles-perm-badge roles-perm-all">
-                            <CheckSquare size={11} /> Toutes les permissions
+                            <CheckSquare size={11} /> {t('roles.perm_all')}
                           </span>
                         ) : (
                           <>
@@ -335,7 +340,7 @@ export default function RolesPage() {
                                 .find((p) => p.key === key);
                               return (
                                 <span key={key} className="roles-perm-badge">
-                                  {perm?.name ?? key}
+                                  {perm ? permName(perm) : key}
                                 </span>
                               );
                             })}
@@ -347,9 +352,9 @@ export default function RolesPage() {
                                   e.stopPropagation();
                                   setExpandedPermsRole(expandedPermsRole === role.id ? null : role.id);
                                 }}
-                                title={expandedPermsRole === role.id ? "Réduire les permissions" : "Voir toutes les permissions"}
+                                title={expandedPermsRole === role.id ? t('roles.show_less_title') : t('roles.show_more_title')}
                               >
-                                {expandedPermsRole === role.id ? "Afficher moins" : `+${role.permissions.length - 4}`}
+                                {expandedPermsRole === role.id ? t('roles.show_less') : `+${role.permissions.length - 4}`}
                               </button>
                             )}
                           </>
@@ -405,10 +410,11 @@ export default function RolesPage() {
                             type="email"
                             className="roles-assign-input"
                             placeholder={t('roles.assign_email_placeholder')}
-                            value={assignEmail}
+                            value={assignEmailByRole[role.id] || ''}
                             onChange={(e) => {
-                              setAssignEmail(e.target.value);
-                              setAssignError(null);
+                              const val = e.target.value;
+                              setAssignEmailByRole((prev) => ({ ...prev, [role.id]: val }));
+                              setAssignErrorByRole((prev) => ({ ...prev, [role.id]: null }));
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -421,12 +427,12 @@ export default function RolesPage() {
                             type="button"
                             className="roles-assign-btn"
                             onClick={() => handleAssign(role.id)}
-                            disabled={assigning || !assignEmail.trim()}
+                            disabled={assigningByRole[role.id] || !(assignEmailByRole[role.id] || '').trim()}
                           >
-                            {assigning ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
+                            {assigningByRole[role.id] ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
                           </button>
                         </div>
-                        {assignError && <p className="roles-assign-error">{assignError}</p>}
+                        {assignErrorByRole[role.id] && <p className="roles-assign-error">{assignErrorByRole[role.id]}</p>}
 
                         {/* Liste utilisateurs */}
                         {usersLoading ? (
@@ -488,7 +494,7 @@ export default function RolesPage() {
                   className={`roles-modal-tab ${modalTab === 'info' ? 'active' : ''}`}
                   onClick={() => setModalTab('info')}
                 >
-                  <Shield size={14} /> Rôle & Permissions
+                  <Shield size={14} /> {t('roles.tab_info')}
                 </button>
                 <button
                   type="button"
@@ -525,7 +531,7 @@ export default function RolesPage() {
                   />
                   {editingRole?.is_system && (
                     <p className="roles-field-hint">
-                      <Lock size={12} /> Le nom d'un rôle système ne peut pas être modifié.
+                      <Lock size={12} /> {t('roles.field_hint_system')}
                     </p>
                   )}
                 </div>
@@ -591,7 +597,7 @@ export default function RolesPage() {
                                 checked={form.permissions.includes(perm.key)}
                                 onChange={() => togglePermission(perm.key)}
                               />
-                              <span>{perm.name}</span>
+                              <span>{permName(perm)}</span>
                             </label>
                           ))}
                         </div>
@@ -629,10 +635,11 @@ export default function RolesPage() {
                     type="email"
                     className="roles-assign-input"
                     placeholder={t('roles.assign_email_placeholder')}
-                    value={assignEmail}
+                    value={assignEmailByRole[editingRole.id] || ''}
                     onChange={(e) => {
-                      setAssignEmail(e.target.value);
-                      setAssignError(null);
+                      const val = e.target.value;
+                      setAssignEmailByRole((prev) => ({ ...prev, [editingRole.id]: val }));
+                      setAssignErrorByRole((prev) => ({ ...prev, [editingRole.id]: null }));
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -645,12 +652,12 @@ export default function RolesPage() {
                     type="button"
                     className="roles-assign-btn"
                     onClick={() => handleAssign(editingRole.id)}
-                    disabled={assigning || !assignEmail.trim()}
+                    disabled={assigningByRole[editingRole.id] || !(assignEmailByRole[editingRole.id] || '').trim()}
                   >
-                    {assigning ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
+                    {assigningByRole[editingRole.id] ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
                   </button>
                 </div>
-                {assignError && <p className="roles-assign-error">{assignError}</p>}
+                {assignErrorByRole[editingRole.id] && <p className="roles-assign-error">{assignErrorByRole[editingRole.id]}</p>}
 
                 {/* Liste */}
                 {loadingUsers[editingRole.id] ? (

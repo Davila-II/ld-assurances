@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StaffRoleAssigned;
 use App\Models\StaffPermission;
 use App\Models\StaffRole;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -136,19 +139,46 @@ class RoleController extends Controller
     public function assignUser(Request $request, StaffRole $role): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
+            'email' => ['required', 'email'],
+            'name'  => ['nullable', 'string', 'max:255'],
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $email = strtolower(trim($validated['email']));
+        $user = User::where('email', $email)->first();
+        $isNewAccount = false;
+        $plainPassword = '••••••••';
 
-        // Les clients ne peuvent pas devenir staff
-        if ($user->role === 'client') {
-            return response()->json([
-                'message' => 'Cet utilisateur est un client et ne peut pas recevoir un rôle administratif.',
-            ], 422);
+        if (! $user) {
+            // Création automatique de l'utilisateur avec le mot de passe par défaut 12345678
+            $name = $validated['name'] ?? explode('@', $email)[0];
+            $user = User::create([
+                'name'          => ucfirst($name),
+                'email'         => $email,
+                'password'      => Hash::make('12345678'),
+                'role'          => 'admin', // membre du staff
+                'staff_role_id' => $role->id,
+            ]);
+            $isNewAccount = true;
+            $plainPassword = '12345678';
+        } else {
+            // L'utilisateur existe déjà
+            if ($user->role === 'client') {
+                return response()->json([
+                    'message' => 'Cet utilisateur possède déjà un compte client. Veuillez utiliser une autre adresse e-mail professionnelle.',
+                ], 422);
+            }
+
+            $user->update([
+                'staff_role_id' => $role->id,
+            ]);
         }
 
-        $user->update(['staff_role_id' => $role->id]);
+        // Envoi d'un e-mail d'information avec identifiants
+        try {
+            Mail::to($user->email)->send(new StaffRoleAssigned($user, $role, $plainPassword, $isNewAccount));
+        } catch (\Throwable $e) {
+            // Envoi non bloquant en cas d'indisponibilité SMTP
+        }
 
         return response()->json([
             'message' => "Rôle \"{$role->name}\" attribué à {$user->name}.",
@@ -157,6 +187,7 @@ class RoleController extends Controller
                 'name'  => $user->name,
                 'email' => $user->email,
             ],
+            'is_new_account' => $isNewAccount,
         ]);
     }
 
