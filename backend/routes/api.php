@@ -42,6 +42,33 @@ Route::get('/test-email', function (\Illuminate\Http\Request $request) {
     }
 });
 
+// Diagnostic connectivité SMTP (ports)
+Route::get('/test-smtp-ports', function () {
+    $hosts = [
+        'smtp-relay.brevo.com' => [587, 465, 25],
+        'smtp.gmail.com'       => [587, 465],
+    ];
+    $results = [];
+    foreach ($hosts as $host => $ports) {
+        foreach ($ports as $port) {
+            $errno  = 0;
+            $errstr = '';
+            $start  = microtime(true);
+            $conn   = @stream_socket_client("tcp://{$host}:{$port}", $errno, $errstr, 5);
+            $ms     = round((microtime(true) - $start) * 1000);
+            $results[] = [
+                'host'   => $host,
+                'port'   => $port,
+                'open'   => $conn !== false,
+                'ms'     => $ms,
+                'error'  => $conn ? null : $errstr,
+            ];
+            if ($conn) fclose($conn);
+        }
+    }
+    return response()->json($results);
+});
+
 // --- Public ---
 Route::get('/categories', [FormController::class, 'categories']);
 Route::get('/categories/{slug}/form', [FormController::class, 'show']);
