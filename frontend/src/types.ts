@@ -306,3 +306,42 @@ export interface AdminClient {
   submissions_count: number;
   created_at: string;
 }
+
+
+// ── Rôles & Permissions du staff ───────────────────────────────────────────
+
+export interface StaffPermissionItem {
+  id: number;
+  key: string;
+  name: string;
+  name_en: string | null;
+}
+
+export interface StaffPermissionGroup {
+  group: string;
+  permissions: StaffPermissionItem[];
+}
+
+export interface StaffRole {
+  id: number;
+  name: string;
+  name_en: string | null;
+  slug: string;
+  description: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  users_count: number;
+  permissions: string[]; // array of permission keys
+}
+
+export interface StaffRolesResponse {
+  roles: StaffRole[];
+  permissions: StaffPermissionGroup[];
+}
+
+export interface StaffRoleUser {
+  id: number;
+  name: string;
+  email: string;
+  created_at: string;
+}

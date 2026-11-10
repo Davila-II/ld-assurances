@@ -12,6 +12,9 @@ import type {
   Paginated,
   PricingRule,
   QuoteCalculation,
+  StaffRole,
+  StaffRolesResponse,
+  StaffRoleUser,
   SubmissionDetail,
   SubmissionFilters,
   SubmissionResult,
@@ -512,4 +515,54 @@ export async function downloadSubmissionPdfAdmin(submissionId: number, filename:
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+// ── Rôles & Permissions ───────────────────────────────────────────────────
+
+export async function getRoles(): Promise<StaffRolesResponse> {
+  return apiFetch<StaffRolesResponse>('/admin/roles');
+}
+
+export async function createRole(data: {
+  name: string;
+  name_en?: string;
+  description?: string;
+  permissions: string[];
+}): Promise<StaffRole> {
+  return apiFetch<StaffRole>('/admin/roles', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateRole(
+  id: number,
+  data: { name?: string; name_en?: string; description?: string; permissions: string[]; is_active?: boolean }
+): Promise<StaffRole> {
+  return apiFetch<StaffRole>(`/admin/roles/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteRole(id: number): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/admin/roles/${id}`, { method: 'DELETE' });
+}
+
+export async function getRoleUsers(roleId: number): Promise<{ users: StaffRoleUser[] }> {
+  return apiFetch<{ users: StaffRoleUser[] }>(`/admin/roles/${roleId}/users`);
+}
+
+export async function assignUserToRole(roleId: number, email: string): Promise<{ message: string; user: StaffRoleUser }> {
+  return apiFetch<{ message: string; user: StaffRoleUser }>(`/admin/roles/${roleId}/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function removeUserFromRole(roleId: number, userId: number): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/admin/roles/${roleId}/remove-user`, {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId }),
+  });
 }
