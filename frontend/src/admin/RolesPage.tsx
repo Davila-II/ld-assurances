@@ -1,137 +1,257 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Plus, Shield, Trash2, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  Edit3,
+  Loader2,
+  Lock,
+  Plus,
+  Shield,
+  Trash2,
+  UserMinus,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
+import {
+  assignUserToRole,
+  createRole,
+  deleteRole,
+  getRoleUsers,
+  getRoles,
+  removeUserFromRole,
+  updateRole,
+} from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import type { StaffPermissionGroup, StaffRole, StaffRoleUser } from '../types';
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
+/* ── Types locaux ────────────────────────────────────────────────────────── */
+type ModalTab = 'info' | 'users';
 
-type Permission =
-  | 'view_submissions'
-  | 'edit_submissions'
-  | 'manage_clients'
-  | 'manage_forms'
-  | 'manage_roles'
-  | 'view_stats';
-
-interface Role {
-  id: number;
+interface FormState {
   name: string;
+  name_en: string;
   description: string;
-  permissions: Permission[];
-  users_count: number;
+  permissions: string[];
 }
 
-const ALL_PERMISSIONS: Permission[] = [
-  'view_submissions',
-  'edit_submissions',
-  'manage_clients',
-  'manage_forms',
-  'manage_roles',
-  'view_stats',
-];
-
-/* ── Données initiales (statiques — à connecter au backend) ─────────────── */
-
-const INITIAL_ROLES: Role[] = [
-  {
-    id: 1,
-    name: 'Super Administrateur',
-    description: 'Accès complet à toutes les fonctionnalités de la plateforme.',
-    permissions: ['view_submissions', 'edit_submissions', 'manage_clients', 'manage_forms', 'manage_roles', 'view_stats'],
-    users_count: 1,
-  },
-  {
-    id: 2,
-    name: 'Gestionnaire',
-    description: 'Peut consulter et traiter les dossiers clients et les déclarations.',
-    permissions: ['view_submissions', 'edit_submissions', 'manage_clients', 'view_stats'],
-    users_count: 2,
-  },
-];
+/* ── Libellés des groupes ────────────────────────────────────────────────── */
+const GROUP_ORDER = ['dossiers', 'finances', 'clients', 'parametres'];
 
 /* ── Composant principal ─────────────────────────────────────────────────── */
-
 export default function RolesPage() {
   const { t } = useLanguage();
 
-  const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [form, setForm] = useState({ name: '', description: '', permissions: [] as Permission[] });
-  const [saving, setSaving] = useState(false);
+  const [roles, setRoles] = useState<StaffRole[]>([]);
+  const [permGroups, setPermGroups] = useState<StaffPermissionGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  /* Ouvrir modal création */
+  /* Modal */
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<StaffRole | null>(null);
+  const [modalTab, setModalTab] = useState<ModalTab>('info');
+  const [form, setForm] = useState<FormState>({ name: '', name_en: '', description: '', permissions: [] });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  /* Expandable rows */
+  const [expandedRole, setExpandedRole] = useState<number | null>(null);
+  const [expandedPermsRole, setExpandedPermsRole] = useState<number | null>(null);
+
+  /* Users sous-panel */
+  const [roleUsers, setRoleUsers] = useState<Record<number, StaffRoleUser[]>>({});
+  const [loadingUsers, setLoadingUsers] = useState<Record<number, boolean>>({});
+  const [assignEmail, setAssignEmail] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  /* ── Chargement ─────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
+  async function loadRoles() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getRoles();
+      setRoles(data.roles);
+      setPermGroups(data.permissions);
+    } catch {
+      setError(t('roles.error_load'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Ouvrir/fermer modal ────────────────────────────────────────────────── */
   const openAdd = () => {
     setEditingRole(null);
-    setForm({ name: '', description: '', permissions: [] });
+    setForm({ name: '', name_en: '', description: '', permissions: [] });
+    setModalTab('info');
+    setFormError(null);
     setModalOpen(true);
   };
 
-  /* Ouvrir modal édition */
-  const openEdit = (role: Role) => {
+  const openEdit = (role: StaffRole) => {
     setEditingRole(role);
-    setForm({ name: role.name, description: role.description, permissions: [...role.permissions] });
+    setForm({
+      name: role.name,
+      name_en: role.name_en ?? '',
+      description: role.description ?? '',
+      permissions: [...role.permissions],
+    });
+    setModalTab('info');
+    setFormError(null);
     setModalOpen(true);
+    loadUsersForRole(role.id);
   };
 
-  /* Fermer modal */
   const closeModal = () => {
     setModalOpen(false);
     setEditingRole(null);
+    setAssignEmail('');
+    setAssignError(null);
   };
 
-  /* Basculer une permission dans le formulaire */
-  const togglePermission = (perm: Permission) => {
+  /* ── Toggle permission ──────────────────────────────────────────────────── */
+  const togglePermission = (key: string) => {
     setForm((prev) => ({
       ...prev,
-      permissions: prev.permissions.includes(perm)
-        ? prev.permissions.filter((p) => p !== perm)
-        : [...prev.permissions, perm],
+      permissions: prev.permissions.includes(key)
+        ? prev.permissions.filter((p) => p !== key)
+        : [...prev.permissions, key],
     }));
   };
 
-  /* Sauvegarder (local — à brancher sur l'API) */
+  const allPermKeys = permGroups.flatMap((g) => g.permissions.map((p) => p.key));
+
+  const selectAll = () => setForm((prev) => ({ ...prev, permissions: allPermKeys }));
+  const deselectAll = () => setForm((prev) => ({ ...prev, permissions: [] }));
+
+  /* ── Sauvegarder ────────────────────────────────────────────────────────── */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSaving(true);
+    setFormError(null);
 
-    await new Promise((r) => setTimeout(r, 400)); // simulation réseau
-
-    if (editingRole) {
-      setRoles((prev) =>
-        prev.map((r) =>
-          r.id === editingRole.id
-            ? { ...r, name: form.name, description: form.description, permissions: form.permissions }
-            : r,
-        ),
-      );
-    } else {
-      setRoles((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          name: form.name,
-          description: form.description,
+    try {
+      if (editingRole) {
+        const updated = await updateRole(editingRole.id, {
+          name: editingRole.is_system ? undefined : form.name || undefined,
+          name_en: form.name_en || undefined,
+          description: form.description || undefined,
           permissions: form.permissions,
-          users_count: 0,
-        },
-      ]);
+        });
+        setRoles((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      } else {
+        const created = await createRole({
+          name: form.name,
+          name_en: form.name_en || undefined,
+          description: form.description || undefined,
+          permissions: form.permissions,
+        });
+        setRoles((prev) => [...prev, created]);
+      }
+      closeModal();
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : t('roles.error_save'));
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    closeModal();
   };
 
-  /* Supprimer */
-  const handleDelete = (id: number) => {
+  /* ── Supprimer ──────────────────────────────────────────────────────────── */
+  const handleDelete = async (role: StaffRole) => {
+    if (role.is_system) {
+      alert(t('roles.system_no_delete'));
+      return;
+    }
+    if (role.users_count > 0) {
+      alert(t('roles.has_users_no_delete'));
+      return;
+    }
     if (!window.confirm(t('roles.confirm_delete'))) return;
-    setRoles((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteRole(role.id);
+      setRoles((prev) => prev.filter((r) => r.id !== role.id));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : t('roles.error_delete'));
+    }
   };
 
-  /* Label permission */
-  const permLabel = (perm: Permission) => t(`roles.perm_${perm}` as Parameters<typeof t>[0]);
+  /* ── Toggle expanded row ────────────────────────────────────────────────── */
+  const toggleExpand = (roleId: number) => {
+    if (expandedRole === roleId) {
+      setExpandedRole(null);
+    } else {
+      setExpandedRole(roleId);
+      loadUsersForRole(roleId);
+    }
+  };
 
+  /* ── Charger les utilisateurs d'un rôle ─────────────────────────────────── */
+  const loadUsersForRole = async (roleId: number) => {
+    if (roleUsers[roleId]) return; // déjà chargé
+    setLoadingUsers((prev) => ({ ...prev, [roleId]: true }));
+    try {
+      const data = await getRoleUsers(roleId);
+      setRoleUsers((prev) => ({ ...prev, [roleId]: data.users }));
+    } finally {
+      setLoadingUsers((prev) => ({ ...prev, [roleId]: false }));
+    }
+  };
+
+  /* ── Assigner un utilisateur ─────────────────────────────────────────────── */
+  const handleAssign = async (roleId: number) => {
+    if (!assignEmail.trim()) return;
+    setAssigning(true);
+    setAssignError(null);
+    try {
+      const res = await assignUserToRole(roleId, assignEmail.trim());
+      setAssignEmail('');
+      // Rafraîchir la liste des users de ce rôle
+      setRoleUsers((prev) => ({
+        ...prev,
+        [roleId]: [...(prev[roleId] ?? []), res.user],
+      }));
+      // Incrémenter le compteur dans la liste des rôles
+      setRoles((prev) =>
+        prev.map((r) => (r.id === roleId ? { ...r, users_count: r.users_count + 1 } : r))
+      );
+    } catch (err: unknown) {
+      setAssignError(err instanceof Error ? err.message : t('roles.error_assign'));
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  /* ── Retirer un utilisateur ──────────────────────────────────────────────── */
+  const handleRemoveUser = async (roleId: number, userId: number) => {
+    try {
+      await removeUserFromRole(roleId, userId);
+      setRoleUsers((prev) => ({
+        ...prev,
+        [roleId]: (prev[roleId] ?? []).filter((u) => u.id !== userId),
+      }));
+      setRoles((prev) =>
+        prev.map((r) => (r.id === roleId ? { ...r, users_count: Math.max(0, r.users_count - 1) } : r))
+      );
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : t('roles.error_delete'));
+    }
+  };
+
+  /* ── Libellé groupe ─────────────────────────────────────────────────────── */
+  const groupLabel = (group: string) =>
+    t(`roles.group_${group}` as Parameters<typeof t>[0]) || group;
+
+  /* ── Rendu ──────────────────────────────────────────────────────────────── */
   return (
     <div className="roles-root">
       {/* En-tête */}
@@ -157,72 +277,202 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {/* Tableau des rôles */}
-      <div className="card">
-        {roles.length === 0 ? (
-          <p className="roles-empty">{t('roles.no_roles')}</p>
-        ) : (
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">{t('roles.th_role')}</th>
-                  <th scope="col">{t('roles.th_desc')}</th>
-                  <th scope="col">{t('roles.th_permissions')}</th>
-                  <th scope="col">{t('roles.th_users')}</th>
-                  <th scope="col">{t('roles.th_actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((role) => (
-                  <tr key={role.id}>
-                    <td data-label={t('roles.th_role')}>
-                      <strong className="roles-name">{role.name}</strong>
-                    </td>
-                    <td data-label={t('roles.th_desc')}>
-                      <span className="roles-desc-cell">{role.description || '—'}</span>
-                    </td>
-                    <td data-label={t('roles.th_permissions')}>
-                      <div className="roles-perms-wrap">
-                        {role.permissions.length === ALL_PERMISSIONS.length ? (
-                          <span className="roles-perm-badge roles-perm-all">Toutes</span>
-                        ) : (
-                          role.permissions.map((p) => (
-                            <span key={p} className="roles-perm-badge">
-                              {permLabel(p)}
-                            </span>
-                          ))
+      {/* Contenu */}
+      {loading ? (
+        <div className="roles-loading">
+          <Loader2 size={28} className="roles-spinner" />
+        </div>
+      ) : error ? (
+        <div className="roles-error-banner">
+          {error}
+          <button type="button" onClick={loadRoles} className="roles-retry-btn">
+            Réessayer
+          </button>
+        </div>
+      ) : (
+        <div className="roles-cards">
+          {roles.length === 0 ? (
+            <p className="roles-empty">{t('roles.no_roles')}</p>
+          ) : (
+            roles.map((role) => {
+              const isExpanded = expandedRole === role.id;
+              const users = roleUsers[role.id] ?? [];
+              const usersLoading = loadingUsers[role.id] ?? false;
+
+              return (
+                <div key={role.id} className={`roles-card ${!role.is_active ? 'roles-card--inactive' : ''}`}>
+                  {/* Ligne principale */}
+                  <div className="roles-card-header">
+                    <div className="roles-card-left">
+                      <div className="roles-card-title-row">
+                        <span className="roles-card-name">{role.name}</span>
+                        {role.is_system && (
+                          <span className="roles-badge roles-badge--system">
+                            <Lock size={10} />
+                            {t('roles.system_badge')}
+                          </span>
+                        )}
+                        {!role.is_active && (
+                          <span className="roles-badge roles-badge--inactive">
+                            {t('roles.inactive_badge')}
+                          </span>
                         )}
                       </div>
-                    </td>
-                    <td data-label={t('roles.th_users')}>{role.users_count}</td>
-                    <td data-label={t('roles.th_actions')}>
+                      {role.description && (
+                        <p className="roles-card-desc">{role.description}</p>
+                      )}
+                      {/* Badges permissions */}
+                      <div className="roles-perms-wrap">
+                        {role.permissions.length === allPermKeys.length ? (
+                          <span className="roles-perm-badge roles-perm-all">
+                            <CheckSquare size={11} /> Toutes les permissions
+                          </span>
+                        ) : (
+                          <>
+                            {(expandedPermsRole === role.id ? role.permissions : role.permissions.slice(0, 4)).map((key) => {
+                              const perm = permGroups
+                                .flatMap((g) => g.permissions)
+                                .find((p) => p.key === key);
+                              return (
+                                <span key={key} className="roles-perm-badge">
+                                  {perm?.name ?? key}
+                                </span>
+                              );
+                            })}
+                            {role.permissions.length > 4 && (
+                              <button
+                                type="button"
+                                className="roles-perm-badge roles-perm-more roles-perm-toggle-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedPermsRole(expandedPermsRole === role.id ? null : role.id);
+                                }}
+                                title={expandedPermsRole === role.id ? "Réduire les permissions" : "Voir toutes les permissions"}
+                              >
+                                {expandedPermsRole === role.id ? "Afficher moins" : `+${role.permissions.length - 4}`}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="roles-card-right">
+                      {/* Compteur utilisateurs */}
+                      <button
+                        type="button"
+                        className="roles-users-count"
+                        onClick={() => toggleExpand(role.id)}
+                        title={t('roles.users_tab')}
+                      >
+                        <Users size={14} />
+                        <span>{role.users_count}</span>
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+
+                      {/* Actions */}
                       <div className="roles-actions">
-                        <button type="button" className="roles-btn-edit" onClick={() => openEdit(role)} title={t('roles.edit')}>
-                          <Edit3 size={15} />
-                        </button>
                         <button
                           type="button"
-                          className="roles-btn-delete"
-                          onClick={() => handleDelete(role.id)}
-                          title={t('roles.delete')}
+                          className="roles-btn-edit"
+                          onClick={() => openEdit(role)}
+                          title={t('roles.edit')}
                         >
-                          <Trash2 size={15} />
+                          <Edit3 size={15} />
                         </button>
+                        {!role.is_system && (
+                          <button
+                            type="button"
+                            className="roles-btn-delete"
+                            onClick={() => handleDelete(role)}
+                            title={t('roles.delete')}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    </div>
+                  </div>
 
-      {/* Modal création / édition */}
+                  {/* Zone expandable : utilisateurs */}
+                  {isExpanded && (
+                    <div className="roles-users-panel">
+                      <div className="roles-users-panel-inner">
+                        {/* Assigner */}
+                        <div className="roles-assign-row">
+                          <UserPlus size={15} className="roles-assign-icon" />
+                          <input
+                            type="email"
+                            className="roles-assign-input"
+                            placeholder={t('roles.assign_email_placeholder')}
+                            value={assignEmail}
+                            onChange={(e) => {
+                              setAssignEmail(e.target.value);
+                              setAssignError(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAssign(role.id);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="roles-assign-btn"
+                            onClick={() => handleAssign(role.id)}
+                            disabled={assigning || !assignEmail.trim()}
+                          >
+                            {assigning ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
+                          </button>
+                        </div>
+                        {assignError && <p className="roles-assign-error">{assignError}</p>}
+
+                        {/* Liste utilisateurs */}
+                        {usersLoading ? (
+                          <div className="roles-users-loading">
+                            <Loader2 size={18} className="roles-spinner" />
+                          </div>
+                        ) : users.length === 0 ? (
+                          <p className="roles-no-users">{t('roles.no_users')}</p>
+                        ) : (
+                          <ul className="roles-user-list">
+                            {users.map((user) => (
+                              <li key={user.id} className="roles-user-item">
+                                <div className="roles-user-avatar">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="roles-user-info">
+                                  <span className="roles-user-name">{user.name}</span>
+                                  <span className="roles-user-email">{user.email}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="roles-user-remove"
+                                  onClick={() => handleRemoveUser(role.id, user.id)}
+                                  title={t('roles.remove_user')}
+                                >
+                                  <UserMinus size={14} />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* ── Modal création / édition ── */}
       {modalOpen && (
         <div className="admin-modal-backdrop" onClick={closeModal}>
           <div className="admin-modal-card roles-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Header modal */}
             <div className="admin-modal-header">
               <h2>{editingRole ? t('roles.modal_edit_title') : t('roles.modal_add_title')}</h2>
               <button type="button" className="admin-modal-close" onClick={closeModal} aria-label="Fermer">
@@ -230,65 +480,208 @@ export default function RolesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="roles-form">
-              {/* Nom */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="role-name">
-                  {t('roles.field_name')} <span className="required">*</span>
-                </label>
-                <input
-                  id="role-name"
-                  type="text"
-                  className="form-input"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder={t('roles.field_name_placeholder')}
-                  required
-                />
+            {/* Tabs si édition */}
+            {editingRole && (
+              <div className="roles-modal-tabs">
+                <button
+                  type="button"
+                  className={`roles-modal-tab ${modalTab === 'info' ? 'active' : ''}`}
+                  onClick={() => setModalTab('info')}
+                >
+                  <Shield size={14} /> Rôle & Permissions
+                </button>
+                <button
+                  type="button"
+                  className={`roles-modal-tab ${modalTab === 'users' ? 'active' : ''}`}
+                  onClick={() => setModalTab('users')}
+                >
+                  <Users size={14} /> {t('roles.users_tab')}
+                  {editingRole.users_count > 0 && (
+                    <span className="roles-modal-tab-count">{editingRole.users_count}</span>
+                  )}
+                </button>
               </div>
+            )}
 
-              {/* Description */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="role-desc">
-                  {t('roles.field_desc')}
-                </label>
-                <textarea
-                  id="role-desc"
-                  className="form-input"
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder={t('roles.field_desc_placeholder')}
-                />
-              </div>
+            {/* Tab: Infos + Permissions */}
+            {modalTab === 'info' && (
+              <form onSubmit={handleSave} className="roles-form">
+                {formError && <div className="roles-form-error">{formError}</div>}
 
-              {/* Permissions */}
-              <div className="form-group">
-                <span className="form-label">{t('roles.permissions_title')}</span>
-                <div className="roles-perms-grid">
-                  {ALL_PERMISSIONS.map((perm) => (
-                    <label key={perm} className="roles-perm-check">
-                      <input
-                        type="checkbox"
-                        checked={form.permissions.includes(perm)}
-                        onChange={() => togglePermission(perm)}
-                      />
-                      <span>{permLabel(perm)}</span>
-                    </label>
-                  ))}
+                {/* Nom */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="role-name">
+                    {t('roles.field_name')} <span className="required">*</span>
+                  </label>
+                  <input
+                    id="role-name"
+                    type="text"
+                    className="form-input"
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder={t('roles.field_name_placeholder')}
+                    disabled={editingRole?.is_system}
+                    required={!editingRole?.is_system}
+                  />
+                  {editingRole?.is_system && (
+                    <p className="roles-field-hint">
+                      <Lock size={12} /> Le nom d'un rôle système ne peut pas être modifié.
+                    </p>
+                  )}
                 </div>
-              </div>
 
-              {/* Boutons */}
-              <div className="roles-modal-actions">
-                <button type="button" className="roles-btn-cancel" onClick={closeModal} disabled={saving}>
-                  {t('roles.btn_cancel')}
-                </button>
-                <button type="submit" className="roles-btn-save" disabled={saving}>
-                  {saving ? t('roles.saving') : t('roles.btn_save')}
-                </button>
+                {/* Nom EN */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="role-name-en">
+                    {t('roles.field_name_en')}
+                  </label>
+                  <input
+                    id="role-name-en"
+                    type="text"
+                    className="form-input"
+                    value={form.name_en}
+                    onChange={(e) => setForm((p) => ({ ...p, name_en: e.target.value }))}
+                    placeholder={t('roles.field_name_en_placeholder')}
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="role-desc">
+                    {t('roles.field_desc')}
+                  </label>
+                  <textarea
+                    id="role-desc"
+                    className="form-input"
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    placeholder={t('roles.field_desc_placeholder')}
+                  />
+                </div>
+
+                {/* Permissions groupées */}
+                <div className="form-group">
+                  <div className="roles-perm-header">
+                    <span className="form-label">{t('roles.permissions_title')}</span>
+                    <div className="roles-perm-actions">
+                      <button type="button" className="roles-perm-toggle" onClick={selectAll}>
+                        {t('roles.permissions_select_all')}
+                      </button>
+                      <span className="roles-perm-sep">·</span>
+                      <button type="button" className="roles-perm-toggle" onClick={deselectAll}>
+                        {t('roles.permissions_deselect_all')}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="roles-perm-groups">
+                    {[...permGroups].sort((a, b) => {
+                      const ia = GROUP_ORDER.indexOf(a.group);
+                      const ib = GROUP_ORDER.indexOf(b.group);
+                      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                    }).map((group) => (
+                      <div key={group.group} className="roles-perm-group">
+                        <div className="roles-perm-group-title">{groupLabel(group.group)}</div>
+                        <div className="roles-perms-grid">
+                          {group.permissions.map((perm) => (
+                            <label key={perm.key} className="roles-perm-check">
+                              <input
+                                type="checkbox"
+                                checked={form.permissions.includes(perm.key)}
+                                onChange={() => togglePermission(perm.key)}
+                              />
+                              <span>{perm.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Boutons */}
+                <div className="roles-modal-actions">
+                  <button type="button" className="roles-btn-cancel" onClick={closeModal} disabled={saving}>
+                    {t('roles.btn_cancel')}
+                  </button>
+                  <button type="submit" className="roles-btn-save" disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 size={14} className="roles-spinner" />
+                        {t('roles.saving')}
+                      </>
+                    ) : (
+                      t('roles.btn_save')
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Tab: Utilisateurs */}
+            {modalTab === 'users' && editingRole && (
+              <div className="roles-users-tab-content">
+                {/* Assigner */}
+                <div className="roles-assign-row">
+                  <UserPlus size={15} className="roles-assign-icon" />
+                  <input
+                    type="email"
+                    className="roles-assign-input"
+                    placeholder={t('roles.assign_email_placeholder')}
+                    value={assignEmail}
+                    onChange={(e) => {
+                      setAssignEmail(e.target.value);
+                      setAssignError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAssign(editingRole.id);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="roles-assign-btn"
+                    onClick={() => handleAssign(editingRole.id)}
+                    disabled={assigning || !assignEmail.trim()}
+                  >
+                    {assigning ? <Loader2 size={14} className="roles-spinner" /> : t('roles.assign_btn')}
+                  </button>
+                </div>
+                {assignError && <p className="roles-assign-error">{assignError}</p>}
+
+                {/* Liste */}
+                {loadingUsers[editingRole.id] ? (
+                  <div className="roles-users-loading">
+                    <Loader2 size={22} className="roles-spinner" />
+                  </div>
+                ) : (roleUsers[editingRole.id] ?? []).length === 0 ? (
+                  <p className="roles-no-users">{t('roles.no_users')}</p>
+                ) : (
+                  <ul className="roles-user-list">
+                    {(roleUsers[editingRole.id] ?? []).map((user) => (
+                      <li key={user.id} className="roles-user-item">
+                        <div className="roles-user-avatar">{user.name.charAt(0).toUpperCase()}</div>
+                        <div className="roles-user-info">
+                          <span className="roles-user-name">{user.name}</span>
+                          <span className="roles-user-email">{user.email}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="roles-user-remove"
+                          onClick={() => handleRemoveUser(editingRole.id, user.id)}
+                          title={t('roles.remove_user')}
+                        >
+                          <UserMinus size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}

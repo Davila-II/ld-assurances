@@ -520,7 +520,7 @@ export async function downloadSubmissionPdfAdmin(submissionId: number, filename:
 // ── Rôles & Permissions ───────────────────────────────────────────────────
 
 export async function getRoles(): Promise<StaffRolesResponse> {
-  return apiFetch<StaffRolesResponse>('/admin/roles');
+  return request<StaffRolesResponse>('/admin/roles', {}, true);
 }
 
 export async function createRole(data: {
@@ -529,40 +529,40 @@ export async function createRole(data: {
   description?: string;
   permissions: string[];
 }): Promise<StaffRole> {
-  return apiFetch<StaffRole>('/admin/roles', {
+  return request<StaffRole>('/admin/roles', {
     method: 'POST',
     body: JSON.stringify(data),
-  });
+  }, true);
 }
 
 export async function updateRole(
   id: number,
   data: { name?: string; name_en?: string; description?: string; permissions: string[]; is_active?: boolean }
 ): Promise<StaffRole> {
-  return apiFetch<StaffRole>(`/admin/roles/${id}`, {
+  return request<StaffRole>(`/admin/roles/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
-  });
+  }, true);
 }
 
 export async function deleteRole(id: number): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/admin/roles/${id}`, { method: 'DELETE' });
+  return request<{ message: string }>(`/admin/roles/${id}`, { method: 'DELETE' }, true);
 }
 
 export async function getRoleUsers(roleId: number): Promise<{ users: StaffRoleUser[] }> {
-  return apiFetch<{ users: StaffRoleUser[] }>(`/admin/roles/${roleId}/users`);
+  return request<{ users: StaffRoleUser[] }>(`/admin/roles/${roleId}/users`, {}, true);
 }
 
 export async function assignUserToRole(roleId: number, email: string): Promise<{ message: string; user: StaffRoleUser }> {
-  return apiFetch<{ message: string; user: StaffRoleUser }>(`/admin/roles/${roleId}/assign`, {
+  return request<{ message: string; user: StaffRoleUser }>(`/admin/roles/${roleId}/assign`, {
     method: 'POST',
     body: JSON.stringify({ email }),
-  });
+  }, true);
 }
 
 export async function removeUserFromRole(roleId: number, userId: number): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/admin/roles/${roleId}/remove-user`, {
+  return request<{ message: string }>(`/admin/roles/${roleId}/remove-user`, {
     method: 'POST',
     body: JSON.stringify({ user_id: userId }),
-  });
+  }, true);
 }
