@@ -20,26 +20,43 @@ use Illuminate\Support\Facades\Route;
 Route::get('/test-email', function (\Illuminate\Http\Request $request) {
     $to = $request->query('to', 'nyatchebe703@gmail.com');
 
-    // Lecture directe depuis $_ENV pour contourner le cache de config Laravel
-    $resendKey = $_ENV['RESEND_API_KEY'] ?? env('RESEND_API_KEY', '');
+    $resendKey   = $_ENV['RESEND_API_KEY'] ?? getenv('RESEND_API_KEY') ?: '';
+    $fromAddress = config('mail.from.address', 'onboarding@resend.dev');
+    $fromName    = config('mail.from.name', 'LD Assurances');
 
     try {
-        $mailer = new \App\Services\ResendMailer($resendKey);
-        $html   = '<h2 style="color:#0e7a6e;">LD Assurances</h2><p>Test d\'envoi réussi depuis la production !</p>';
-        $sent   = $mailer->send($to, 'Test d\'envoi e-mail LD Assurances', $html);
+        $http = new \GuzzleHttp\Client(['timeout' => 10]);
+
+        $response = $http->post('https://api.resend.com/emails', [
+            'headers' => [
+                'Authorization' => "Bearer {$resendKey}",
+                'Content-Type'  => 'application/json',
+            ],
+            'json' => [
+                'from'    => "{$fromName} <{$fromAddress}>",
+                'to'      => [$to],
+                'subject' => 'Test e-mail LD Assurances',
+                'html'    => '<h2 style="color:#0e7a6e;">LD Assurances</h2><p>Test réussi !</p>',
+            ],
+            'http_errors' => false,
+        ]);
+
+        $status = $response->getStatusCode();
+        $body   = json_decode((string) $response->getBody(), true);
 
         return response()->json([
-            'status'             => $sent ? 'success' : 'error',
-            'message'            => $sent ? "E-mail envoyé avec succès à {$to}." : 'Échec envoi — vérifiez RESEND_API_KEY.',
-            'resend_key_set'     => !empty($resendKey),
+            'status'             => ($status >= 200 && $status < 300) ? 'success' : 'error',
+            'http_status'        => $status,
+            'resend_response'    => $body,
             'resend_key_preview' => !empty($resendKey) ? substr($resendKey, 0, 8) . '...' : 'non définie',
-            'from'               => config('mail.from.address'),
-        ], $sent ? 200 : 500);
+            'from'               => "{$fromName} <{$fromAddress}>",
+            'to'                 => $to,
+        ]);
+
     } catch (\Throwable $e) {
         return response()->json([
             'status'             => 'error',
             'message'            => $e->getMessage(),
-            'resend_key_set'     => !empty($resendKey),
             'resend_key_preview' => !empty($resendKey) ? substr($resendKey, 0, 8) . '...' : 'non définie',
         ], 500);
     }
