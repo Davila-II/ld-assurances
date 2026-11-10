@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Layers, Shield } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { hasPermission } from '../auth';
 
 export default function SettingsPage() {
   const { t } = useLanguage();
 
-  const cards = [
+  const allCards = [
     {
       icon: <Layers size={32} className="settings-card-icon" />,
       title: t('settings.form_builder_title'),
@@ -14,6 +15,7 @@ export default function SettingsPage() {
       to: '/admin/formulaires',
       accent: '#1e4d8f',
       bg: '#eaf1fc',
+      permission: 'manage_form_builder',
     },
     {
       icon: <Shield size={32} className="settings-card-icon" />,
@@ -23,8 +25,11 @@ export default function SettingsPage() {
       to: '/admin/roles',
       accent: '#0e7a6e',
       bg: '#e6f7f5',
+      permission: 'manage_roles',
     },
   ];
+
+  const cards = allCards.filter((card) => hasPermission(card.permission));
 
   return (
     <div className="settings-root">

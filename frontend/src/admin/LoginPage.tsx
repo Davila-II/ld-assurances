@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { adminLogin } from '../api';
-import { getAdminUser, getToken, setAdminUser, setToken } from '../auth';
+import { getToken, setAdminUser, setToken } from '../auth';
 import { errorMessage } from './labels';
 import PasswordInput from '../components/PasswordInput';
 import logoImg from '../images/logo.png';

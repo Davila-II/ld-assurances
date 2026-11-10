@@ -29,6 +29,7 @@ import {
   type CalculateSubmissionPayload,
 } from '../api';
 import { useLanguage } from '../i18n/LanguageContext';
+import { hasPermission } from '../auth';
 import type { AttachmentInfo, PricingRule, QuoteCalculation, SubmissionDetail, SubmissionStatus } from '../types';
 import StatusBadge from './StatusBadge';
 import {
@@ -455,57 +456,61 @@ export default function SubmissionDetailPage() {
               </div>
             )}
 
-            <div className="status-row">
-              <label htmlFor="new-status">{t('admin.detail_status_label')}</label>
-              <select
-                id="new-status"
-                value={newStatus}
-                onChange={(event) => setNewStatus(event.target.value as SubmissionStatus)}
-              >
-                {STATUSES.map((status) => {
-                  const currentRank = STATUS_RANK[submission.status] ?? 0;
-                  const optionRank = STATUS_RANK[status] ?? 0;
-                  const isDowngrade = optionRank < currentRank;
-                  return (
-                    <option key={status} value={status} disabled={isDowngrade}>
-                      {t(`status.${status}` as const) || STATUS_LABELS[status]}
-                      {isDowngrade ? ' (—)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-              <button
-                type="button"
-                className={newStatus === 'rejected' ? 'btn btn-danger' : 'btn'}
-                disabled={
-                  saving ||
-                  (newStatus === submission.status &&
-                    (newStatus !== 'rejected' || rejectionReason.trim() === (submission.rejection_reason ?? '')))
-                }
-                onClick={saveStatus}
-              >
-                {saving
-                  ? t('admin.loading')
-                  : newStatus === 'rejected'
-                    ? (lang === 'en' ? 'Confirm rejection' : 'Confirmer le rejet')
-                    : (lang === 'en' ? 'Update' : 'Mettre à jour')}
-              </button>
-            </div>
+            {hasPermission('change_status') && (
+              <>
+                <div className="status-row">
+                  <label htmlFor="new-status">{t('admin.detail_status_label')}</label>
+                  <select
+                    id="new-status"
+                    value={newStatus}
+                    onChange={(event) => setNewStatus(event.target.value as SubmissionStatus)}
+                  >
+                    {STATUSES.map((status) => {
+                      const currentRank = STATUS_RANK[submission.status] ?? 0;
+                      const optionRank = STATUS_RANK[status] ?? 0;
+                      const isDowngrade = optionRank < currentRank;
+                      return (
+                        <option key={status} value={status} disabled={isDowngrade}>
+                          {t(`status.${status}` as const) || STATUS_LABELS[status]}
+                          {isDowngrade ? ' (—)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <button
+                    type="button"
+                    className={newStatus === 'rejected' ? 'btn btn-danger' : 'btn'}
+                    disabled={
+                      saving ||
+                      (newStatus === submission.status &&
+                        (newStatus !== 'rejected' || rejectionReason.trim() === (submission.rejection_reason ?? '')))
+                    }
+                    onClick={saveStatus}
+                  >
+                    {saving
+                      ? t('admin.loading')
+                      : newStatus === 'rejected'
+                        ? (lang === 'en' ? 'Confirm rejection' : 'Confirmer le rejet')
+                        : (lang === 'en' ? 'Update' : 'Mettre à jour')}
+                  </button>
+                </div>
 
-            {newStatus === 'rejected' && (
-              <div className="field" style={{ marginTop: '14px' }}>
-                <label htmlFor="rejection-reason" style={{ color: '#9b1c1c', fontWeight: 600 }}>
-                  {t('admin.detail_rejection_reason_label')} :
-                </label>
-                <textarea
-                  id="rejection-reason"
-                  rows={3}
-                  required
-                  placeholder={t('admin.detail_rejection_placeholder')}
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                />
-              </div>
+                {newStatus === 'rejected' && (
+                  <div className="field" style={{ marginTop: '14px' }}>
+                    <label htmlFor="rejection-reason" style={{ color: '#9b1c1c', fontWeight: 600 }}>
+                      {t('admin.detail_rejection_reason_label')} :
+                    </label>
+                    <textarea
+                      id="rejection-reason"
+                      rows={3}
+                      required
+                      placeholder={t('admin.detail_rejection_placeholder')}
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             {notice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{notice}</p>}
@@ -569,12 +574,13 @@ export default function SubmissionDetailPage() {
           </section>
 
           {/* 5. Tarification & Indemnisation (Gestion Admin) */}
-          <section
-            className="card"
-            style={{
-              borderLeft: submission.form_type === 'claim' ? '4px solid #0f766e' : '4px solid #144983',
-            }}
-          >
+          {hasPermission('manage_calculation') && (
+            <section
+              className="card"
+              style={{
+                borderLeft: submission.form_type === 'claim' ? '4px solid #0f766e' : '4px solid #144983',
+              }}
+            >
             <div
               style={{
                 display: 'flex',
@@ -1100,96 +1106,107 @@ export default function SubmissionDetailPage() {
                 </div>
               </div>
             )}
-          </section>
+            </section>
+          )}
 
           {/* 6. Répondre au client */}
           <section className="card">
             <h2>{t('admin.detail_reply_title')}</h2>
-            <div className="field">
-              <label htmlFor="reply">{lang === 'en' ? 'Message' : 'Message'}</label>
-              <textarea
-                id="reply"
-                rows={4}
-                value={replyMessage}
-                onChange={(event) => setReplyMessage(event.target.value)}
-                placeholder={t('admin.detail_reply_placeholder')}
-              />
-            </div>
+            {hasPermission('reply_submissions') ? (
+              <>
+                <div className="field">
+                  <label htmlFor="reply">{lang === 'en' ? 'Message' : 'Message'}</label>
+                  <textarea
+                    id="reply"
+                    rows={4}
+                    value={replyMessage}
+                    onChange={(event) => setReplyMessage(event.target.value)}
+                    placeholder={t('admin.detail_reply_placeholder')}
+                  />
+                </div>
 
-            <div className="field" style={{ marginTop: '12px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                <Paperclip size={16} />
-                <span>{t('admin.detail_reply_attachments')}</span>
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                style={{ marginTop: '6px' }}
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setReplyFiles(Array.from(e.target.files));
-                  }
-                }}
-              />
-              <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
-                {t('admin.detail_reply_attachments_hint')}
-              </small>
+                <div className="field" style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                    <Paperclip size={16} />
+                    <span>{t('admin.detail_reply_attachments')}</span>
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    style={{ marginTop: '6px' }}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setReplyFiles(Array.from(e.target.files));
+                      }
+                    }}
+                  />
+                  <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                    {t('admin.detail_reply_attachments_hint')}
+                  </small>
 
-              {replyFiles.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                  {replyFiles.map((f, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: '#f1f5f9',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '0.85rem',
+                  {replyFiles.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {replyFiles.map((f, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#f1f5f9',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {f.name} ({formatSize(f.size, lang)})
+                          <button
+                            type="button"
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                            onClick={() => setReplyFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            <X size={14} color="#ef4444" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={sendingReply || !replyMessage.trim()}
+                    onClick={sendReply}
+                  >
+                    {sendingReply ? (lang === 'en' ? 'Sending…' : 'Envoi…') : t('admin.detail_send_reply')}
+                  </button>
+                  {replyMessage && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={sendingReply}
+                      onClick={() => {
+                        setReplyMessage('');
+                        setReplyFiles([]);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
                     >
-                      {f.name} ({formatSize(f.size, lang)})
-                      <button
-                        type="button"
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
-                        onClick={() => setReplyFiles((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        <X size={14} color="#ef4444" />
-                      </button>
-                    </span>
-                  ))}
+                      {t('admin.detail_reply_cancel_edit')}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
-              <button
-                type="button"
-                className="btn"
-                disabled={sendingReply || !replyMessage.trim()}
-                onClick={sendReply}
-              >
-                {sendingReply ? (lang === 'en' ? 'Sending…' : 'Envoi…') : t('admin.detail_send_reply')}
-              </button>
-              {replyMessage && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={sendingReply}
-                  onClick={() => {
-                    setReplyMessage('');
-                    setReplyFiles([]);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                >
-                  {t('admin.detail_reply_cancel_edit')}
-                </button>
-              )}
-            </div>
-            {replyNotice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{replyNotice}</p>}
+                {replyNotice && <p className="notice" role="status" style={{ marginTop: '12px' }}>{replyNotice}</p>}
+              </>
+            ) : (
+              <p style={{ color: '#64748b', fontSize: '0.9rem', fontStyle: 'italic', margin: '4px 0 16px' }}>
+                {lang === 'en' 
+                  ? 'Your profile does not have permission to send replies to clients.' 
+                  : 'Votre rôle ne possède pas la permission d\'envoyer des réponses aux clients.'}
+              </p>
+            )}
 
             {/* Historique des réponses envoyées par l'administration */}
             {submission.replies && submission.replies.length > 0 && (
