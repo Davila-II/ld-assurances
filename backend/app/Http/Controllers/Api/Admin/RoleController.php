@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\StaffRoleAssigned;
+use App\Jobs\SendStaffRoleEmail;
 use App\Models\StaffPermission;
 use App\Models\StaffRole;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -173,12 +172,10 @@ class RoleController extends Controller
             ]);
         }
 
-        // Envoi d'un e-mail d'information avec identifiants
-        try {
-            Mail::to($user->email)->send(new StaffRoleAssigned($user, $role, $plainPassword, $isNewAccount));
-        } catch (\Throwable $e) {
-            // Envoi non bloquant en cas d'indisponibilité SMTP
-        }
+        // Envoi d'un e-mail d'information avec identifiants (après la réponse HTTP, sans bloquer)
+        dispatch(new SendStaffRoleEmail($user, $role, $plainPassword, $isNewAccount))
+            ->onConnection('sync')
+            ->afterResponse();
 
         return response()->json([
             'message' => "Rôle \"{$role->name}\" attribué à {$user->name}.",
