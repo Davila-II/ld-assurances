@@ -3605,3 +3605,108 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================================
+   CORRECTIFS RESPONSIVITÉ — AUDIT GLOBAL (nov. 2026)
+   ========================================================================== */
+
+/* ── 1. Admin header : éviter le débordement horizontal ── */
+.admin-app-layout {
+  overflow-x: hidden;
+}
+
+.admin-header-bottombar {
+  overflow: hidden;
+}
+
+/* ── 2. Topbar admin : tronquer le nom utilisateur si trop long ── */
+.admin-user-badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+/* ── 3. Admin main : pas de scroll horizontal ── */
+.admin-main {
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* ── 4. Tablette (800px–1024px) : header admin sans débordement ── */
+@media (max-width: 1024px) and (min-width: 801px) {
+  .admin-header-bottombar {
+    padding: 8px 16px;
+    gap: 10px;
+  }
+
+  .admin-brand-logo-img {
+    height: 38px;
+  }
+
+  .admin-nav a {
+    padding: 7px 9px;
+    font-size: 0.84rem;
+    gap: 4px;
+  }
+
+  .admin-logout-btn {
+    padding: 0 10px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ── 5. Mobile < 480px : admin-stats toujours lisibles ── */
+@media (max-width: 480px) {
+  .admin-header-topbar {
+    padding: 5px 12px;
+  }
+
+  .admin-header-bottombar {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+
+  .admin-brand-logo-img {
+    height: 34px;
+  }
+}
+
+/* ── 6. Tables admin : wrapper scroll horizontal systématique ── */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── 7. Modales : pleine largeur sur très petits écrans ── */
+@media (max-width: 360px) {
+  .admin-modal-card {
+    margin: 4px;
+    padding: 14px 10px;
+  }
+
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 8. Page Mon Profil : empiler sur mobile ── */
+@media (max-width: 600px) {
+  .role-profile-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .role-profile-card {
+    padding: 16px;
+  }
+}
+
+/* ── 9. Site public : brand-text masqué sur très petit écran ── */
+@media (max-width: 360px) {
+  .brand-text {
+    display: none;
+  }
+}

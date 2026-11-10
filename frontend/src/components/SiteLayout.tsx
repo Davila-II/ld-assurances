@@ -82,6 +82,17 @@ export default function SiteLayout() {
 
   return (
     <div className="site">
+      {/* Overlay fermeture menu mobile */}
+      {open && (
+        <div
+          onClick={close}
+          aria-hidden="true"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 49,
+            background: 'rgba(15,31,56,0.3)', backdropFilter: 'blur(1px)',
+          }}
+        />
+      )}
       <div className="topbar">
         <div className="topbar-inner">
           <div className="topbar-contact">

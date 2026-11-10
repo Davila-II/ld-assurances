@@ -3378,6 +3378,7 @@ export default function FormBuilderPage() {
                         )}
 
                         {testResult.breakdown?.length > 0 && (
+                          <div className="table-responsive">
                           <table className="quote-pricing-breakdown-table">
                             <thead>
                               <tr>
@@ -3399,6 +3400,7 @@ export default function FormBuilderPage() {
                               ))}
                             </tbody>
                           </table>
+                          </div>
                         )}
                       </div>
                     )}
