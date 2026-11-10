@@ -16,28 +16,25 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsClient;
 use Illuminate\Support\Facades\Route;
 
-// Test de diagnostic SMTP pour vérifier en direct l'envoi d'emails
+// Test de diagnostic SMTP/Resend pour vérifier en direct l'envoi d'emails
 Route::get('/test-email', function (\Illuminate\Http\Request $request) {
     $to = $request->query('to', 'nyatchebe703@gmail.com');
     try {
-        \Illuminate\Support\Facades\Mail::raw('Test d\'envoi réussi depuis LD Assurances en production !', function ($message) use ($to) {
-            $message->to($to)->subject('Test d\'envoi d\'e-mail LD Assurances');
-        });
+        $mailer = new \App\Services\ResendMailer();
+        $html   = '<h2 style="color:#0e7a6e;">LD Assurances</h2><p>Test d\'envoi réussi depuis la production !</p>';
+        $sent   = $mailer->send($to, 'Test d\'envoi e-mail LD Assurances', $html);
+
         return response()->json([
-            'status'  => 'success',
-            'message' => "E-mail de test envoyé avec succès à {$to}.",
-            'mailer'  => config('mail.default'),
-            'host'    => config('mail.mailers.smtp.host'),
-            'port'    => config('mail.mailers.smtp.port'),
-            'from'    => config('mail.from.address'),
-        ]);
+            'status'          => $sent ? 'success' : 'error',
+            'message'         => $sent ? "E-mail envoyé avec succès à {$to}." : 'Échec envoi — vérifiez RESEND_KEY.',
+            'resend_key_set'  => !empty(env('RESEND_KEY')),
+            'from'            => config('mail.from.address'),
+        ], $sent ? 200 : 500);
     } catch (\Throwable $e) {
         return response()->json([
-            'status'  => 'error',
-            'message' => $e->getMessage(),
-            'mailer'  => config('mail.default'),
-            'host'    => config('mail.mailers.smtp.host'),
-            'port'    => config('mail.mailers.smtp.port'),
+            'status'         => 'error',
+            'message'        => $e->getMessage(),
+            'resend_key_set' => !empty(env('RESEND_KEY')),
         ], 500);
     }
 });
