@@ -20,7 +20,7 @@ class AuthController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         // Même message dans tous les cas d'échec, pour ne rien révéler
-        if (! $user || ! Hash::check($credentials['password'], $user->password) || ! $user->isAdmin()) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password) || ! $user->isStaff()) {
             return response()->json(['message' => 'Identifiants incorrects.'], 401);
         }
 
@@ -46,11 +46,23 @@ class AuthController extends Controller
 
     private function userData(User $user): array
     {
+        $permissions = [];
+        $roleName = $user->isAdmin() ? 'Administrateur' : ($user->staffRole?->name ?? 'Collaborateur');
+
+        if ($user->isAdmin()) {
+            $permissions = ['*'];
+        } elseif ($user->staffRole) {
+            $permissions = $user->staffRole->permissions->pluck('key')->values()->all();
+        }
+
         return [
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-            'role'  => $user->role,
+            'id'          => $user->id,
+            'name'        => $user->name,
+            'email'       => $user->email,
+            'role'        => $user->role,
+            'role_name'   => $roleName,
+            'is_admin'    => $user->isAdmin(),
+            'permissions' => $permissions,
         ];
     }
 }

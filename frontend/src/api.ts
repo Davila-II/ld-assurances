@@ -205,6 +205,8 @@ export const adminLogin = (email: string, password: string) =>
     body: JSON.stringify({ email, password }),
   });
 
+export const getAdminMe = () => request<AdminUser>('/admin/me', {}, true);
+
 export const adminLogout = () =>
   request<{ message: string }>('/admin/logout', { method: 'POST' }, true);
 

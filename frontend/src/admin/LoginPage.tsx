@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { adminLogin } from '../api';
-import { getToken, setToken } from '../auth';
+import { getAdminUser, getToken, setAdminUser, setToken } from '../auth';
 import { errorMessage } from './labels';
 import PasswordInput from '../components/PasswordInput';
 import logoImg from '../images/logo.png';
@@ -41,6 +41,7 @@ export default function LoginPage() {
     try {
       const result = await adminLogin(email, password);
       setToken(result.token);
+      setAdminUser(result.user);
       navigate('/admin', { replace: true });
     } catch (err) {
       setError(errorMessage(err));

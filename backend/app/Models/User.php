@@ -41,6 +41,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isStaff(): bool
+    {
+        return $this->isAdmin() || ($this->staff_role_id !== null && $this->staffRole?->is_active);
+    }
+
     public function isClient(): bool
     {
         return $this->role === 'client';

@@ -12,7 +12,7 @@ class EnsureUserIsAdmin
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isAdmin()) {
+        if (! $user || ! $user->isStaff()) {
             return response()->json(['message' => 'Accès refusé.'], 403);
         }
 

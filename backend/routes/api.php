@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Client\SubmissionController as ClientSubmissionCont
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Middleware\CheckStaffPermission;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsClient;
 use Illuminate\Support\Facades\Route;
@@ -75,49 +76,83 @@ Route::prefix('admin')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
-        Route::get('/stats', [AdminSubmissionController::class, 'stats']);
+        Route::get('/stats', [AdminSubmissionController::class, 'stats'])
+            ->middleware(CheckStaffPermission::class . ':view_stats');
 
-        Route::get('/submissions', [AdminSubmissionController::class, 'index']);
-        Route::get('/submissions/{submission}', [AdminSubmissionController::class, 'show']);
-        Route::patch('/submissions/{submission}/status', [AdminSubmissionController::class, 'updateStatus']);
-        Route::patch('/submissions/{submission}/notes', [AdminSubmissionController::class, 'updateNotes']);
-        Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply']);
-        Route::post('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'calculateForSubmission']);
-        Route::delete('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'resetCalculation']);
+        Route::get('/submissions', [AdminSubmissionController::class, 'index'])
+            ->middleware(CheckStaffPermission::class . ':view_submissions,view_all_submissions');
+        Route::get('/submissions/{submission}', [AdminSubmissionController::class, 'show'])
+            ->middleware(CheckStaffPermission::class . ':view_submissions,view_all_submissions');
+        Route::patch('/submissions/{submission}/status', [AdminSubmissionController::class, 'updateStatus'])
+            ->middleware(CheckStaffPermission::class . ':change_status');
+        Route::patch('/submissions/{submission}/notes', [AdminSubmissionController::class, 'updateNotes'])
+            ->middleware(CheckStaffPermission::class . ':change_status,reply_submissions');
+        Route::post('/submissions/{submission}/reply', [AdminSubmissionController::class, 'reply'])
+            ->middleware(CheckStaffPermission::class . ':reply_submissions');
+        Route::post('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'calculateForSubmission'])
+            ->middleware(CheckStaffPermission::class . ':manage_calculation');
+        Route::delete('/submissions/{submission}/calculate', [AdminSubmissionController::class, 'resetCalculation'])
+            ->middleware(CheckStaffPermission::class . ':manage_calculation');
 
-        Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download']);
-        Route::get('/submissions/{submission}/pdf', [AdminSubmissionController::class, 'downloadPdf']);
+        Route::get('/attachments/{attachment}/download', [AdminSubmissionController::class, 'download'])
+            ->middleware(CheckStaffPermission::class . ':view_submissions,download_pdf');
+        Route::get('/submissions/{submission}/pdf', [AdminSubmissionController::class, 'downloadPdf'])
+            ->middleware(CheckStaffPermission::class . ':download_pdf');
 
         // Gestion des clients
-        Route::get('/clients', [AdminClientController::class, 'index']);
-        Route::post('/clients', [AdminClientController::class, 'store']);
+        Route::get('/clients', [AdminClientController::class, 'index'])
+            ->middleware(CheckStaffPermission::class . ':view_clients,manage_clients');
+        Route::post('/clients', [AdminClientController::class, 'store'])
+            ->middleware(CheckStaffPermission::class . ':manage_clients');
 
         // Règles de calcul & Tarification (Algorithmes CIMA et Personnalisés)
-        Route::get('/pricing-rules', [PricingRuleController::class, 'index']);
-        Route::get('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'show']);
-        Route::post('/pricing-rules', [PricingRuleController::class, 'store']);
-        Route::patch('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'update']);
-        Route::delete('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'destroy']);
-        Route::post('/pricing-rules/{pricingRule}/test', [PricingRuleController::class, 'test']);
+        Route::get('/pricing-rules', [PricingRuleController::class, 'index'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
+        Route::get('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'show'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
+        Route::post('/pricing-rules', [PricingRuleController::class, 'store'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
+        Route::patch('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'update'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
+        Route::delete('/pricing-rules/{pricingRule}', [PricingRuleController::class, 'destroy'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
+        Route::post('/pricing-rules/{pricingRule}/test', [PricingRuleController::class, 'test'])
+            ->middleware(CheckStaffPermission::class . ':manage_pricing_rules');
 
         // Constructeur de formulaires
-        Route::get('/form-builder/categories', [FormBuilderController::class, 'categories']);
-        Route::post('/form-builder/categories', [FormBuilderController::class, 'storeCategory']);
-        Route::patch('/form-builder/categories/{category}', [FormBuilderController::class, 'updateCategory']);
-        Route::delete('/form-builder/categories/{category}', [FormBuilderController::class, 'destroyCategory']);
-        Route::get('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'fields']);
-        Route::post('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'storeField']);
-        Route::post('/form-builder/categories/{category}/fields/reorder', [FormBuilderController::class, 'reorder']);
-        Route::patch('/form-builder/fields/{field}', [FormBuilderController::class, 'updateField']);
-        Route::delete('/form-builder/fields/{field}', [FormBuilderController::class, 'destroyField']);
+        Route::get('/form-builder/categories', [FormBuilderController::class, 'categories'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::post('/form-builder/categories', [FormBuilderController::class, 'storeCategory'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::patch('/form-builder/categories/{category}', [FormBuilderController::class, 'updateCategory'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::delete('/form-builder/categories/{category}', [FormBuilderController::class, 'destroyCategory'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::get('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'fields'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::post('/form-builder/categories/{category}/fields', [FormBuilderController::class, 'storeField'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::post('/form-builder/categories/{category}/fields/reorder', [FormBuilderController::class, 'reorder'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::patch('/form-builder/fields/{field}', [FormBuilderController::class, 'updateField'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
+        Route::delete('/form-builder/fields/{field}', [FormBuilderController::class, 'destroyField'])
+            ->middleware(CheckStaffPermission::class . ':manage_form_builder');
 
         // Rôles & Permissions du staff
-        Route::get('/roles', [RoleController::class, 'index']);
-        Route::post('/roles', [RoleController::class, 'store']);
-        Route::patch('/roles/{role}', [RoleController::class, 'update']);
-        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
-        Route::get('/roles/{role}/users', [RoleController::class, 'users']);
-        Route::post('/roles/{role}/assign', [RoleController::class, 'assignUser']);
-        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser']);
+        Route::get('/roles', [RoleController::class, 'index'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::post('/roles', [RoleController::class, 'store'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::patch('/roles/{role}', [RoleController::class, 'update'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::get('/roles/{role}/users', [RoleController::class, 'users'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::post('/roles/{role}/assign', [RoleController::class, 'assignUser'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
+        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser'])
+            ->middleware(CheckStaffPermission::class . ':manage_roles');
     });
 });

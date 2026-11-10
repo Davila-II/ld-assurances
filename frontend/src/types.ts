@@ -167,6 +167,9 @@ export interface AdminUser {
   name: string;
   email: string;
   role: string;
+  role_name?: string;
+  is_admin?: boolean;
+  permissions?: string[];
 }
 
 export interface LoginResult {

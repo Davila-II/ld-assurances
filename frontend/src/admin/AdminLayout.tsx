@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -11,8 +11,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { adminLogout } from '../api';
-import { clearToken, getToken } from '../auth';
+import { adminLogout, getAdminMe } from '../api';
+import { clearToken, getAdminUser, getToken, hasAnyPermission, hasPermission, setAdminUser } from '../auth';
 import { errorMessage } from './labels';
 import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
 import { SITE } from '../siteConfig';
@@ -24,8 +24,24 @@ export default function AdminLayout() {
   const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState(getAdminUser());
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    // Si l'utilisateur n'est pas encore en cache, on appelle /admin/me
+    if (!user && getToken()) {
+      getAdminMe()
+        .then((fetchedUser) => {
+          setAdminUser(fetchedUser);
+          setUser(fetchedUser);
+        })
+        .catch(() => {
+          clearToken();
+          navigate('/admin/login', { replace: true });
+        });
+    }
+  }, [user, navigate]);
 
   if (!getToken()) {
     return <Navigate to="/admin/login" replace />;
@@ -50,6 +66,12 @@ export default function AdminLayout() {
   const currentFormType = searchParams.get('form_type');
   const isSubmissionsPath = location.pathname.startsWith('/admin/submissions');
 
+  // Détermination des droits d'affichage pour la navigation
+  const canViewDashboard = hasPermission('view_stats');
+  const canViewSubmissions = hasAnyPermission(['view_submissions', 'view_all_submissions']);
+  const canViewClients = hasAnyPermission(['view_clients', 'manage_clients']);
+  const canViewSettings = hasAnyPermission(['manage_form_builder', 'manage_roles', 'manage_settings', 'manage_pricing_rules']);
+
   return (
     <div className="admin-app-layout">
       {/* En-tête à deux barres */}
@@ -59,6 +81,11 @@ export default function AdminLayout() {
         <div className="admin-header-topbar">
           <span className="admin-topbar-brand">LD Assurances — Courtier &amp; Conseils en Assurances</span>
           <div className="admin-topbar-actions">
+            {user && (
+              <span className="admin-user-badge" style={{ fontSize: '0.82rem', color: '#e0f2fe', marginRight: '12px' }}>
+                {user.name} ({user.role_name || user.role})
+              </span>
+            )}
             <LanguageToggle />
           </div>
         </div>
@@ -74,32 +101,45 @@ export default function AdminLayout() {
 
           {/* Navigation Desktop */}
           <nav className="admin-nav admin-nav-desktop">
-            <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
-              <LayoutDashboard size={16} />
-              <span>{t('admin.nav_dashboard')}</span>
-            </NavLink>
-            <NavLink
-              to="/admin/submissions?form_type=claim"
-              className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
-            >
-              <AlertTriangle size={16} />
-              <span>{t('admin.nav_claims')}</span>
-            </NavLink>
-            <NavLink
-              to="/admin/submissions?form_type=quote"
-              className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
-            >
-              <FileText size={16} />
-              <span>{t('admin.nav_quotes')}</span>
-            </NavLink>
-            <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <Users size={16} />
-              <span>{t('admin.nav_clients')}</span>
-            </NavLink>
-            <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <Settings size={16} />
-              <span>{t('admin.nav_settings')}</span>
-            </NavLink>
+            {canViewDashboard && (
+              <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
+                <LayoutDashboard size={16} />
+                <span>{t('admin.nav_dashboard')}</span>
+              </NavLink>
+            )}
+
+            {canViewSubmissions && (
+              <>
+                <NavLink
+                  to="/admin/submissions?form_type=claim"
+                  className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
+                >
+                  <AlertTriangle size={16} />
+                  <span>{t('admin.nav_claims')}</span>
+                </NavLink>
+                <NavLink
+                  to="/admin/submissions?form_type=quote"
+                  className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
+                >
+                  <FileText size={16} />
+                  <span>{t('admin.nav_quotes')}</span>
+                </NavLink>
+              </>
+            )}
+
+            {canViewClients && (
+              <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')}>
+                <Users size={16} />
+                <span>{t('admin.nav_clients')}</span>
+              </NavLink>
+            )}
+
+            {canViewSettings && (
+              <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')}>
+                <Settings size={16} />
+                <span>{t('admin.nav_settings')}</span>
+              </NavLink>
+            )}
           </nav>
 
           {/* Actions Desktop */}
@@ -134,7 +174,7 @@ export default function AdminLayout() {
               <img src={logoImg} alt="LD Assurances" className="admin-brand-logo-img" />
             </div>
             <span className="admin-brand-text">LD ASSURANCES</span>
-            <span className="admin-brand-badge">Admin</span>
+            <span className="admin-brand-badge">{user?.role_name || 'Admin'}</span>
           </div>
           <button type="button" className="admin-drawer-close" onClick={closeMenu} aria-label="Fermer le menu">
             <X size={20} />
@@ -142,34 +182,47 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-drawer-nav">
-          <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-            <LayoutDashboard size={18} />
-            <span>{t('admin.nav_dashboard')}</span>
-          </NavLink>
-          <NavLink
-            to="/admin/submissions?form_type=claim"
-            className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
-            onClick={closeMenu}
-          >
-            <AlertTriangle size={18} />
-            <span>{t('admin.nav_claims_long')}</span>
-          </NavLink>
-          <NavLink
-            to="/admin/submissions?form_type=quote"
-            className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
-            onClick={closeMenu}
-          >
-            <FileText size={18} />
-            <span>{t('admin.nav_quotes_long')}</span>
-          </NavLink>
-          <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-            <Users size={18} />
-            <span>{t('admin.nav_clients')}</span>
-          </NavLink>
-          <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-            <Settings size={18} />
-            <span>{t('admin.nav_settings_long')}</span>
-          </NavLink>
+          {canViewDashboard && (
+            <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+              <LayoutDashboard size={18} />
+              <span>{t('admin.nav_dashboard')}</span>
+            </NavLink>
+          )}
+
+          {canViewSubmissions && (
+            <>
+              <NavLink
+                to="/admin/submissions?form_type=claim"
+                className={() => (isSubmissionsPath && currentFormType === 'claim' ? 'active' : '')}
+                onClick={closeMenu}
+              >
+                <AlertTriangle size={18} />
+                <span>{t('admin.nav_claims_long')}</span>
+              </NavLink>
+              <NavLink
+                to="/admin/submissions?form_type=quote"
+                className={() => (isSubmissionsPath && currentFormType === 'quote' ? 'active' : '')}
+                onClick={closeMenu}
+              >
+                <FileText size={18} />
+                <span>{t('admin.nav_quotes_long')}</span>
+              </NavLink>
+            </>
+          )}
+
+          {canViewClients && (
+            <NavLink to="/admin/clients" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+              <Users size={18} />
+              <span>{t('admin.nav_clients')}</span>
+            </NavLink>
+          )}
+
+          {canViewSettings && (
+            <NavLink to="/admin/parametres" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+              <Settings size={18} />
+              <span>{t('admin.nav_settings_long')}</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="admin-drawer-footer">
